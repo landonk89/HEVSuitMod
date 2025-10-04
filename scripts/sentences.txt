@@ -1,0 +1,413 @@
+// A sentence is defined by an id/name followed by a list of audio files (with tags) separated by spaces to play sequentially.
+// Example: SomeEventName folder/filename1 folder/filename2 folder/filename3
+//
+// Tags available: 
+//	loops(int) - How many times to play this clip in a row without delay between each playback.
+//	pitch(float) - The pitch of the audio, where 1.0 is default, 0.5 is half, 2.0 is double, and so on.
+//	volume(float) - The volume of the audio, where 1.0 is default.
+//	delay(float) - Wait this long in seconds before playing this sound.
+//
+// Default delay between audioclips is 0.1s, unless otherwise specified.
+// Example useage of tags:
+// [loops:3]folder/filename - Play this file 3 times in a row without delay between them.
+// [pitch:1.2]folder/filename - This audio's pitch is 20% above normal.
+//
+// Multiple tags can exist together, separated by commas (NO SPACES HERE!!) like so:
+// [delay:1.5,volume:0.7,pitch:0.8]folder/filename
+
+// Tell parser this is the Events section, these don't have a fixed length and can be however long we want
+$Events
+
+// General stuff
+FirstRaid general/bell [delay:0.25]general/welcome
+
+// Weapon related
+OutOfAmmo fx/warning General/AmmunitionDepleted
+
+// Health related
+HeavyBleed [loops:3]fx/boop health/MajorBloodLoss general/Detected
+LightBleed [loops:3]fx/boop health/MinorBloodLoss general/Detected
+Death [loops:2]fx/beep [loops:2]fx/beep fx/beep fx/beep fx/flatline
+Death [loops:2]fx/beep [loops:2]fx/beep fx/beep fx/flatline
+
+// Raid events
+MortarStrike fx/warning general/danger raidevents/ArtilleryBarrageImminent
+
+// Tell parser we're doing 'Weapons' now
+$Weapons
+
+// This section identifies every weapon with a maker/model/caliber voiceline
+// Fixed length of 3 audioclips when parsed so the user can selectively disable maker or type
+// These MUST follow this format: itemId makerName modelName caliber
+627e14b21713922ded6f2c15 Weapons/Maker/accuracyinernational Weapons/Model/axmc Weapons/Types/338lapua
+674d6121c09f69dfb201a888 Weapons/Maker/aklysdefense Weapons/Model/velociraptor Weapons/Types/300blackout
+54491c4f4bdc2db1078b4568 Weapons/Maker/baikal Weapons/Model/mp133 Weapons/Types/12g
+5580223e4bdc2d1c128b457f Weapons/Maker/baikal Weapons/Model/mp43 Weapons/Types/12g
+56dee2bdd2720bc8328b4567 Weapons/Maker/baikal Weapons/Model/mp153 Weapons/Types/12g
+606dae0ab0e443224b421bb7 Weapons/Maker/baikal Weapons/Model/mp155 Weapons/Types/12g
+61f7c9e189e6fb1a5e3ea78d Weapons/Maker/baikal Weapons/Model/mp18 Weapons/Types/762x54r
+64748cb8de82c85eaf0a273a Weapons/Maker/baikal Weapons/Model/mp43short Weapons/Types/12g
+57e26ea924597715ca604a09 Weapons/Maker/bars Weapons/Model/a-2607 Weapons/Types/melee
+57e26fc7245977162a14b800 Weapons/Maker/bars Weapons/Model/a-2607 Weapons/Types/melee
+6259b864ebedf17603599e88 Weapons/Maker/benelli Weapons/Model/m3 Weapons/Types/12g
+5cadc190ae921500103bb3b6 Weapons/Maker/beretta Weapons/Model/m9a3 Weapons/Types/9x19
+5de7bd7bfd6b4e6e2276dc25 Weapons/Maker/bt Weapons/Model/mp9n Weapons/Types/9x19
+5e00903ae9dc277128008b87 Weapons/Maker/bt Weapons/Model/mp9 Weapons/Types/9x19
+61a4c8884f95bc3b2c5dc96f Weapons/Maker/chiappa Weapons/Model/rhino50ds Weapons/Types/357magnum
+624c2e8614da335f1e034d8c Weapons/Maker/chiappa Weapons/Model/rhino200ds Weapons/Types/9x19
+60db29ce99594040e04c4a27 Weapons/Maker/ckib Weapons/Model/mts255 Weapons/Types/12g
+606587252535c57a13424cfd Weapons/Maker/cmmg Weapons/Model/mk47 Weapons/Types/762x39
+5447a9cd4bdc2dbd208b4567 Weapons/Maker/colt Weapons/Model/m4a1 Weapons/Types/556x45
+5e81c3cbac2bb513793cdc75 Weapons/Maker/colt Weapons/Model/m1911a1 Weapons/Types/45acp
+5f36a0e5fbf956000b716b65 Weapons/Maker/colt Weapons/Model/m45a1 Weapons/Types/45acp
+6513ef33e06849f06c0957ca Weapons/Maker/degtyarov Weapons/Model/rpd Weapons/Types/762x39
+65268d8ecb944ff1e90ea385 Weapons/Maker/degtyarov Weapons/Model/rpdn Weapons/Types/762x39
+5b0bbe4e5acfc40dc528a72d Weapons/Maker/dsa Weapons/Model/sa58 Weapons/Types/762x51
+5c488a752e221602b412af63 Weapons/Maker/dt Weapons/Model/mdr Weapons/Types/556x45
+5dcbd56fdbd3d91b3e5468d5 Weapons/Maker/dt Weapons/Model/mdr Weapons/Types/762x51
+5cc82d76e24e8d00134b4b83 Weapons/Maker/fn Weapons/Model/p90 Weapons/Types/57x28
+5d3eb3b0a4b93615055e84d2 Weapons/Maker/fn Weapons/Model/fiveseven Weapons/Types/57x28
+5d67abc1a4b93614ec50137f Weapons/Maker/fn Weapons/Model/fiveseven Weapons/Types/57x28
+5e81ebcd8e146c7080625e15 Weapons/Maker/fn Weapons/Model/40gl Weapons/Types/40mm
+6165ac306ef05c2ce828ef74 Weapons/Maker/fn Weapons/Model/scarh Weapons/Types/762x51
+6183afd850224f204c1da514 Weapons/Maker/fn Weapons/Model/scarh Weapons/Types/762x51
+6184055050224f204c1da540 Weapons/Maker/fn Weapons/Model/scarl Weapons/Types/556x45
+618428466ef05c2ce828f218 Weapons/Maker/fn Weapons/Model/scarl Weapons/Types/556x45
+5a7ae0c351dfba0017554310 Weapons/Maker/glock Weapons/Model/seventeen Weapons/Types/9x19
+5b1fa9b25acfc40018633c01 Weapons/Maker/glock Weapons/Model/eighteenc Weapons/Types/9x19
+63088377b5cd696784087147 Weapons/Maker/glock Weapons/Model/nineteenx Weapons/Types/9x19
+5e32f56fcb6d5863cc5e5ee4 Weapons/Maker/grenade Weapons/Model/vog17 NULL
+5e340dcdcb6d5863cc5e5efb Weapons/Maker/grenade Weapons/Model/vog25 NULL
+5926bb2186f7744b1c6c6e60 Weapons/Maker/hk Weapons/Model/mp5 Weapons/Types/9x19
+5ba26383d4351e00334c93d9 Weapons/Maker/hk Weapons/Model/mp7a1 Weapons/Types/46x30
+5bb2475ed4351e00853264e3 Weapons/Maker/hk Weapons/Model/416a5 Weapons/Types/556x45
+5bd70322209c4d00d7167b8f Weapons/Maker/hk Weapons/Model/mp7a2 Weapons/Types/46x30
+5d2f0d8048f0356c925bc3b0 Weapons/Maker/hk Weapons/Model/mp5k Weapons/Types/9x19
+5fc3e272f8b6a877a729eac5 Weapons/Maker/hk Weapons/Model/ump Weapons/Types/45acp
+6176aca650224f204c1da3fb Weapons/Maker/hk Weapons/Model/g28 Weapons/Types/762x51
+6193a720f8ee7e52e42109ed Weapons/Maker/hk Weapons/Model/usp Weapons/Types/45acp
+623063e994fc3f7b302a9696 Weapons/Maker/hk Weapons/Model/g36 Weapons/Types/556x45
+6680304edadb7aa61d00cef0 Weapons/Maker/iwi Weapons/Model/uzi_pro Weapons/Types/9x19
+668e71a8dadf42204c032ce1 Weapons/Maker/iwi Weapons/Model/uzi_pro Weapons/Types/9x19
+66992b349950f5f4cd06029f Weapons/Maker/iwi Weapons/Model/uzi Weapons/Types/9x19
+55801eed4bdc2d89578b4588 Weapons/Maker/izhmash Weapons/Model/sv98 Weapons/Types/762x54r
+5644bd2b4bdc2d3b4c8b4572 Weapons/Maker/kalashnikov Weapons/Model/ak74n Weapons/Types/545x39
+57dc2fa62459775949412633 Weapons/Maker/kalashnikov Weapons/Model/aks74u Weapons/Types/545x39
+583990e32459771419544dd2 Weapons/Maker/kalashnikov Weapons/Model/aks74un Weapons/Types/545x39
+5839a40f24597726f856b511 Weapons/Maker/kalashnikov Weapons/Model/aks74ub Weapons/Types/545x39
+59984ab886f7743e98271174 Weapons/Maker/kalashnikov Weapons/Model/pp1901vityaz Weapons/Types/9x19
+59d6088586f774275f37482f Weapons/Maker/kalashnikov Weapons/Model/akm Weapons/Types/762x39
+59f9cabd86f7743a10721f46 Weapons/Maker/kalashnikov Weapons/Model/saiga9 Weapons/Types/9x19
+59ff346386f77477562ff5e2 Weapons/Maker/kalashnikov Weapons/Model/akms Weapons/Types/762x39
+5a0ec13bfcdbcb00165aa685 Weapons/Maker/kalashnikov Weapons/Model/akmn Weapons/Types/762x39
+5ab8e9fcd8ce870019439434 Weapons/Maker/kalashnikov Weapons/Model/aks74n Weapons/Types/545x39
+5abcbc27d8ce8700182eceeb Weapons/Maker/kalashnikov Weapons/Model/akmsn Weapons/Types/762x39
+5ac4cd105acfc40016339859 Weapons/Maker/kalashnikov Weapons/Model/ak74m Weapons/Types/545x39
+5ac66cb05acfc40198510a10 Weapons/Maker/kalashnikov Weapons/Model/ak101 Weapons/Types/556x45
+5ac66d015acfc400180ae6e4 Weapons/Maker/kalashnikov Weapons/Model/ak102 Weapons/Types/556x45
+5ac66d2e5acfc43b321d4b53 Weapons/Maker/kalashnikov Weapons/Model/ak103 Weapons/Types/762x39
+5ac66d725acfc43b321d4b60 Weapons/Maker/kalashnikov Weapons/Model/ak104 Weapons/Types/762x39
+5ac66d9b5acfc4001633997a Weapons/Maker/kalashnikov Weapons/Model/ak105 Weapons/Types/545x39
+5ae08f0a5acfc408fb1398a1 Weapons/Maker/izhmash Weapons/Model/mosinsniper Weapons/Types/762x54r
+5bfd297f0db834001a669119 Weapons/Maker/izhmash Weapons/Model/mosininfantry Weapons/Types/762x54r
+5beed0f50db834001c062b12 Weapons/Maker/kalashnikov Weapons/Model/rpk16 Weapons/Types/545x39
+5bf3e03b0db834001d2c4a9c Weapons/Maker/kalashnikov Weapons/Model/ak74 Weapons/Types/545x39
+5bf3e0490db83400196199af Weapons/Maker/kalashnikov Weapons/Model/aks74 Weapons/Types/545x39
+5c46fbd72e2216398b5a8c9c Weapons/Maker/dragunov Weapons/Model/svds Weapons/Types/762x54r
+6410733d5dd49d77bd07847e Weapons/Maker/tokarev Weapons/Model/avt_40 Weapons/Types/762x54r
+643ea5b23db6f9f57107d9fd Weapons/Maker/tokarev Weapons/Model/svt_40 Weapons/Types/762x54r
+5df8ce05b11454561e39243b Weapons/Maker/kac Weapons/Model/sr25 Weapons/Types/762x51
+6499849fc93611967b034949 Weapons/Maker/kalashnikov Weapons/Model/ak12 Weapons/Types/545x39
+64ca3d3954fc657e230529cc Weapons/Maker/kalashnikov Weapons/Model/pkp Weapons/Types/762x54r
+64637076203536ad5600c990 Weapons/Maker/kalashnikov Weapons/Model/pkm Weapons/Types/762x54r
+674fe9a75e51f1c47c04ec23 Weapons/Maker/kalashnikov Weapons/Model/saiga12k Weapons/Types/12g
+576165642459773c7a400233 Weapons/Maker/kalashnikov Weapons/Model/saiga12k Weapons/Types/12g
+5cadfbf7ae92152ac412eeef Weapons/Maker/kbp Weapons/Model/ash12 Weapons/Types/127x55
+633ec7c2a6918cb895019c6c Weapons/Maker/kbp Weapons/Model/rsh_12 Weapons/Types/127x55
+644674a13d52156624001fbc Weapons/Maker/kbp Weapons/Model/9a91 Weapons/Types/9x39
+645e0c6b3b381ede770e1cc9 Weapons/Maker/kbp Weapons/Model/vsk94 Weapons/Types/9x39
+5f2a9575926fd9352339381f Weapons/Maker/keltec Weapons/Model/rfb Weapons/Types/762x51
+5fb64bc92b1b027b1f50bcf2 Weapons/Maker/kriss Weapons/Model/vector45 Weapons/Types/45acp
+5fc3f2d5900b1d5091531e57 Weapons/Maker/kriss Weapons/Model/vector9mm Weapons/Types/9x19
+602a9740da11d6478d5a06dc Weapons/Maker/lebedev Weapons/Model/pl15 Weapons/Types/9x19
+588892092459774ac91d4b11 Weapons/Maker/lobaev Weapons/Model/dvl10 Weapons/Types/762x51
+5d43021ca4b9362eab4b5e25 Weapons/Maker/lonestar Weapons/Model/tx15 Weapons/Types/556x45
+668fe5a998b5ad715703ddd6 Weapons/Maker/magnumresearch Weapons/Model/deserteagle Weapons/Types/50ae
+669fa39b48fc9f8db6035a0c Weapons/Maker/magnumresearch Weapons/Model/deserteagle Weapons/Types/50ae
+669fa3d876116c89840b1217 Weapons/Maker/magnumresearch Weapons/Model/deserteagle Weapons/Types/50ae
+669fa3f88abd2662d80eee77 Weapons/Maker/magnumresearch Weapons/Model/deserteagle Weapons/Types/50ae
+669fa409933e898cce0c2166 Weapons/Maker/magnumresearch Weapons/Model/deserteagle Weapons/Types/357magnum
+5448bd6b4bdc2dfc2f8b4569 Weapons/Maker/makarov Weapons/Model/pm Weapons/Types/9x18
+579204f224597773d619e051 Weapons/Maker/makarov Weapons/Model/pm_treaded Weapons/Types/9x18
+6275303a9f372d6ea97f9ec7 Weapons/Maker/milkor Weapons/Model/m32a1 Weapons/Types/40x46
+5bffdd7e0db834001b734a1a Weapons/Maker/millerbros Weapons/Model/melee_m2 Weapons/Types/melee
+587e02ff24597743df3deaeb Weapons/Maker/molot Weapons/Model/opsks Weapons/Types/762x39
+59e6152586f77473dc057aa1 Weapons/Maker/molot Weapons/Model/veprkm Weapons/Types/762x39
+59e6687d86f77411d949b251 Weapons/Maker/molot Weapons/Model/vpo209 Weapons/Types/366tkm
+5c07c60e0db834002330051f Weapons/Maker/molot Weapons/Model/adar215 Weapons/Types/556x45
+5c501a4d2e221602b412b540 Weapons/Maker/molot Weapons/Model/veprhunter Weapons/Types/762x51
+5de652c31b7e3716273428be Weapons/Maker/molot Weapons/Model/vpo215 Weapons/Types/366tkm
+5e870397991fd70db46995c8 Weapons/Maker/mossberg Weapons/Model/590a1 Weapons/Types/12g
+66ffa9b66e19cc902401c5e8 Weapons/Maker/mps Weapons/Model/aa12gen1 Weapons/Types/12g
+67124dcfa3541f2a1f0e788b Weapons/Maker/mps Weapons/Model/aa12gen2 Weapons/Types/12g
+57d14d2524597714373db789 NULL Weapons/Model/pp91kedr Weapons/Types/9x18
+57f3c6bd24597738e730fa2f NULL Weapons/Model/pp91kedrb Weapons/Types/9x18
+57f4c844245977379d5c14d1 NULL Weapons/Model/pp9klin Weapons/Types/9x18
+5c0126f40db834002a125382 NULL Weapons/Model/redrebel Weapons/Types/melee
+5cdeb229d7f00c000e7ce174 NULL Weapons/Model/nsv Weapons/Types/127x108
+66d9f1abb16d9aacf5068468 NULL Weapons/Model/rsp30yellow NULL
+5df24cf80dee1b22f862e9bc Weapons/Maker/orsis Weapons/Model/t5000 Weapons/Types/762x51
+5a367e5dc4a282000e49738f Weapons/Maker/remington Weapons/Model/rsass Weapons/Types/762x51
+5a7828548dc32e5a9c28b516 Weapons/Maker/remington Weapons/Model/m870 Weapons/Types/12g
+5bfea6e90db834001b7347f3 Weapons/Maker/remington Weapons/Model/m700 Weapons/Types/762x51
+628a60ae6b1d481ff772e9c8 Weapons/Maker/rifledynamics Weapons/Model/rd704 Weapons/Types/762x39
+628b5638ad252a16da6dd245 Weapons/Maker/sag Weapons/Model/ak545 Weapons/Types/545x39
+628b9c37a733087d0d7fe84b Weapons/Maker/sag Weapons/Model/ak545_short Weapons/Types/545x39
+673cab3e03c6a20581028bc1 Weapons/Maker/sako Weapons/Model/trgm10 Weapons/Types/338lapua
+674d90b55704568fe60bc8f5 Weapons/Maker/semin Weapons/Model/pushdagger Weapons/Types/melee
+56d59856d2720bd8418b456a Weapons/Maker/sig Weapons/Model/p226r Weapons/Types/9x19
+58948c8e86f77409493f7266 Weapons/Maker/sig Weapons/Model/mpx Weapons/Types/9x19
+5fbcc1d9016cce60e8341ab3 Weapons/Maker/sig Weapons/Model/mcx Weapons/Types/300blackout
+65290f395ae2ae97b80fdf2d Weapons/Maker/sig Weapons/Model/mcx_spear Weapons/Types/68x51
+574d967124597745970e7c94 Weapons/Maker/simonov Weapons/Model/sks Weapons/Types/762x39
+63920105a83e15700a00f168 Weapons/Maker/sog Weapons/Model/voodoohawk Weapons/Types/melee
+60339954d62c9b14ed777c06 Weapons/Maker/soyuz Weapons/Model/stm9 Weapons/Types/9x19
+5aafa857e5b5b00018480968 Weapons/Maker/springfield Weapons/Model/m1a Weapons/Types/762x51
+5a17f98cfcdbcb0980087290 Weapons/Maker/stechkin Weapons/Model/aps Weapons/Types/9x18
+5abccb7dd8ce87001773e277 Weapons/Maker/stechkin Weapons/Model/apb Weapons/Types/9x18
+62e7c4fba689e8c9c50dfc38 Weapons/Maker/steyr Weapons/Model/aug_a1 Weapons/Types/556x45
+63171672192e68c5460cebc5 Weapons/Maker/steyr Weapons/Model/aug_a3 Weapons/Types/556x45
+6718817435e3cfd9550d2c27 Weapons/Maker/steyr Weapons/Model/aug_a3 Weapons/Types/556x45
+5fc22d7c187fea44d52eda44 Weapons/Maker/sword Weapons/Model/mk18 Weapons/Types/338lapua
+56e0598dd2720bb5668b45a6 Weapons/Maker/tochmash Weapons/Model/pb Weapons/Types/9x18
+57838ad32459774a17445cd2 Weapons/Maker/tochmash Weapons/Model/vss Weapons/Types/9x39
+57c44b372459772d2b39b8ce Weapons/Maker/tochmash Weapons/Model/asval Weapons/Types/9x39
+59f98b4986f7746f546d2cef Weapons/Maker/tochmash Weapons/Model/sr1mp Weapons/Types/9x21
+62e14904c2699c0ec93adc47 Weapons/Maker/tochmash Weapons/Model/sr2m Weapons/Types/9x21
+651450ce0e00edc794068371 Weapons/Maker/tochmash Weapons/Model/sr3m Weapons/Types/9x39
+571a12c42459771f627b58a0 Weapons/Maker/tokarev Weapons/Model/tt Weapons/Types/762x25
+5b3b713c5acfc4330140bd8d Weapons/Maker/tokarev Weapons/Model/ttgold Weapons/Types/762x25
+5ea03f7400685063ec28bfa8 Weapons/Maker/tokarev Weapons/Model/ppsh41 Weapons/Types/762x25
+5a38e6bac4a2826c6e06d79b Weapons/Maker/toz Weapons/Model/106 Weapons/Types/20g
+5e848cc2988a8701445df1e8 Weapons/Maker/toz Weapons/Model/ks23m Weapons/Types/23x75
+65ca457b4aafb5d7fc0dcb5d Weapons/Maker/unitedcutlery Weapons/Model/m48kukri Weapons/Types/melee
+65fb023261d5829b2d090755 Weapons/Maker/usord Weapons/Model/m60e4 Weapons/Types/762x51
+661ceb1b9311543c7104149b Weapons/Maker/usord Weapons/Model/m60e6 Weapons/Types/762x51
+661cec09b2c6356b4d0c7a36 Weapons/Maker/usord Weapons/Model/m60e6 Weapons/Types/762x51
+66015072e9f84d5680039678 Weapons/Maker/ussr Weapons/Model/toygun Weapons/Types/20x1
+676176d362e0497044079f4c Weapons/Maker/xproducts Weapons/Model/x17 Weapons/Types/762x51
+576a581d2459771e7b1bc4f1 Weapons/Maker/yarygin Weapons/Model/mp443 Weapons/Types/9x19
+5d52cc5ba4b9367408500062 Weapons/Maker/zid Weapons/Model/ags30 Weapons/Types/30x29
+620109578d82e67e7911abf2 Weapons/Maker/zid Weapons/Model/sp81 Weapons/Types/26x75
+657857faeff4c850222dff1b Weapons/Maker/zid Weapons/Model/pktm Weapons/Types/762x54r
+5710c24ad2720bc3458b45a3 NULL Weapons/Model/f1 Weapons/Types/frag
+58d3db5386f77426186285a0 NULL Weapons/Model/rgd5 Weapons/Types/frag
+58d3db5386f77426186285a0 NULL Weapons/Model/m67 Weapons/Types/frag
+5a0c27731526d80618476ac4 NULL Weapons/Model/zarya Weapons/Types/stun
+5a2a57cfc4a2826c6e06d44a NULL Weapons/Model/rgd2 Weapons/Types/smoke
+5e32f56fcb6d5863cc5e5ee4 NULL Weapons/Model/vog17 Weapons/Types/frag
+5e340dcdcb6d5863cc5e5efb NULL Weapons/Model/vog25 Weapons/Types/frag
+617aa4dd8166f034d57de9c5 NULL Weapons/Model/m18 Weapons/Types/smoke
+617fd91e5539a84ec44ce155 NULL Weapons/Model/rgn Weapons/Types/impact
+618a431df1eb8e24b8741deb NULL Weapons/Model/rgo Weapons/Types/impact
+619256e5f8af2c1a4e1f5d92 NULL Weapons/Model/m7290 Weapons/Types/flash
+66dae7cbeb28f0f96809f325 NULL Weapons/Model/v40 Weapons/Types/frag
+624c0b3340357b5f566e8766 NULL Weapons/Model/rsp30yellow Weapons/Types/flare
+66d9f1abb16d9aacf5068468 NULL Weapons/Model/rsp30yellow Weapons/Types/flare
+6217726288ed9f0845317459 NULL Weapons/Model/rsp30green Weapons/Types/flare
+62178c4d4ecf221597654e3d NULL Weapons/Model/rsp30red Weapons/Types/flare
+66d98233302686954b0c6f81 NULL Weapons/Model/rsp30blue Weapons/Types/flare
+62178be9d0050232da3485d9 NULL Weapons/Model/rsp30white Weapons/Types/flare
+
+// Tell parser we're doing 'Types' now
+$Types
+
+// This section identifies ammo types
+// Fixed length of 3 audioclips when parsed so the user can selectively disable caliber or extendedName
+// These MUST follow this format: itemId caliber name extendedName
+5cadf6ddae9215051e1c23b2 Weapons/Types/127x55 Weapons/Types/ps12 NULL
+5cadf6e5ae921500113bb973 Weapons/Types/127x55 Weapons/Types/ps12a NULL
+5cadf6eeae921500134b2799 Weapons/Types/127x55 Weapons/Types/ps12b NULL
+560d5e524bdc2d25448b4571 Weapons/Types/12ga Weapons/Types/buckshot7mm NULL
+5d6e6772a4b936088465b17c Weapons/Types/12ga Weapons/Types/buckshot525mm NULL
+5d6e67fba4b9361bc73bc779 Weapons/Types/12ga Weapons/Types/buckshot65mm NULL
+5d6e6806a4b936088465b17e Weapons/Types/12ga Weapons/Types/buckshotmagnum NULL
+5d6e6869a4b9361c140bcfde Weapons/Types/12ga Weapons/Types/grizzly40slug NULL
+5d6e6891a4b9361bd473feea Weapons/Types/12ga Weapons/Types/slug_poleva3 NULL
+5d6e689ca4b9361bc8618956 Weapons/Types/12ga Weapons/Types/poleva6u NULL
+5d6e68a8a4b9360b6c0d54e2 Weapons/Types/12ga Weapons/Types/ap20 NULL
+5d6e68b3a4b9361bca7e50b5 Weapons/Types/12ga Weapons/Types/copperslug NULL
+5d6e68c4a4b9361b93413f79 Weapons/Types/12ga Weapons/Types/50bmgslug NULL
+5d6e68d1a4b93622fe60e845 Weapons/Types/12ga Weapons/Types/superformancehp NULL
+5d6e68dea4b9361bcc29e659 Weapons/Types/12ga Weapons/Types/dualsabotslug NULL
+5d6e68e6a4b9361c140bcfe0 Weapons/Types/12ga Weapons/Types/ftxslug NULL
+5d6e6911a4b9361bd5780d52 Weapons/Types/12ga Weapons/Types/flechette NULL
+64b8ee384b75259c590fa89b Weapons/Types/12ga Weapons/Types/piranha NULL
+58820d1224597753c90aeb13 Weapons/Types/12ga Weapons/Types/slug NULL
+5c0d591486f7744c505b416f Weapons/Types/12ga Weapons/Types/rip NULL
+5a38ebd9c4a282000d722a5b Weapons/Types/20ga Weapons/Types/buckshot75mm NULL
+5d6e695fa4b936359b35d852 Weapons/Types/20ga Weapons/Types/buckshot56mm NULL
+5d6e69b9a4b9361bc8618958 Weapons/Types/20ga Weapons/Types/buckshot62mm NULL
+5d6e69c7a4b9360b6c0d54e4 Weapons/Types/20ga Weapons/Types/buckshot73mm NULL
+5d6e6a05a4b93618084f58d0 Weapons/Types/20ga Weapons/Types/starslug NULL
+5d6e6a42a4b9364f07165f52 Weapons/Types/20ga Weapons/Types/poleva6u NULL
+5d6e6a53a4b9361bd473feec Weapons/Types/20ga Weapons/Types/poleva3 NULL
+5d6e6a5fa4b93614ec501745 Weapons/Types/20ga Weapons/Types/devastatorslug NULL
+660137d8481cc6907a0c5cda Weapons/Types/20ga Weapons/Types/tssap NULL
+660137ef76c1b56143052be8 Weapons/Types/20ga Weapons/Types/dgs NULL
+6601380580e77cfd080e3418 Weapons/Types/20ga Weapons/Types/flechette NULL
+5fbe3ffdf8b6a877a729ea82 Weapons/Types/300blackout Weapons/Types/bcpfmj NULL
+5fd20ff893a8961fc660a954 Weapons/Types/300blackout Weapons/Types/ap NULL
+6196364158ef8c428c287d9f Weapons/Types/300blackout Weapons/Types/vmax NULL
+619636be6db0f2477964e710 Weapons/Types/300blackout Weapons/Types/m62 tracer
+64b8725c4b75259c590fa899 Weapons/Types/300blackout Weapons/Types/cbj NULL
+6196365d58ef8c428c287da1 Weapons/Types/300whisper Weapons/Types/NULL Weapons/Types/subsonic
+5fc275cf85fd526b824a571a Weapons/Types/338lapua Weapons/Types/fmj NULL
+5fc382a9d724d907e2077dab Weapons/Types/338lapua Weapons/Types/ap NULL
+5fc382b6d6fa9c00c571bbc3 Weapons/Types/338lapua Weapons/Types/tacx NULL
+5fc382c1016cce60e8341b20 Weapons/Types/338lapua Weapons/Types/ucw NULL
+62330b3ed4dc74626d570b95 Weapons/Types/357magnum Weapons/Types/fmj NULL
+62330bfadc5883093563729b Weapons/Types/357magnum Weapons/Types/hp NULL
+62330c18744e5e31df12f516 Weapons/Types/357magnum Weapons/Types/jhp NULL
+62330c40bdd19b369e1e53d1 Weapons/Types/357magnum Weapons/Types/sp NULL
+59e6542b86f77411dc52a77a Weapons/Types/366tkm Weapons/Types/fmj NULL
+59e655cb86f77411dc52a77b Weapons/Types/366tkm Weapons/Types/eko NULL
+59e6658b86f77411d949b250 Weapons/Types/366tkm Weapons/Types/geksa NULL
+5f0596629e22f464da6bbdd9 Weapons/Types/366tkm Weapons/Types/apm NULL
+5ede4739e0350d05467f73e8 Weapons/Types/40mm Weapons/Types/m406 NULL
+5ede47405b097655935d7d16 Weapons/Types/40mm Weapons/Types/m441 NULL
+5ede474b0c226a66f5402622 Weapons/Types/40mm Weapons/Types/m381 NULL
+5ede475339ee016e8c534742 Weapons/Types/40mm Weapons/Types/m576 NULL
+5ede475b549eed7c6d5c18fb Weapons/Types/40mm Weapons/Types/m386 NULL
+5ede47641cf3836a88318df1 Weapons/Types/40mm Weapons/Types/m716 NULL
+5f0c892565703e5c461894e9 Weapons/Types/40mm Weapons/Types/m433 NULL
+5e81f423763d9f754677bf2e Weapons/Types/45acp Weapons/Types/matchfmj NULL
+5ea2a8e200685063ec28c05a Weapons/Types/45acp Weapons/Types/rip NULL
+5efb0cabfb3e451d70735af5 Weapons/Types/45acp Weapons/Types/ap NULL
+5efb0d4f4bc50b58e81710f3 Weapons/Types/45acp Weapons/Types/lasermatchfmj Weapons/Types/tracer
+5efb0fc6aeb21837e749c801 Weapons/Types/45acp Weapons/Types/hydrashok NULL
+5ba2678ad4351e44f824b344 Weapons/Types/46x30 Weapons/Types/fmjsx NULL
+5ba26812d4351e003201fef1 Weapons/Types/46x30 Weapons/Types/actionsx NULL
+5ba26835d4351e0035628ff5 Weapons/Types/46x30 Weapons/Types/apsx NULL
+5ba26844d4351e00334c9475 Weapons/Types/46x30 Weapons/Types/subsonicsx NULL
+64b6979341772715af0f9c39 Weapons/Types/46x30 Weapons/Types/jsp NULL
+5e85a9a6eacf8c039e4e2ac1 Weapons/Types/4ga Weapons/Types/shrap10 NULL
+5e85a9f4add9fe03027d9bf1 Weapons/Types/4ga Weapons/Types/zvezda NULL
+5e85aa1a988a8701445df1f5 Weapons/Types/4ga Weapons/Types/barrikada NULL
+5f647f31b6238e5dd066e196 Weapons/Types/4ga Weapons/Types/shrap25 NULL
+668fe62ac62660a5d8071446 Weapons/Types/50ae Weapons/Types/fmj NULL
+66a0d1c87d0d369e270bb9de Weapons/Types/50ae Weapons/Types/jhp NULL
+66a0d1e0ed648d72fe064d06 Weapons/Types/50ae Weapons/Types/coppersolid NULL
+66a0d1f88486c69fce00fdf6 Weapons/Types/50ae Weapons/Types/jsp NULL
+56dfef82d2720bbd668b4567 Weapons/Types/545x39 Weapons/Types/bp NULL
+56dff026d2720bb8668b4567 Weapons/Types/545x39 Weapons/Types/bs NULL
+56dff061d2720bb5668b4567 Weapons/Types/545x39 Weapons/Types/bt Weapons/Types/tracer
+56dff0bed2720bb0668b4567 Weapons/Types/545x39 Weapons/Types/fmj NULL
+56dff216d2720bbd668b4568 Weapons/Types/545x39 Weapons/Types/hp NULL
+56dff2ced2720bb4668b4567 Weapons/Types/545x39 Weapons/Types/pp NULL
+56dff338d2720bbd668b4569 Weapons/Types/545x39 Weapons/Types/prs NULL
+56dff3afd2720bba668b4567 Weapons/Types/545x39 Weapons/Types/ps NULL
+56dff421d2720b5f5a8b4567 Weapons/Types/545x39 Weapons/Types/sp NULL
+56dff4a2d2720bbd668b456a Weapons/Types/545x39 Weapons/Types/t tracer
+56dff4ecd2720b5f5a8b4568 Weapons/Types/545x39 Weapons/Types/us Weapons/Types/subsonic
+5c0d5e4486f77478390952fe Weapons/Types/545x39 Weapons/Types/ppbs NULL
+61962b617c6c7b169525f168 Weapons/Types/545x39 Weapons/Types/7n40 NULL
+54527a984bdc2d4e668b4567 Weapons/Types/556x45 Weapons/Types/m855 NULL
+54527ac44bdc2d36668b4567 Weapons/Types/556x45 Weapons/Types/m855a1 NULL
+59e68f6f86f7746c9f75e846 Weapons/Types/556x45 Weapons/Types/m856 Weapons/Types/tracer
+59e6906286f7746c9f75e847 Weapons/Types/556x45 Weapons/Types/m856a1 Weapons/Types/tracer
+59e690b686f7746c9f75e848 Weapons/Types/556x45 Weapons/Types/m995 NULL
+59e6918f86f7746c9f75e849 Weapons/Types/556x45 Weapons/Types/rrlp NULL
+59e6920f86f77411d82aa167 Weapons/Types/556x45 Weapons/Types/fmj NULL
+59e6927d86f77411da468256 Weapons/Types/556x45 Weapons/Types/hp NULL
+5c0d5ae286f7741e46554302 Weapons/Types/556x45 Weapons/Types/warmageddon NULL
+60194943740c5d77f6705eea Weapons/Types/556x45 Weapons/Types/sost NULL
+601949593ae8f707c4608daa Weapons/Types/556x45 Weapons/Types/ssa-ap NULL
+5cc80f38e4a949001152b560 Weapons/Types/57x28 Weapons/Types/ss190 NULL
+5cc80f53e4a949000e1ea4f8 Weapons/Types/57x28 Weapons/Types/l191 Weapons/Types/tracer
+5cc80f67e4a949035e43bbba Weapons/Types/57x28 Weapons/Types/sb193 NULL
+5cc80f79e4a949033c7343b2 Weapons/Types/57x28 Weapons/Types/ss198lf NULL
+5cc80f8fe4a949033b0224a2 Weapons/Types/57x28 Weapons/Types/ss197sr NULL
+5cc86832d7f00c000d3a6e6c Weapons/Types/57x28 Weapons/Types/r37f NULL
+5cc86840d7f00c002412c56c Weapons/Types/57x28 Weapons/Types/r37x NULL
+6529243824cbe3c74a05e5c1 Weapons/Types/68x51 Weapons/Types/sighybrid NULL
+6529302b8c26af6326029fb7 Weapons/Types/68x51 Weapons/Types/sigfmj NULL
+5735fdcd2459776445391d61 Weapons/Types/762x25 Weapons/Types/akbs NULL
+5735ff5c245977640e39ba7e Weapons/Types/762x25 Weapons/Types/fmj43 NULL
+573601b42459776410737435 Weapons/Types/762x25 Weapons/Types/lrn NULL
+573602322459776445391df1 Weapons/Types/762x25 Weapons/Types/lrnpc NULL
+5736026a245977644601dc61 Weapons/Types/762x25 Weapons/Types/p NULL
+573603562459776000000000 Weapons/Types/762x25 Weapons/Types/pst NULL
+573603c924597764442bd9cb Weapons/Types/762x25 Weapons/Types/t Weapons/Types/tracer
+5656d7c34bdc2d9d198b4587 Weapons/Types/762x39 Weapons/Types/ps NULL
+59e0d99486f7744a32234762 Weapons/Types/762x39 Weapons/Types/bp NULL
+59e4cf5286f7741778269d8a Weapons/Types/762x39 Weapons/Types/t45m Weapons/Types/tracer
+59e4d24686f7741776641ac7 Weapons/Types/762x39 Weapons/Types/us Weapons/Types/subsonic
+59e4d3d286f774176a36250a Weapons/Types/762x39 Weapons/Types/hp NULL
+601aa3d2b2bcb34913271e6d Weapons/Types/762x39 Weapons/Types/maiap NULL
+64b7af434b75259c590fa893 Weapons/Types/762x39 Weapons/Types/pp NULL
+64b7af5a8532cf95ee0a0dbd Weapons/Types/762x39 Weapons/Types/fmj NULL
+64b7af734b75259c590fa895 Weapons/Types/762x39 Weapons/Types/sp NULL
+58dd3ad986f77403051cba8f Weapons/Types/762x51 Weapons/Types/m80 NULL
+5a6086ea4f39f99cd479502f Weapons/Types/762x51 Weapons/Types/m61 NULL
+5a608bf24f39f98ffc77720e Weapons/Types/762x51 Weapons/Types/m62 Weapons/Types/tracer
+5e023e53d4353e3302577c4c Weapons/Types/762x51 Weapons/Types/bcpfmj NULL
+5e023e6e34d52a55c3304f71 Weapons/Types/762x51 Weapons/Types/tcwsp NULL
+5e023e88277cce2b522ff2b1 Weapons/Types/762x51 Weapons/Types/ultranosler NULL
+5efb0c1bd79ff02a1f5e68d9 Weapons/Types/762x51 Weapons/Types/m993 NULL
+6768c25aa7b238f14a08d3f6 Weapons/Types/762x51 Weapons/Types/m80a1 NULL
+59e77a2386f7742ee578960a Weapons/Types/762x54r Weapons/Types/ps NULL
+560d61e84bdc2da74d8b4571 Weapons/Types/762x54r Weapons/Types/snb NULL
+5887431f2459777e1612938f Weapons/Types/762x54r Weapons/Types/lps NULL
+5e023cf8186a883be655e54f Weapons/Types/762x54r Weapons/Types/t46m Weapons/Types/tracer
+5e023d34e8a400319a28ed44 Weapons/Types/762x54r Weapons/Types/bt Weapons/Types/tracer
+5e023d48186a883be655e551 Weapons/Types/762x54r Weapons/Types/bs NULL
+64b8f7968532cf95ee0a0dbf Weapons/Types/762x54r Weapons/Types/fmj NULL
+64b8f7b5389d7ffd620ccba2 Weapons/Types/762x54r Weapons/Types/spbt NULL
+64b8f7c241772715af0f9c3d Weapons/Types/762x54r Weapons/Types/hpbt NULL
+573718ba2459775a75491131 Weapons/Types/9x18 Weapons/Types/bzht NULL
+573719762459775a626ccbc1 Weapons/Types/9x18 Weapons/Types/p NULL
+573719df2459775a626ccbc2 Weapons/Types/9x18 Weapons/Types/pbm NULL
+57371aab2459775a77142f22 Weapons/Types/9x18 Weapons/Types/pmm NULL
+57371b192459775a9f58a5e0 Weapons/Types/9x18 Weapons/Types/ppe NULL
+57371e4124597760ff7b25f1 Weapons/Types/9x18 Weapons/Types/ppt NULL
+57371eb62459776125652ac1 Weapons/Types/9x18 Weapons/Types/prs NULL
+57371f2b24597761224311f1 Weapons/Types/9x18 Weapons/Types/psppo NULL
+57371f8d24597761006c6a81 Weapons/Types/9x18 Weapons/Types/pso NULL
+5737201124597760fc4431f1 Weapons/Types/9x18 Weapons/Types/pst NULL
+5737207f24597760ff7b25f2 Weapons/Types/9x18 Weapons/Types/psv NULL
+573720e02459776143012541 Weapons/Types/9x18 Weapons/Types/rg028 NULL
+57372140245977611f70ee91 Weapons/Types/9x18 Weapons/Types/sp7 NULL
+5737218f245977612125ba51 Weapons/Types/9x18 Weapons/Types/sp8 NULL
+56d59d3ad2720bdb418b4577 Weapons/Types/9x19 Weapons/Types/pst NULL
+58864a4f2459770fcc257101 Weapons/Types/9x19 Weapons/Types/pso NULL
+5a3c16fe86f77452b62de32a Weapons/Types/9x19 Weapons/Types/lugercci NULL
+5c0d56a986f774449d5de529 Weapons/Types/9x19 Weapons/Types/rip NULL
+5c3df7d588a4501f290594e5 Weapons/Types/9x19 Weapons/Types/gt Weapons/Types/tracer
+5c925fa22e221601da359b7b Weapons/Types/9x19 Weapons/Types/ap63 NULL
+5efb0da7a29a85116f6ea05f Weapons/Types/9x19 Weapons/Types/pbp NULL
+5efb0e16aeb21837e749c7ff Weapons/Types/9x19 Weapons/Types/quakemaker NULL
+64b7bbb74b75259c590fa897 Weapons/Types/9x19 Weapons/Types/m882 NULL
+5a269f97c4a282000b151807 Weapons/Types/9x21 Weapons/Types/ps NULL
+5a26abfac4a28232980eabff Weapons/Types/9x21 Weapons/Types/p NULL
+5a26ac06c4a282000c5a90a8 Weapons/Types/9x21 Weapons/Types/pe NULL
+5a26ac0ec4a28200741e1e18 Weapons/Types/9x21 Weapons/Types/bt NULL
+6576f4708ca9c4381d16cd9d Weapons/Types/9x21 Weapons/Types/7n42 NULL
+6576f93989f0062e741ba952 Weapons/Types/9x21 Weapons/Types/7u4 NULL
+57a0dfb82459774d3078b56c Weapons/Types/9x39 Weapons/Types/sp5 NULL
+57a0e5022459774d1673f889 Weapons/Types/9x39 Weapons/Types/sp6 NULL
+5c0d668f86f7747ccb7f13b2 Weapons/Types/9x39 Weapons/Types/spp NULL
+5c0d688c86f77413ae3407b2 Weapons/Types/9x39 Weapons/Types/bp NULL
+61962d879bb3d20b0946d385 Weapons/Types/9x39 Weapons/Types/pab9 NULL
+6576f96220d53a5b8f3e395e Weapons/Types/9x39 Weapons/Types/fmj NULL
+635267f063651329f75a4ee8 NULL Weapons/Types/acidgreenflare NULL
+62389aaba63f32501b1b444f NULL Weapons/Types/greenflare NULL
+62389ba9a63f32501b1b4451 NULL Weapons/Types/redflare NULL
+66d98233302686954b0c6f81 NULL Weapons/Types/rsp30blue NULL
+624c09cfbc2e27219346d955 NULL Weapons/Types/rsp30red NULL
+624c09da2cec124eb67c1046 NULL Weapons/Types/rsp30white NULL
+624c09e49b98e019a3315b66 NULL Weapons/Types/rsp30yellow NULL
+66d9f3047b82b9a9aa055d81 NULL Weapons/Types/rsp30yellow NULL
+62389bc9423ed1685422dc57 NULL Weapons/Types/whiteflare NULL
+62389be94d5d474bf712e709 NULL Weapons/Types/yellowflare NULL 
+
