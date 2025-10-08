@@ -13,12 +13,12 @@ namespace HEVSuitMod
 	public class HEVSentence
 	{
 		public string Identifier { get; }
-		public List<HEVAudioClip> Sentence { get; }
+		public List<HEVAudioClip> Clips { get; }
 
 		public HEVSentence(string identifier, List<HEVAudioClip> sentence)
 		{
 			Identifier = identifier;
-			Sentence = sentence;
+			Clips = sentence;
 		}
 	}
 }

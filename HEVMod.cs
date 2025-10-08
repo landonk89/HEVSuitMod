@@ -1,13 +1,13 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using System;
+using System.IO;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using System.Linq;
 using EFT;
-using EFT.HealthSystem;
 
 namespace HEVSuitMod
 {
@@ -19,7 +19,7 @@ namespace HEVSuitMod
 
 		// File related stuff
 		private AssetBundle assets;
-		private string bundlePath = Assembly.GetExecutingAssembly().Location + "/hevsuit.bundle";
+		private string bundlePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\hevsuit.bundle";
 		private const int weaponMakerIndex = 1;
 		private const int weaponTypeIndex = 3;
 		private const int typeCaliberIndex = 1;
@@ -32,6 +32,7 @@ namespace HEVSuitMod
 		private Coroutine sentencePlayer;
 
 		// Config
+		public ConfigEntry<float> globalVolume;
 		public ConfigEntry<bool> sayMakerOnInspect;
 		public ConfigEntry<bool> sayModelOnInspect;
 		public ConfigEntry<bool> sayTypeOnInspect;
@@ -53,9 +54,29 @@ namespace HEVSuitMod
 			}
 
 			Instance = this;
+
+			audioSource = gameObject.AddComponent<AudioSource>();
+
+			Logger.LogWarning($"Bundle: {bundlePath}");
 			assets = AssetBundle.LoadFromFile(bundlePath);
+			if (assets == null)
+			{
+				Logger.LogError("Couldn't load assetbundle!!!");
+			}
+
+			foreach (var file in assets.GetAllAssetNames())
+			{
+				Logger.LogInfo(file);
+			}
 
 			// Config stuff
+			globalVolume = Config.Bind(
+					"Voicelines",
+					"Volume",
+					1.0f,
+					new ConfigDescription("Volume", new AcceptableValueRange<float>(0f, 1f))
+				);
+
 			sayMakerOnInspect = Config.Bind(
 					"Voicelines",
 					"Say weapon maker when inspecting (ex: Colt)",
@@ -98,6 +119,13 @@ namespace HEVSuitMod
 					"When inspecting a weapon's chamber, the HEV will say its extended name last (ex: Tracer)"
 				);
 
+			defaultDelay = Config.Bind(
+					"HEV",
+					"Default clip delay",
+					0.1f,
+					""
+				);
+
 			applySettings = Config.Bind(
 				"Voicelines",
 				"Apply and reload voice settings",
@@ -121,7 +149,51 @@ namespace HEVSuitMod
 
 		private void Update()
 		{
-			// TODO
+			if (Input.GetKeyDown(KeyCode.F9))
+				DebugPlayRandomSentence();
+
+			if (pendingSentences.Count > 0 && sentencePlayer == null)
+				sentencePlayer = StartCoroutine(PlaySentences());				
+		}
+
+		private void DebugPlayRandomSentence()
+		{
+			HEVSentence sentence = allSentences.PickRandom();
+			Logger.LogInfo($"Playing Sentence: {sentence.Identifier}");
+			pendingSentences.Add(sentence);
+		}
+
+		private IEnumerator PlaySentences()
+		{
+			while (pendingSentences.Count > 0)
+			{
+				var sentence = pendingSentences[0];
+
+				foreach (var clip in sentence.Clips)
+				{
+					audioSource.clip = assets.LoadAsset<AudioClip>(clip.ClipName);
+					audioSource.pitch = clip.Pitch;
+					audioSource.volume = clip.Volume;
+
+					// Handle missing files
+					if (audioSource.clip == null)
+					{
+						Logger.LogError($"Missing clip: {clip.ClipName}");
+						continue;
+					}
+
+					for (int i = 0; i < clip.Loops; i++)
+					{
+						yield return new WaitForSeconds(clip.Delay);
+						audioSource.Play();
+						yield return new WaitForSeconds(audioSource.clip.length);
+					}
+				}
+
+				pendingSentences.RemoveAt(0);
+			}
+
+			sentencePlayer = null;
 		}
 
 		/// <summary>
@@ -169,10 +241,25 @@ namespace HEVSuitMod
 		}
 
 		/// <summary>
-		/// Play a sentence that describes the detected health event where the type is <paramref name="effect.Type.Name"/>
+		/// Play a sentence that describes the removed effect where the type is <paramref name="effect.Type.Name"/>
 		/// </summary>
 		/// <param name="effect"></param>
-		private void HealthEffectEvent(IEffect effect)
+		private void HealthEffectRemoved(IEffect effect)
+		{
+			switch (effect.Type.Name)
+			{
+				// TODO
+				default:
+					Logger.LogWarning($"HealthEffectRemoved: Unhandled IEffect {effect.Type.Name}");
+					break;
+			}
+		}
+
+		/// <summary>
+		/// Play a sentence that describes the started effect where the type is <paramref name="effect.Type.Name"/>
+		/// </summary>
+		/// <param name="effect"></param>
+		private void HealthEffectAdded(IEffect effect)
 		{
 			switch (effect.Type.Name)
 			{
@@ -200,13 +287,18 @@ namespace HEVSuitMod
 				case "LightBleeding":
 					pendingSentences.Add(GetSentenceRandom("LightBleeding"));
 					break;
+
+				default:
+					Logger.LogWarning($"HealthEffectStarted: Unhandled IEffect {effect.Type.Name}");
+					break;
 			}
 		}
 
 		private void SubscribeEvents()
 		{
 			// Detect fractures, bleeds, etc
-			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent += HealthEffectEvent;
+			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent += HealthEffectAdded;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
 			
 			// Detect low health
 			// Discard the params for this one, we don't need them. We just want to know that health has changed
@@ -215,14 +307,19 @@ namespace HEVSuitMod
 
 		private void UnsubscribeEvents()
 		{
-			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent -= HealthEffectEvent;
+			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent -= HealthEffectAdded;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
 		}
 
 		private void ParseAllSentences()
 		{
 			// Parse event sentences
-			TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>("scripts/sentences");
+			TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>("assets/scripts/sentences.txt");
+			if (hevSentencesFile == null)
+			{
+				Logger.LogError("Failed to load sentences!!");
+			}
 			SentenceType sentenceType = SentenceType.None;
 			string[] hevSentences = hevSentencesFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 			foreach (string hevSentence in hevSentences)
@@ -257,6 +354,8 @@ namespace HEVSuitMod
 		// --------------------------------------------------------------
 		private HEVSentence ParseSentence(string sentence, SentenceType sentenceType)
 		{
+			Logger.LogInfo($"Parsing sentence of type {sentenceType}: {sentence}");
+
 			List<HEVAudioClip> clips = new();
 			string[] tokens = sentence.Split(' ');
 
@@ -282,7 +381,8 @@ namespace HEVSuitMod
 				string clip;
 				int loops = 1;
 				float pitch = 1f;
-				float volume = 1f;
+				float volume = globalVolume.Value;
+				//float delay = 0f;
 				float delay = i == 1 ? 0f : Instance.defaultDelay.Value; // No delay for the first clip
 
 				// For each token there may be parameters formatted like [param:value,param2:value]
@@ -297,38 +397,34 @@ namespace HEVSuitMod
 						{
 							case "loops":
 								if (int.TryParse(paramValuePair[1], out int loopsValue))
-								{
 									loops = loopsValue;
-								}
+
 								break;
 
 							case "pitch":
 								if (float.TryParse(paramValuePair[1], out float pitchValue))
-								{
 									pitch = pitchValue;
-								}
+
 								break;
 
 							case "volume":
 								if (float.TryParse(paramValuePair[1], out float volumeValue))
-								{
-									volume = volumeValue;
-								}
+									volume *= volumeValue; // TODO: Test me!!
+
 								break;
 
 							case "delay":
 								if (float.TryParse(paramValuePair[1], out float delayValue))
-								{
 									delay = delayValue;
-								}
+
 								break;
 						}
 					}
-					clip = tokens[i].Substring(tokens[i].IndexOf(']') + 1);
+					clip = "assets/sounds/" + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
 				}
 				else // Token is just filename, no params
 				{
-					clip = tokens[i];
+					clip = "assets/sounds/" + tokens[i].ToLower() + ".wav";
 				}
 
 				clips.Add(new HEVAudioClip(clip, loops, pitch, volume, delay));
