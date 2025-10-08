@@ -1,20 +1,35 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using System.Linq;
+using EFT;
+using EFT.HealthSystem;
 
 namespace HEVSuitMod
 {
 	[BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
 	public class HEVMod : BaseUnityPlugin
 	{
+		// Singleton
 		public static HEVMod Instance { get; private set; }
 
+		// File related stuff
 		private AssetBundle assets;
 		private string bundlePath = Assembly.GetExecutingAssembly().Location + "/hevsuit.bundle";
-		public List<HEVSentence> sentences = new();
+		private const int weaponMakerIndex = 1;
+		private const int weaponTypeIndex = 3;
+		private const int typeCaliberIndex = 1;
+		private const int typeExtendedNameIndex = 3;
+
+		// Sound stuff
+		private AudioSource audioSource;
+		private List<HEVSentence> allSentences = new();
+		private List<HEVSentence> pendingSentences = new();
+		private Coroutine sentencePlayer;
 
 		// Config
 		public ConfigEntry<bool> sayMakerOnInspect;
@@ -24,47 +39,63 @@ namespace HEVSuitMod
 		public ConfigEntry<bool> sayNameOnChamberCheck;
 		public ConfigEntry<bool> sayExtendedOnChamberCheck;
 		public ConfigEntry<float> defaultDelay;
-		private ConfigEntry<bool> applySettings;
+		public ConfigEntry<bool> applySettings;
 
 		private void Awake()
 		{
 			// Plugin startup logic
 			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
-			if (Instance == null)
+			if (Instance != null)
 			{
-				Instance = this;
+				Logger.LogError($"Attempted to create duplicate instance of {PluginInfo.PLUGIN_GUID}!!");
+				return;
 			}
 
+			Instance = this;
 			assets = AssetBundle.LoadFromFile(bundlePath);
 
 			// Config stuff
 			sayMakerOnInspect = Config.Bind(
 					"Voicelines",
-					"Say weapon maker",
+					"Say weapon maker when inspecting (ex: Colt)",
 					true,
-					"When inspecting a weapon, the HEV will say the maker name first (ex: Colt)"
+					"When inspecting a weapon, the HEV will say the maker name first"
 				);
 
 			sayModelOnInspect = Config.Bind(
 					"Voicelines",
-					"Say weapon model",
+					"Say weapon model when inspecting (ex: M4A1)",
 					true,
-					"When inspecting a weapon, the HEV will say the model name (ex: M4A1)"
+					"When inspecting a weapon, the HEV will say the model name"
 				);
 
 			sayTypeOnInspect = Config.Bind(
 					"Voicelines",
-					"Say weapon caliber",
+					"Say weapon caliber when inspecting (ex: 5.56x45)",
 					false,
-					"When inspecting a weapon, the HEV will say its caliber/type after the name (ex: 5.56x45)"
+					"When inspecting a weapon, the HEV will say its caliber/type after the name"
 				);
 
 			sayTypeOnChamberCheck = Config.Bind(
 					"Voicelines",
-					"Say weapon caliber",
+					"Say ammo caliber when checking chamber (Ex: 5.56x45)",
 					false,
-					"When inspecting a weapon, the HEV will say its caliber/type after the name (ex: 5.56x45)"
+					"When inspecting a weapon's chamber, the HEV will say its caliber/type first"
+				);
+
+			sayNameOnChamberCheck = Config.Bind(
+					"Voicelines",
+					"Say ammo name when checking chamber (Ex: M855)",
+					false,
+					"When inspecting a weapon's chamber, the HEV will say its name"
+				);
+
+			sayExtendedOnChamberCheck = Config.Bind(
+					"Voicelines",
+					"Say ammo exdended name when checking chamber (Ex: Subsonic, Tracer)",
+					false,
+					"When inspecting a weapon's chamber, the HEV will say its extended name last (ex: Tracer)"
 				);
 
 			applySettings = Config.Bind(
@@ -75,16 +106,117 @@ namespace HEVSuitMod
 			);
 
 			// Reload sentences when we need to
+			// TODO: See if this really has any performance hit or stutter, just do it on every setting change if not
 			applySettings.SettingChanged += (sender, args) =>
 			{
 				if (applySettings.Value)
 				{
-					sentences.Clear();
+					allSentences.Clear();
 					ParseAllSentences();
 				}
 			};
 
 			ParseAllSentences();
+		}
+
+		private void Update()
+		{
+			// TODO
+		}
+
+		/// <summary>
+		/// Pick a random sentence from the list that has the identifier '<paramref name="identifier"/>'
+		/// </summary>
+		/// <param name="identifier"></param>
+		/// <returns></returns>
+		private HEVSentence GetSentenceRandom(string identifier)
+		{
+			return allSentences.Where(x => x.Identifier == identifier).PickRandom();
+		}
+
+		/// <summary>
+		/// Event triggered by player's HP falling below a threshold value
+		/// </summary>
+		private void LowHealthEvent()
+		{
+			// Determine current total HP, if below threshold say something dramatic
+			// FIXME: Is there no built in way to get total hp?? This seems stupid but I can't find one
+			float health = 0;
+			foreach (EBodyPart part in Enum.GetValues(typeof(EBodyPart)))
+				health += GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(part).Current;
+
+			// TODO: replace this magic number with a ConfigEntry<float> name like lowHealth
+			if (health < 250f)
+			{
+				// Say our health is low, suggest healing
+				pendingSentences.Add(GetSentenceRandom("LowHealth"));
+			}
+			else if (health < 100f)
+			{
+				// Say death is imminent, seek medical attention
+				pendingSentences.Add(GetSentenceRandom("NearDeath"));
+			}
+		}
+
+		/// <summary>
+		/// Event triggered by a body part being 'blacked'
+		/// </summary>
+		/// <param name="bodyPart"></param>
+		/// <param name="damageType"></param>
+		private void BodyPartDestroyedEvent(EBodyPart bodyPart, EDamageType damageType)
+		{
+			// TODO: Investigate ActiveHealthController.BodyPartDestroyedEvent further, HEV should say something like "Major injury, seek medical attention"
+		}
+
+		/// <summary>
+		/// Play a sentence that describes the detected health event where the type is <paramref name="effect.Type.Name"/>
+		/// </summary>
+		/// <param name="effect"></param>
+		private void HealthEffectEvent(IEffect effect)
+		{
+			switch (effect.Type.Name)
+			{
+				case "Fracture":
+					switch (effect.BodyPart)
+					{
+						case EBodyPart.LeftLeg:
+						case EBodyPart.RightLeg:
+							// "Major Fracture" because we can't run
+							pendingSentences.Add(GetSentenceRandom("MajorFracture"));
+							break;
+
+						case EBodyPart.LeftArm:
+						case EBodyPart.RightArm:
+							// "Minor Fracture" because a broken arm is no big deal
+							pendingSentences.Add(GetSentenceRandom("MinorFracture"));
+							break;
+					}
+					break;
+
+				case "HeavyBleeding":
+					pendingSentences.Add(GetSentenceRandom("HeavyBleeding"));
+					break;
+
+				case "LightBleeding":
+					pendingSentences.Add(GetSentenceRandom("LightBleeding"));
+					break;
+			}
+		}
+
+		private void SubscribeEvents()
+		{
+			// Detect fractures, bleeds, etc
+			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent += HealthEffectEvent;
+			
+			// Detect low health
+			// Discard the params for this one, we don't need them. We just want to know that health has changed
+			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
+		}
+
+		private void UnsubscribeEvents()
+		{
+			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent -= HealthEffectEvent;
+			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
 		}
 
 		private void ParseAllSentences()
@@ -107,16 +239,21 @@ namespace HEVSuitMod
 					continue;
 				}
 
-				sentences.Add(ParseSentence(hevSentence, sentenceType));
+				allSentences.Add(ParseSentence(hevSentence, sentenceType));
 			}
 		}
 
 		// --------------------------------------------------------------
-		// EventSentence:
-		// The first word is the event name like 'Death'
+		// Sentence:
+		// The first word is the event name or itemId like 'Death' or '5926bb2186f7744b1c6c6e60'
 		// Then each sound filename is placed in line with tags before it enclosed in sqaure brackets [ ], each tag inside is separated by commas ','.
 		// Multiple tags per file are supported, so something like '[delay:0.5,loop:2,pitch:1.2,volume:0.8]filename' will work
 		// Example sentence: Death [loop:2]fx/beep [delay:0.1,loop:2]fx/beep [delay:0.1]fx/beep [delay:0.1]fx/beep [delay:0.1,pitch:1.2,volume:0.5]fx/flatline
+		// 
+		// This parser has a few modes set by a '$mode' in the parsed file:
+		// $Events: These are normal, any length because there are no settings for them.
+		// $Weapons: These are a fixed length of 3 audio clips so we can selectively disable maker or caliber voicelines.
+		// $Types: These are also a fixed length of 3 so we can selectively disable caliber or extendedName voicelines.
 		// --------------------------------------------------------------
 		private HEVSentence ParseSentence(string sentence, SentenceType sentenceType)
 		{
@@ -129,27 +266,26 @@ namespace HEVSuitMod
 				if (tokens[i].Equals("NULL")) // Skip NULLs for those fixed length sentences
 					continue;
 
-				// Check if it's a weapon or type sentence, we need to selectively skip some parts
-				// I know magic numbers equals BAD >:( but I don't care get over it
-				if (sentenceType == SentenceType.Weapons && i == 1 && !sayMakerOnInspect.Value)
+				// Check if it's a weapon or type sentence, we may need to skip some parts
+				if (sentenceType == SentenceType.Weapons && i == weaponMakerIndex && !sayMakerOnInspect.Value)
 					continue;
 
-				if (sentenceType == SentenceType.Weapons && i == 3 && !sayTypeOnInspect.Value)
+				if (sentenceType == SentenceType.Weapons && i == weaponTypeIndex && !sayTypeOnInspect.Value)
 					continue;
 
-				if (sentenceType == SentenceType.Types && i == 1 && !sayTypeOnChamberCheck.Value)
+				if (sentenceType == SentenceType.Types && i == typeCaliberIndex && !sayTypeOnChamberCheck.Value)
 					continue;
 
-				if (sentenceType == SentenceType.Types && i == 3 && !sayExtendedOnChamberCheck.Value)
+				if (sentenceType == SentenceType.Types && i == typeExtendedNameIndex && !sayExtendedOnChamberCheck.Value)
 					continue;
 
 				string clip;
 				int loops = 1;
 				float pitch = 1f;
 				float volume = 1f;
-				float delay = i == 1 ? 0f : Instance.defaultDelay.Value;
+				float delay = i == 1 ? 0f : Instance.defaultDelay.Value; // No delay for the first clip
 
-				// For each token there may be parameters
+				// For each token there may be parameters formatted like [param:value,param2:value]
 				if (tokens[i].StartsWith("["))
 				{
 					string[] parameters = tokens[i].Substring(1, tokens[i].IndexOf(']') - 1).Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
@@ -199,6 +335,16 @@ namespace HEVSuitMod
 			}
 
 			return new HEVSentence(tokens[0], clips);
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sentence"></param>
+		/// <returns></returns>
+		private IEnumerator PlaySentence(HEVSentence sentence)
+		{
+			yield return null;
 		}
 	}
 }

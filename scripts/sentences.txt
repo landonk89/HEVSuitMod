@@ -25,8 +25,12 @@ FirstRaid general/bell [delay:0.25]general/welcome
 OutOfAmmo fx/warning General/AmmunitionDepleted
 
 // Health related
-HeavyBleed [loops:3]fx/boop health/MajorBloodLoss general/Detected
-LightBleed [loops:3]fx/boop health/MinorBloodLoss general/Detected
+HeavyBleeding fx/boop fx/boop fx/boop health/MajorBloodLoss general/Detected
+LightBleeding fx/boop fx/boop fx/boop health/MinorBloodLoss general/Detected
+// TODO: Test fx/beep with loops:3,delay:0.1 vs just repeating it 3 times
+MajorFracture [pitch:1.2,loops:3,delay:0.1]fx/beep Health/MajorFracture General/Detected
+MinorFracture [loops:3,delay:0.1]fx/boop Health/MinorFracture General/Detected
+NearDeath [pitch:1.2,loops:3,delay:0.1] fx/beep General/Warning Health/UserDeathImminent Health/SeekMedicalAttention
 Death [loops:2]fx/beep [loops:2]fx/beep fx/beep fx/beep fx/flatline
 Death [loops:2]fx/beep [loops:2]fx/beep fx/beep fx/flatline
 
@@ -34,11 +38,11 @@ Death [loops:2]fx/beep [loops:2]fx/beep fx/beep fx/flatline
 MortarStrike fx/warning general/danger raidevents/ArtilleryBarrageImminent
 
 // Tell parser we're doing 'Weapons' now
-$Weapons
-
 // This section identifies every weapon with a maker/model/caliber voiceline
 // Fixed length of 3 audioclips when parsed so the user can selectively disable maker or type
 // These MUST follow this format: itemId makerName modelName caliber
+$Weapons
+
 627e14b21713922ded6f2c15 Weapons/Maker/accuracyinernational Weapons/Model/axmc Weapons/Types/338lapua
 674d6121c09f69dfb201a888 Weapons/Maker/aklysdefense Weapons/Model/velociraptor Weapons/Types/300blackout
 54491c4f4bdc2db1078b4568 Weapons/Maker/baikal Weapons/Model/mp133 Weapons/Types/12g
@@ -220,11 +224,11 @@ $Weapons
 62178be9d0050232da3485d9 NULL Weapons/Model/rsp30white Weapons/Types/flare
 
 // Tell parser we're doing 'Types' now
-$Types
-
 // This section identifies ammo types
 // Fixed length of 3 audioclips when parsed so the user can selectively disable caliber or extendedName
 // These MUST follow this format: itemId caliber name extendedName
+$Types
+
 5cadf6ddae9215051e1c23b2 Weapons/Types/127x55 Weapons/Types/ps12 NULL
 5cadf6e5ae921500113bb973 Weapons/Types/127x55 Weapons/Types/ps12a NULL
 5cadf6eeae921500134b2799 Weapons/Types/127x55 Weapons/Types/ps12b NULL
@@ -325,7 +329,7 @@ $Types
 601949593ae8f707c4608daa Weapons/Types/556x45 Weapons/Types/ssa-ap NULL
 5cc80f38e4a949001152b560 Weapons/Types/57x28 Weapons/Types/ss190 NULL
 5cc80f53e4a949000e1ea4f8 Weapons/Types/57x28 Weapons/Types/l191 Weapons/Types/tracer
-5cc80f67e4a949035e43bbba Weapons/Types/57x28 Weapons/Types/sb193 NULL
+5cc80f67e4a949035e43bbba Weapons/Types/57x28 Weapons/Types/sb193 Weapons/Types/subsonic
 5cc80f79e4a949033c7343b2 Weapons/Types/57x28 Weapons/Types/ss198lf NULL
 5cc80f8fe4a949033b0224a2 Weapons/Types/57x28 Weapons/Types/ss197sr NULL
 5cc86832d7f00c000d3a6e6c Weapons/Types/57x28 Weapons/Types/r37f NULL
