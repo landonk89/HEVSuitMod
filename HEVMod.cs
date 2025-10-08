@@ -32,6 +32,7 @@ namespace HEVSuitMod
 		private Coroutine sentencePlayer;
 
 		// Config
+		public ConfigEntry<string> debugSentence;
 		public ConfigEntry<float> globalVolume;
 		public ConfigEntry<bool> sayMakerOnInspect;
 		public ConfigEntry<bool> sayModelOnInspect;
@@ -70,6 +71,13 @@ namespace HEVSuitMod
 			}
 
 			// Config stuff
+			debugSentence = Config.Bind(
+					"Debug",
+					"Sentence to play on F8 press",
+					"Death",
+					""
+				);
+
 			globalVolume = Config.Bind(
 					"Voicelines",
 					"Volume",
@@ -122,7 +130,7 @@ namespace HEVSuitMod
 			defaultDelay = Config.Bind(
 					"HEV",
 					"Default clip delay",
-					0.1f,
+					0.25f,
 					""
 				);
 
@@ -149,11 +157,21 @@ namespace HEVSuitMod
 
 		private void Update()
 		{
+			if (Input.GetKeyDown(KeyCode.F8))
+				DebugPlaySentence(debugSentence.Value);
+
 			if (Input.GetKeyDown(KeyCode.F9))
 				DebugPlayRandomSentence();
 
 			if (pendingSentences.Count > 0 && sentencePlayer == null)
 				sentencePlayer = StartCoroutine(PlaySentences());				
+		}
+
+		private void DebugPlaySentence(string identifier)
+		{
+			HEVSentence sentence = allSentences.Where(x => x.Identifier == identifier).PickRandom();
+			Logger.LogInfo($"Playing Sentence: {sentence.Identifier}");
+			pendingSentences.Add(sentence);
 		}
 
 		private void DebugPlayRandomSentence()
@@ -182,11 +200,11 @@ namespace HEVSuitMod
 						continue;
 					}
 
+					yield return new WaitForSeconds(clip.Delay);
 					for (int i = 0; i < clip.Loops; i++)
 					{
-						yield return new WaitForSeconds(clip.Delay);
 						audioSource.Play();
-						yield return new WaitForSeconds(audioSource.clip.length);
+						yield return new WaitForSeconds(audioSource.clip.length + clip.Interval);
 					}
 				}
 
@@ -380,6 +398,7 @@ namespace HEVSuitMod
 
 				string clip;
 				int loops = 1;
+				float interval = 0f; // Default space between loops
 				float pitch = 1f;
 				float volume = globalVolume.Value;
 				//float delay = 0f;
@@ -393,32 +412,18 @@ namespace HEVSuitMod
 					{
 						string[] paramValuePair = parameters[j].Split(':');
 
-						switch (paramValuePair[0])
+						string key = paramValuePair[0];
+						string val = paramValuePair[1];
+
+						switch (key)
 						{
-							case "loops":
-								if (int.TryParse(paramValuePair[1], out int loopsValue))
-									loops = loopsValue;
-
-								break;
-
-							case "pitch":
-								if (float.TryParse(paramValuePair[1], out float pitchValue))
-									pitch = pitchValue;
-
-								break;
-
-							case "volume":
-								if (float.TryParse(paramValuePair[1], out float volumeValue))
-									volume *= volumeValue; // TODO: Test me!!
-
-								break;
-
-							case "delay":
-								if (float.TryParse(paramValuePair[1], out float delayValue))
-									delay = delayValue;
-
-								break;
+							case "loops" when int.TryParse(val, out int lps): loops = lps; break;
+							case "interval" when float.TryParse(val, out float intvl): interval = intvl ; break;
+							case "pitch" when float.TryParse(val, out float pch): pitch = pch; break;
+							case "volume" when float.TryParse(val, out float vol): volume *= vol; break;
+							case "delay" when float.TryParse(val, out float dly): delay = dly; break;
 						}
+
 					}
 					clip = "assets/sounds/" + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
 				}
@@ -427,20 +432,10 @@ namespace HEVSuitMod
 					clip = "assets/sounds/" + tokens[i].ToLower() + ".wav";
 				}
 
-				clips.Add(new HEVAudioClip(clip, loops, pitch, volume, delay));
+				clips.Add(new HEVAudioClip(clip, loops, interval, pitch, volume, delay));
 			}
 
 			return new HEVSentence(tokens[0], clips);
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sentence"></param>
-		/// <returns></returns>
-		private IEnumerator PlaySentence(HEVSentence sentence)
-		{
-			yield return null;
 		}
 	}
 }
