@@ -34,6 +34,7 @@ namespace HEVSuitMod
 		private Coroutine sentencePlayer;
 
 		// Config
+		public ConfigEntry<bool> debugValidate;
 		public ConfigEntry<string> debugSentence;
 		public ConfigEntry<string> debugNumberSentence;
 		public ConfigEntry<float> globalVolume;
@@ -92,6 +93,13 @@ namespace HEVSuitMod
 			}
 
 			// Config stuff
+			debugValidate = Config.Bind(
+					"Debug",
+					"Validate all sentences",
+					false,
+					""
+				);
+
 			debugSentence = Config.Bind(
 					"Debug",
 					"Sentence to play on F8 press",
@@ -181,6 +189,15 @@ namespace HEVSuitMod
 				}
 			};
 
+			debugValidate.SettingChanged += (sender, args) =>
+			{
+				if (debugValidate.Value)
+				{
+					DebugValidateSentences();
+					debugValidate.Value = false;
+				}
+			};
+
 			ParseAllSentences();
 		}
 
@@ -198,6 +215,21 @@ namespace HEVSuitMod
 
 			if (pendingSentences.Count > 0 && sentencePlayer == null)
 				sentencePlayer = StartCoroutine(PlaySentences());				
+		}
+
+		private void DebugValidateSentences()
+		{
+			string[] allFiles = assets.GetAllAssetNames();
+			foreach (var sentence in allSentences)
+			{
+				foreach (var file in sentence.Clips)
+				{
+					if (!Array.Exists(allFiles, s => s.ToLower() == file.ClipName.ToLower()))
+					{
+						Logger.LogError($"Sentence {sentence.Identifier}, File not found: {file.ClipName}");
+					}
+				}
+			}
 		}
 
 		private void DebugPlaySentence(string identifier)
@@ -225,7 +257,7 @@ namespace HEVSuitMod
 			pendingSentences.Add(GetNumberSentence(num));
 		}
 
-		private HEVSentence DebugGetSentenceRandom(string identifier)
+		private HEVSentence GetSentenceRandom(string identifier)
 		{
 			return allSentences.Where(x => x.Identifier == identifier).PickRandom();
 		}
@@ -239,9 +271,9 @@ namespace HEVSuitMod
 		{
 			while (pendingSentences.Count > 0)
 			{
-				var sentence = pendingSentences[0];
+				HEVSentence sentence = pendingSentences[0];
 
-				foreach (var clip in sentence.Clips)
+				foreach (HEVAudioClip clip in sentence.Clips)
 				{
 					audioSource.clip = assets.LoadAsset<AudioClip>(clip.ClipName);
 					audioSource.pitch = clip.Pitch;
@@ -271,7 +303,6 @@ namespace HEVSuitMod
 		// Numbers
 		private HEVSentence GetNumberSentence(int number)
 		{
-			// TODO: Make voice lines and update to support numbers > 999 (also zero and negatives!!)
 			List<HEVAudioClip> clips = new();
 			string[] clipNames = GetNumberClips(number);
 
@@ -291,10 +322,10 @@ namespace HEVSuitMod
 		/// <returns>An array of file names for generating the HEVClip</returns>
 		private string[] GetNumberClips(int number)
 		{
-			List<string> clips = new();
-
 			if (number == 0)
-				return new[] { "zero" };
+				return ["zero"];
+
+			List<string> clips = new();
 
 			if (number < 0)
 			{
@@ -335,7 +366,6 @@ namespace HEVSuitMod
 				number %= 10;
 			}
 
-			// handle 1–19
 			switch (number)
 			{
 				case 1: clips.Add("one"); break;
@@ -377,12 +407,12 @@ namespace HEVSuitMod
 			if (health < 250f)
 			{
 				// Say our health is low, suggest healing
-				pendingSentences.Add(DebugGetSentenceRandom("LowHealth"));
+				pendingSentences.Add(GetSentenceRandom("LowHealth"));
 			}
 			else if (health < 100f)
 			{
 				// Say death is imminent, seek medical attention
-				pendingSentences.Add(DebugGetSentenceRandom("NearDeath"));
+				pendingSentences.Add(GetSentenceRandom("NearDeath"));
 			}
 		}
 
@@ -425,23 +455,23 @@ namespace HEVSuitMod
 						case EBodyPart.LeftLeg:
 						case EBodyPart.RightLeg:
 							// "Major Fracture" because we can't run
-							pendingSentences.Add(DebugGetSentenceRandom("MajorFracture"));
+							pendingSentences.Add(GetSentenceRandom("MajorFracture"));
 							break;
 
 						case EBodyPart.LeftArm:
 						case EBodyPart.RightArm:
 							// "Minor Fracture" because a broken arm is no big deal
-							pendingSentences.Add(DebugGetSentenceRandom("MinorFracture"));
+							pendingSentences.Add(GetSentenceRandom("MinorFracture"));
 							break;
 					}
 					break;
 
 				case "HeavyBleeding":
-					pendingSentences.Add(DebugGetSentenceRandom("HeavyBleeding"));
+					pendingSentences.Add(GetSentenceRandom("HeavyBleeding"));
 					break;
 
 				case "LightBleeding":
-					pendingSentences.Add(DebugGetSentenceRandom("LightBleeding"));
+					pendingSentences.Add(GetSentenceRandom("LightBleeding"));
 					break;
 
 				default:
@@ -475,7 +505,9 @@ namespace HEVSuitMod
 			if (hevSentencesFile == null)
 			{
 				Logger.LogError("Failed to load sentences!!");
+				return;
 			}
+
 			SentenceType sentenceType = SentenceType.None;
 			string[] hevSentences = hevSentencesFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 			foreach (string hevSentence in hevSentences)
@@ -519,7 +551,7 @@ namespace HEVSuitMod
 			for (int i = 1; i < tokens.Length; i++)
 			{
 				// Skip NULLs for those fixed length sentences
-				if (tokens[i].Equals("NULL"))
+				if (tokens[i].Contains("NULL"))
 					continue;
 
 				// Check if it's a weapon or type sentence, we may need to skip some parts
