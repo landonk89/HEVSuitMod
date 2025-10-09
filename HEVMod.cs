@@ -181,6 +181,11 @@ namespace HEVSuitMod
 			pendingSentences.Add(sentence);
 		}
 
+		// TODO: Right now this will just play everything added to the list until it's empty,
+		// this will need a little system to keep from adding duplicate sentences and stop things
+		// from getting out of hand, we don't want to pile up 50 sentences and play them all.
+		// We need to be smart about what to add and what to skip. For example, 2 bleeds at the
+		// same time or within a certain time shouldn't both be played. Same for 2 fractures, and so on.
 		private IEnumerator PlaySentences()
 		{
 			while (pendingSentences.Count > 0)
@@ -401,8 +406,8 @@ namespace HEVSuitMod
 				float interval = 0f; // Default space between loops
 				float pitch = 1f;
 				float volume = globalVolume.Value;
-				//float delay = 0f;
-				float delay = i == 1 ? 0f : Instance.defaultDelay.Value; // No delay for the first clip
+				//float delay = i == 1 ? 0f : Instance.defaultDelay.Value; // This didn't work as intended
+				float delay = allSentences.Count == 0 ? 0f : Instance.defaultDelay.Value; // No delay for the first clip
 
 				// For each token there may be parameters formatted like [param:value,param2:value]
 				if (tokens[i].StartsWith("["))

@@ -3,6 +3,8 @@
 This mod will eventually bring Half-Life's HEV suit (and hopefully, many other things) to Escape From Tarkov (SPT or Official mod support if possible after 1.0).
 Currently this is only in the concept stage with no working prototype.
 
+Please see https://github.com/landonk89/HEVSuitAssets for the related asset files for this mod.
+
 I am only slightly higher than a beginner when it comes to modding and coding in general, so I need to learn a lot
 more about Unity and EFT's systems to make this all work the way I want. Any contributions or advice are welcome,
 hopefully some talented people who love these two games as much as I do will stumble into this project and find interest!
