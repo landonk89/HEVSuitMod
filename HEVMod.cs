@@ -21,8 +21,10 @@ namespace HEVSuitMod
 		private AssetBundle assets;
 		private string bundlePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\hevsuit.bundle";
 		private const int weaponMakerIndex = 1;
-		private const int weaponTypeIndex = 3;
+		private const int weaponModelIndex = 2;
+		private const int weaponCaliberIndex = 3;
 		private const int typeCaliberIndex = 1;
+		private const int typeNameIndex = 2;
 		private const int typeExtendedNameIndex = 3;
 
 		// Sound stuff
@@ -44,6 +46,25 @@ namespace HEVSuitMod
 		public ConfigEntry<float> defaultDelay;
 		public ConfigEntry<bool> applySettings;
 
+		// Silly little helper
+		private string GetDirectory(int index, SentenceType sentenceType)
+		{
+			if (sentenceType == SentenceType.Types)
+				return "Assets/Sounds/Weapons/Types/"; // Every file is in the same place
+
+			if (sentenceType == SentenceType.Events)
+				return "Assets/Sounds/";
+
+			// Must be a weapon
+			switch (index)
+			{
+				case weaponMakerIndex: return "Assets/Sounds/Weapons/Maker/";
+				case weaponModelIndex: return "Assets/Sounds/Weapons/Model/";
+				case weaponCaliberIndex: return "Assets/Sounds/Weapons/Types/";
+				default: return "ERROR/";
+			}
+		}
+
 		private void Awake()
 		{
 			// Plugin startup logic
@@ -56,7 +77,6 @@ namespace HEVSuitMod
 			}
 
 			Instance = this;
-
 			audioSource = gameObject.AddComponent<AudioSource>();
 
 			Logger.LogWarning($"Bundle: {bundlePath}");
@@ -157,6 +177,7 @@ namespace HEVSuitMod
 				{
 					allSentences.Clear();
 					ParseAllSentences();
+					applySettings.Value = false;
 				}
 			};
 
@@ -197,7 +218,7 @@ namespace HEVSuitMod
 		{
 			if (!int.TryParse(number, out int num))
 			{
-				Logger.LogError($"int.TryParse({number}, out int num) failed.");
+				Logger.LogError($"int.TryParse(\"{number}\", out int num) failed.");
 				return;
 			}
 
@@ -337,9 +358,6 @@ namespace HEVSuitMod
 				case 18: clips.Add("eighteen"); break;
 				case 19: clips.Add("nineteen"); break;
 			}
-
-			// Add the directory and extention to each one
-			//clips = clips.Select(name => $"assets/sounds/numbers/{name}.wav").ToList();
 
 			return clips.ToArray();
 		}
@@ -508,12 +526,11 @@ namespace HEVSuitMod
 				bool skip =
 					(sentenceType == SentenceType.Types && i == typeExtendedNameIndex && !sayExtendedOnChamberCheck.Value) ||
 					(sentenceType == SentenceType.Types && i == typeCaliberIndex && !sayTypeOnChamberCheck.Value) ||
-					(sentenceType == SentenceType.Weapons && i == weaponTypeIndex && !sayTypeOnInspect.Value) ||
+					(sentenceType == SentenceType.Weapons && i == weaponCaliberIndex && !sayTypeOnInspect.Value) ||
 					(sentenceType == SentenceType.Weapons && i == weaponMakerIndex && !sayMakerOnInspect.Value);
 
 				if (skip)
 					continue;
-
 
 				string clip;
 				int loops = 1;
@@ -543,11 +560,13 @@ namespace HEVSuitMod
 						}
 
 					}
-					clip = "assets/sounds/" + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
+					//clip = "assets/sounds/" + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
+					clip = GetDirectory(i, sentenceType) + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
 				}
 				else // Token is just filename, no params
 				{
-					clip = "assets/sounds/" + tokens[i].ToLower() + ".wav";
+					//clip = "assets/sounds/" + tokens[i].ToLower() + ".wav";
+					clip = GetDirectory(i, sentenceType) + tokens[i].ToLower() + ".wav";
 				}
 
 				clips.Add(new HEVAudioClip(clip, loops, interval, pitch, volume, delay));

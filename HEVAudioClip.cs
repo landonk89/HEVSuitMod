@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace HEVSuitMod
+﻿namespace HEVSuitMod
 {
 	public class HEVAudioClip
 	{
