@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using EFT;
+using BepInEx.Logging;
 
 namespace HEVSuitMod
 {
@@ -16,9 +17,10 @@ namespace HEVSuitMod
 	{
 		// Singleton
 		public static HEVMod Instance { get; private set; }
+		public static ManualLogSource Log;
 
 		// File related stuff
-		private AssetBundle assets;
+		public AssetBundle assets;
 		private string bundlePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\hevsuit.bundle";
 		private const int weaponMakerIndex = 1;
 		private const int weaponModelIndex = 2;
@@ -28,13 +30,14 @@ namespace HEVSuitMod
 		private const int typeExtendedNameIndex = 3;
 
 		// Sound stuff
-		private AudioSource audioSource;
-		private List<HEVSentence> allSentences = new();
-		private List<HEVSentence> pendingSentences = new();
-		private Coroutine sentencePlayer;
+		//private AudioSource audioSource;
+		//private List<HEVSentence> allSentences = new();
+		//private List<HEVSentence> pendingSentences = new();
+		//private Coroutine sentencePlayer;
 
 		// Config
 		public ConfigEntry<bool> debugValidate;
+		public ConfigEntry<bool> debugDrawCompass;
 		public ConfigEntry<string> debugSentence;
 		public ConfigEntry<string> debugNumberSentence;
 		public ConfigEntry<float> globalVolume;
@@ -46,6 +49,12 @@ namespace HEVSuitMod
 		public ConfigEntry<bool> sayExtendedOnChamberCheck;
 		public ConfigEntry<float> defaultDelay;
 		public ConfigEntry<bool> applySettings;
+
+		// Components
+		VoiceController voiceController;
+
+		// Debug components
+		DebugUICompass debugCompass;
 
 		// Silly little helper
 		private string GetDirectory(int index, SentenceType sentenceType)
@@ -69,7 +78,8 @@ namespace HEVSuitMod
 		private void Awake()
 		{
 			// Plugin startup logic
-			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+			Log = base.Logger;
+			Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
 			if (Instance != null)
 			{
@@ -78,7 +88,7 @@ namespace HEVSuitMod
 			}
 
 			Instance = this;
-			audioSource = gameObject.AddComponent<AudioSource>();
+			//audioSource = gameObject.AddComponent<AudioSource>();
 
 			Logger.LogWarning($"Bundle: {bundlePath}");
 			assets = AssetBundle.LoadFromFile(bundlePath);
@@ -87,15 +97,17 @@ namespace HEVSuitMod
 				Logger.LogError("Couldn't load assetbundle!!!");
 			}
 
-			foreach (var file in assets.GetAllAssetNames())
-			{
-				Logger.LogInfo(file);
-			}
-
 			// Config stuff
 			debugValidate = Config.Bind(
 					"Debug",
 					"Validate all sentences",
+					false,
+					""
+				);
+
+			debugDrawCompass = Config.Bind(
+					"Debug",
+					"Draw temporary compass",
 					false,
 					""
 				);
@@ -159,7 +171,7 @@ namespace HEVSuitMod
 			sayExtendedOnChamberCheck = Config.Bind(
 					"Voicelines",
 					"Say ammo exdended name when checking chamber (Ex: Subsonic, Tracer)",
-					false,
+					true,
 					"When inspecting a weapon's chamber, the HEV will say its extended name last (ex: Tracer)"
 				);
 
@@ -183,7 +195,8 @@ namespace HEVSuitMod
 			{
 				if (applySettings.Value)
 				{
-					allSentences.Clear();
+					//allSentences.Clear();
+					voiceController.PurgeSentences();
 					ParseAllSentences();
 					applySettings.Value = false;
 				}
@@ -193,203 +206,69 @@ namespace HEVSuitMod
 			{
 				if (debugValidate.Value)
 				{
-					DebugValidateSentences();
+					voiceController.DebugValidateSentences();
 					debugValidate.Value = false;
 				}
 			};
 
+			debugDrawCompass.SettingChanged += (sender, args) =>
+			{
+				if (debugDrawCompass.Value)
+					debugCompass.enabled = true;
+				else
+					debugCompass.enabled = false;
+			};
+
+			// Add components
+			voiceController = gameObject.AddComponent<VoiceController>();
+
+			// Add debugging/temporary components
+			debugCompass = gameObject.AddComponent<DebugUICompass>();
+			
 			ParseAllSentences();
 		}
 
 		private void Update()
 		{
 			// For debugging/testing
+			if (Input.GetKeyDown(KeyCode.F7))
+				DebugCompassTest();
+
 			if (Input.GetKeyDown(KeyCode.F8))
 				DebugPlaySentence(debugSentence.Value);
 
 			if (Input.GetKeyDown(KeyCode.F9))
-				DebugPlayRandomSentence();
+				voiceController.DebugPlayRandomSentence();
 
 			if (Input.GetKeyDown(KeyCode.F10))
 				DebugPlayNumberSentence(debugNumberSentence.Value);
-
-			if (pendingSentences.Count > 0 && sentencePlayer == null)
-				sentencePlayer = StartCoroutine(PlaySentences());				
-		}
-
-		private void DebugValidateSentences()
-		{
-			string[] allFiles = assets.GetAllAssetNames();
-			foreach (var sentence in allSentences)
-			{
-				foreach (var file in sentence.Clips)
-				{
-					if (!Array.Exists(allFiles, s => s.ToLower() == file.ClipName.ToLower()))
-					{
-						Logger.LogError($"Sentence {sentence.Identifier}, File not found: {file.ClipName}");
-					}
-				}
-			}
 		}
 
 		private void DebugPlaySentence(string identifier)
 		{
-			HEVSentence sentence = allSentences.Where(x => x.Identifier == identifier).PickRandom();
+			HEVSentence sentence = voiceController.GetSentenceById(identifier);
 			Logger.LogInfo($"Playing Sentence: {sentence.Identifier}");
-			pendingSentences.Add(sentence);
-		}
-
-		private void DebugPlayRandomSentence()
-		{
-			HEVSentence sentence = allSentences.PickRandom();
-			Logger.LogInfo($"Playing Sentence: {sentence.Identifier}");
-			pendingSentences.Add(sentence);
+			voiceController.PlaySentence(sentence);
 		}
 
 		private void DebugPlayNumberSentence(string number)
 		{
 			if (!int.TryParse(number, out int num))
 			{
-				Logger.LogError($"int.TryParse(\"{number}\", out int num) failed.");
+				Logger.LogError($"DebugPlayNumberSentence: int.TryParse(\"{number}\", out int num) failed.");
 				return;
 			}
 
-			pendingSentences.Add(GetNumberSentence(num));
+			HEVSentence numberSentence = VoiceController.GetNumberSentence(num);
+			Logger.LogInfo($"Playing number: {number}");
+			voiceController.PlaySentence(numberSentence);
 		}
 
-		private HEVSentence GetSentenceRandom(string identifier)
+		private void DebugCompassTest()
 		{
-			return allSentences.Where(x => x.Identifier == identifier).PickRandom();
-		}
-
-		// TODO: Right now this will just play everything added to the list until it's empty,
-		// this will need a little system to keep from adding duplicate sentences and stop things
-		// from getting out of hand, we don't want to pile up 50 sentences and play them all.
-		// We need to be smart about what to add and what to skip. For example, 2 bleeds at the
-		// same time or within a certain time shouldn't both be played. Same for 2 fractures, and so on.
-		private IEnumerator PlaySentences()
-		{
-			while (pendingSentences.Count > 0)
-			{
-				HEVSentence sentence = pendingSentences[0];
-
-				foreach (HEVAudioClip clip in sentence.Clips)
-				{
-					audioSource.clip = assets.LoadAsset<AudioClip>(clip.ClipName);
-					audioSource.pitch = clip.Pitch;
-					audioSource.volume = clip.Volume;
-
-					// Handle missing files
-					if (audioSource.clip == null)
-					{
-						Logger.LogError($"Missing clip: {clip.ClipName}");
-						continue;
-					}
-
-					yield return new WaitForSeconds(clip.Delay);
-					for (int i = 0; i < clip.Loops; i++)
-					{
-						audioSource.Play();
-						yield return new WaitForSeconds(audioSource.clip.length + clip.Interval);
-					}
-				}
-
-				pendingSentences.RemoveAt(0);
-			}
-
-			sentencePlayer = null;
-		}
-
-		// Numbers
-		private HEVSentence GetNumberSentence(int number)
-		{
-			List<HEVAudioClip> clips = new();
-			string[] clipNames = GetNumberClips(number);
-
-			for (int i = 0; i < clipNames.Length; i++)
-			{
-				clipNames[i] = $"assets/sounds/numbers/{clipNames[i]}.wav";
-				clips.Add(new HEVAudioClip(clipNames[i], 1, 0f, 1f, globalVolume.Value, 0f));
-			}
-
-			return new HEVSentence(null, clips);
-		}
-
-		/// <summary>
-		/// Convert an integer into clip file names for generating a number sentence
-		/// </summary>
-		/// <param name="number"></param>
-		/// <returns>An array of file names for generating the HEVClip</returns>
-		private string[] GetNumberClips(int number)
-		{
-			if (number == 0)
-				return ["zero"];
-
-			List<string> clips = new();
-
-			if (number < 0)
-			{
-				clips.Add("negative");
-				number = -number;
-			}
-
-			if (number >= 1000)
-			{
-				int thousands = number / 1000;
-				clips.AddRange(GetNumberClips(thousands));
-				clips.Add("thousand");
-				number %= 1000;
-			}
-
-			if (number >= 100)
-			{
-				int hundreds = number / 100;
-				clips.AddRange(GetNumberClips(hundreds));
-				clips.Add("hundred");
-				number %= 100;
-			}
-
-			if (number >= 20)
-			{
-				int tens = number / 10;
-				switch (tens)
-				{
-					case 2: clips.Add("twenty"); break;
-					case 3: clips.Add("thirty"); break;
-					case 4: clips.Add("forty"); break;
-					case 5: clips.Add("fifty"); break;
-					case 6: clips.Add("sixty"); break;
-					case 7: clips.Add("seventy"); break;
-					case 8: clips.Add("eighty"); break;
-					case 9: clips.Add("ninety"); break;
-				}
-				number %= 10;
-			}
-
-			switch (number)
-			{
-				case 1: clips.Add("one"); break;
-				case 2: clips.Add("two"); break;
-				case 3: clips.Add("three"); break;
-				case 4: clips.Add("four"); break;
-				case 5: clips.Add("five"); break;
-				case 6: clips.Add("six"); break;
-				case 7: clips.Add("seven"); break;
-				case 8: clips.Add("eight"); break;
-				case 9: clips.Add("nine"); break;
-				case 10: clips.Add("ten"); break;
-				case 11: clips.Add("eleven"); break;
-				case 12: clips.Add("twelve"); break;
-				case 13: clips.Add("thirteen"); break;
-				case 14: clips.Add("fourteen"); break;
-				case 15: clips.Add("fifteen"); break;
-				case 16: clips.Add("sixteen"); break;
-				case 17: clips.Add("seventeen"); break;
-				case 18: clips.Add("eighteen"); break;
-				case 19: clips.Add("nineteen"); break;
-			}
-
-			return clips.ToArray();
+			int lookDir = Compass.GetBearing(GamePlayerOwner.MyPlayer.LookDirection);
+			Logger.LogInfo($"CompassTest: {VoiceController.GetDirectionClip(lookDir)}");
+			voiceController.PlaySentence(VoiceController.GetDirectionSentence(lookDir));
 		}
 
 		/// <summary>
@@ -407,12 +286,14 @@ namespace HEVSuitMod
 			if (health < 250f)
 			{
 				// Say our health is low, suggest healing
-				pendingSentences.Add(GetSentenceRandom("LowHealth"));
+				//pendingSentences.Add(GetSentence("LowHealth"));
+				voiceController.PlaySentenceById("LowHealth");
 			}
 			else if (health < 100f)
 			{
 				// Say death is imminent, seek medical attention
-				pendingSentences.Add(GetSentenceRandom("NearDeath"));
+				//pendingSentences.Add(GetSentence("NearDeath"));
+				voiceController.PlaySentenceById("NearDeath");
 			}
 		}
 
@@ -455,23 +336,27 @@ namespace HEVSuitMod
 						case EBodyPart.LeftLeg:
 						case EBodyPart.RightLeg:
 							// "Major Fracture" because we can't run
-							pendingSentences.Add(GetSentenceRandom("MajorFracture"));
+							//pendingSentences.Add(GetSentence("MajorFracture"));
+							voiceController.PlaySentenceById("MajorFracture");
 							break;
 
 						case EBodyPart.LeftArm:
 						case EBodyPart.RightArm:
 							// "Minor Fracture" because a broken arm is no big deal
-							pendingSentences.Add(GetSentenceRandom("MinorFracture"));
+							//pendingSentences.Add(GetSentence("MinorFracture"));
+							voiceController.PlaySentenceById("MinorFracture");
 							break;
 					}
 					break;
 
 				case "HeavyBleeding":
-					pendingSentences.Add(GetSentenceRandom("HeavyBleeding"));
+					//pendingSentences.Add(GetSentence("HeavyBleeding"));
+					voiceController.PlaySentenceById("HeavyBleeding");
 					break;
 
 				case "LightBleeding":
-					pendingSentences.Add(GetSentenceRandom("LightBleeding"));
+					//pendingSentences.Add(GetSentence("LightBleeding"));
+					voiceController.PlaySentenceById("LightBleeding");
 					break;
 
 				default:
@@ -480,7 +365,7 @@ namespace HEVSuitMod
 			}
 		}
 
-		private void SubscribeEvents()
+		public void SubscribeEvents()
 		{
 			// Detect fractures, bleeds, etc
 			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent += HealthEffectAdded;
@@ -491,7 +376,7 @@ namespace HEVSuitMod
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
 		}
 
-		private void UnsubscribeEvents()
+		public void UnsubscribeEvents()
 		{
 			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent -= HealthEffectAdded;
 			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
@@ -524,7 +409,8 @@ namespace HEVSuitMod
 					continue;
 				}
 
-				allSentences.Add(ParseSentence(hevSentence, sentenceType));
+				//allSentences.Add(ParseSentence(hevSentence, sentenceType));
+				voiceController.AddSentence(ParseSentence(hevSentence, sentenceType));
 			}
 		}
 
@@ -569,7 +455,7 @@ namespace HEVSuitMod
 				float interval = 0f; // Default space between loops
 				float pitch = 1f;
 				float volume = globalVolume.Value;
-				float delay = allSentences.Count == 0 ? 0f : Instance.defaultDelay.Value; // No delay for the first clip
+				float delay = Instance.defaultDelay.Value; // No delay for the first?
 
 				// For each token there may be parameters formatted like [param:value,param2:value]
 				if (tokens[i].StartsWith("["))
@@ -592,12 +478,10 @@ namespace HEVSuitMod
 						}
 
 					}
-					//clip = "assets/sounds/" + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
 					clip = GetDirectory(i, sentenceType) + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
 				}
 				else // Token is just filename, no params
 				{
-					//clip = "assets/sounds/" + tokens[i].ToLower() + ".wav";
 					clip = GetDirectory(i, sentenceType) + tokens[i].ToLower() + ".wav";
 				}
 

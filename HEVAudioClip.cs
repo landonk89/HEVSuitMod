@@ -18,5 +18,15 @@
 			Volume = volume;
 			Delay = delay;
 		}
+
+		public HEVAudioClip(string clip)
+		{
+			ClipName = clip;
+			Loops = 1;
+			Interval = 0f;
+			Pitch = 1f;
+			Volume = HEVMod.Instance.globalVolume.Value;
+			Delay = 0f;
+		}
 	}
 }
