@@ -91,7 +91,7 @@ namespace HEVSuitMod
 					for (int i = 0; i < clip.Loops; i++)
 					{
 						audioSource.Play();
-						//Singleton<BetterAudio>.instance.PlayAtPoint(sentence.Clips[i], BetterAudio.AudioSourceGroupType.Character);
+						// TODO: Look into BetterAudio class
 						yield return new WaitForSeconds(audioSource.clip.length + clip.Interval);
 					}
 				}

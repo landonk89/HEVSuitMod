@@ -3,10 +3,12 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>HEVSuitMod</AssemblyName>
-    <Description>My first plugin</Description>
-    <Version>1.0.0</Version>
+    <Description>HEV Suit from Half-Life for Escape from Tarkov</Description>
+    <Version>0.0.1</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <PackageProjectUrl>https://github.com/landonk89/HEVSuitMod</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/landonk89/HEVSuitMod</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

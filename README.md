@@ -5,6 +5,8 @@ Currently this is only in the concept stage.
 
 Please see https://github.com/landonk89/HEVSuitAssets for the related asset files for this mod.
 
+Right now, this is very early in development. A few things work but it's buggy and unfinished.
+
 I am only slightly higher than a beginner when it comes to modding and coding in general, so I need to learn a lot
 more about Unity and EFT's systems to make this all work the way I want. Any contributions or advice are welcome,
 hopefully some talented people who love these two games as much as I do will stumble into this project and find interest!
@@ -15,7 +17,8 @@ as a prompt/training file.
 The 'sentences.txt' file in 'scripts' is used to define HEV sentences in a (loosely)similar way to Half-Life's original code.
 See code comments and comments in sentences.txt to understand how it works.
 
-Currently, the only functions that work are debugging keys F8, F9, F10
+There are some debugging keys: F7, F8, F9, F10
+F7 will play a random compass direction voiceline
 F8 will play the sentence name set in configuration manager (ex: HeavyBleeding).
-F9 will play a randomly selected sentence.
+F9 will play a randomly selected sentence from all sentences.
 F10 will play a number sentence set in configuration manager (ex: 24, 250, 300, etc).
