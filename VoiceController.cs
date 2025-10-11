@@ -39,8 +39,9 @@ namespace HEVSuitMod
 		// Called before reloading sentences.txt
 		public void PurgeSentences()
 		{
-			HEVMod.Log.LogWarning("Purging sentence database...");
-			StopCoroutine(sentencePlayer);
+			if (sentencePlayer != null)
+				StopCoroutine(sentencePlayer);
+
 			pendingSentences.Clear();
 			allSentences.Clear();
 		}
@@ -54,7 +55,7 @@ namespace HEVSuitMod
 
 		public void DebugValidateSentences()
 		{
-			string[] allFiles = HEVMod.Instance.assets.GetAllAssetNames();
+			string[] allFiles = HEVMod.Instance.Assets.GetAllAssetNames();
 			foreach (var sentence in allSentences)
 			{
 				foreach (var file in sentence.Clips)
@@ -75,7 +76,7 @@ namespace HEVSuitMod
 				HEVSentence sentence = pendingSentences[0];
 				foreach (HEVAudioClip clip in sentence.Clips)
 				{
-					audioSource.clip = HEVMod.Instance.assets.LoadAsset<AudioClip>(clip.ClipName);
+					audioSource.clip = HEVMod.Instance.Assets.LoadAsset<AudioClip>(clip.ClipName);
 					audioSource.pitch = clip.Pitch;
 					audioSource.volume = clip.Volume;
 
@@ -90,6 +91,7 @@ namespace HEVSuitMod
 					for (int i = 0; i < clip.Loops; i++)
 					{
 						audioSource.Play();
+						//Singleton<BetterAudio>.instance.PlayAtPoint(sentence.Clips[i], BetterAudio.AudioSourceGroupType.Character);
 						yield return new WaitForSeconds(audioSource.clip.length + clip.Interval);
 					}
 				}

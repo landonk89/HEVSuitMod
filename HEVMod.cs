@@ -2,8 +2,6 @@
 using BepInEx.Configuration;
 using System;
 using System.IO;
-using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -20,20 +18,16 @@ namespace HEVSuitMod
 		public static ManualLogSource Log;
 
 		// File related stuff
-		public AssetBundle assets;
+		public AssetBundle Assets { get; private set; }
 		private string bundlePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\hevsuit.bundle";
+		
+		// Parser stuff
 		private const int weaponMakerIndex = 1;
 		private const int weaponModelIndex = 2;
 		private const int weaponCaliberIndex = 3;
 		private const int typeCaliberIndex = 1;
 		private const int typeNameIndex = 2;
 		private const int typeExtendedNameIndex = 3;
-
-		// Sound stuff
-		//private AudioSource audioSource;
-		//private List<HEVSentence> allSentences = new();
-		//private List<HEVSentence> pendingSentences = new();
-		//private Coroutine sentencePlayer;
 
 		// Config
 		public ConfigEntry<bool> debugValidate;
@@ -50,8 +44,13 @@ namespace HEVSuitMod
 		public ConfigEntry<float> defaultDelay;
 		public ConfigEntry<bool> applySettings;
 
+		// TEMPORARY!!!
+		private bool gameStarted = false;
+		private bool subscribed = false;
+
 		// Components
 		VoiceController voiceController;
+		SentenceParser parser;
 
 		// Debug components
 		DebugUICompass debugCompass;
@@ -91,8 +90,8 @@ namespace HEVSuitMod
 			//audioSource = gameObject.AddComponent<AudioSource>();
 
 			Logger.LogWarning($"Bundle: {bundlePath}");
-			assets = AssetBundle.LoadFromFile(bundlePath);
-			if (assets == null)
+			Assets = AssetBundle.LoadFromFile(bundlePath);
+			if (Assets == null)
 			{
 				Logger.LogError("Couldn't load assetbundle!!!");
 			}
@@ -195,9 +194,7 @@ namespace HEVSuitMod
 			{
 				if (applySettings.Value)
 				{
-					//allSentences.Clear();
-					voiceController.PurgeSentences();
-					ParseAllSentences();
+					parser.Reparse();
 					applySettings.Value = false;
 				}
 			};
@@ -221,11 +218,10 @@ namespace HEVSuitMod
 
 			// Add components
 			voiceController = gameObject.AddComponent<VoiceController>();
+			parser = new(voiceController, Assets);
 
 			// Add debugging/temporary components
 			debugCompass = gameObject.AddComponent<DebugUICompass>();
-			
-			ParseAllSentences();
 		}
 
 		private void Update()
@@ -242,6 +238,25 @@ namespace HEVSuitMod
 
 			if (Input.GetKeyDown(KeyCode.F10))
 				DebugPlayNumberSentence(debugNumberSentence.Value);
+
+			// TODO: Just for testing here... Need to find a more correct way to do this.
+			// Tried some patching with harmony and that was a giant failure, need to learn more
+			// about GamePlayerOwner.MyPlayer and when it starts etc..
+			if(GamePlayerOwner.MyPlayer != null && !gameStarted)
+				gameStarted = true;
+			
+			if (!gameStarted)
+				return;
+
+			if (GamePlayerOwner.MyPlayer == null && subscribed)
+			{
+				gameStarted = false;
+				UnsubscribeEvents();
+				return;
+			}
+
+			if (!subscribed)
+				SubscribeEvents();
 		}
 
 		private void DebugPlaySentence(string identifier)
@@ -271,6 +286,28 @@ namespace HEVSuitMod
 			voiceController.PlaySentence(VoiceController.GetDirectionSentence(lookDir));
 		}
 
+		public void SubscribeEvents()
+		{
+			// Detect fractures, bleeds, etc
+			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent += HealthEffectAdded;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
+
+			// Detect low health
+			// Discard the params for this one, we don't need them. We just want to know that health has changed
+			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
+			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDied();
+			subscribed = true;
+		}
+
+		public void UnsubscribeEvents()
+		{
+			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent -= HealthEffectAdded;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
+			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
+			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDied();
+			subscribed = false;
+		}
+
 		/// <summary>
 		/// Event triggered by player's HP falling below a threshold value
 		/// </summary>
@@ -286,15 +323,18 @@ namespace HEVSuitMod
 			if (health < 250f)
 			{
 				// Say our health is low, suggest healing
-				//pendingSentences.Add(GetSentence("LowHealth"));
 				voiceController.PlaySentenceById("LowHealth");
 			}
 			else if (health < 100f)
 			{
 				// Say death is imminent, seek medical attention
-				//pendingSentences.Add(GetSentence("NearDeath"));
 				voiceController.PlaySentenceById("NearDeath");
 			}
+		}
+
+		private void PlayerDied()
+		{
+			voiceController.PlaySentenceById("Death");
 		}
 
 		/// <summary>
@@ -336,26 +376,22 @@ namespace HEVSuitMod
 						case EBodyPart.LeftLeg:
 						case EBodyPart.RightLeg:
 							// "Major Fracture" because we can't run
-							//pendingSentences.Add(GetSentence("MajorFracture"));
 							voiceController.PlaySentenceById("MajorFracture");
 							break;
 
 						case EBodyPart.LeftArm:
 						case EBodyPart.RightArm:
 							// "Minor Fracture" because a broken arm is no big deal
-							//pendingSentences.Add(GetSentence("MinorFracture"));
 							voiceController.PlaySentenceById("MinorFracture");
 							break;
 					}
 					break;
 
 				case "HeavyBleeding":
-					//pendingSentences.Add(GetSentence("HeavyBleeding"));
 					voiceController.PlaySentenceById("HeavyBleeding");
 					break;
 
 				case "LightBleeding":
-					//pendingSentences.Add(GetSentence("LightBleeding"));
 					voiceController.PlaySentenceById("LightBleeding");
 					break;
 
@@ -363,132 +399,6 @@ namespace HEVSuitMod
 					Logger.LogWarning($"HealthEffectStarted: Unhandled IEffect {effect.Type.Name}");
 					break;
 			}
-		}
-
-		public void SubscribeEvents()
-		{
-			// Detect fractures, bleeds, etc
-			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent += HealthEffectAdded;
-			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
-			
-			// Detect low health
-			// Discard the params for this one, we don't need them. We just want to know that health has changed
-			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
-		}
-
-		public void UnsubscribeEvents()
-		{
-			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent -= HealthEffectAdded;
-			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
-			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
-		}
-
-		private void ParseAllSentences()
-		{
-			// Parse event sentences
-			TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>("assets/scripts/sentences.txt");
-			if (hevSentencesFile == null)
-			{
-				Logger.LogError("Failed to load sentences!!");
-				return;
-			}
-
-			SentenceType sentenceType = SentenceType.None;
-			string[] hevSentences = hevSentencesFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-			foreach (string hevSentence in hevSentences)
-			{
-				if (hevSentence.StartsWith("//")) // Skip comments
-					continue;
-
-				if (hevSentence.StartsWith("$")) // Change parse mode
-				{
-					string sentenceTypeText = hevSentence.Substring(1);
-					if (!Enum.TryParse(sentenceTypeText, out sentenceType))
-						Logger.LogError($"Could not set SentenceType {sentenceTypeText}");
-
-					continue;
-				}
-
-				//allSentences.Add(ParseSentence(hevSentence, sentenceType));
-				voiceController.AddSentence(ParseSentence(hevSentence, sentenceType));
-			}
-		}
-
-		// --------------------------------------------------------------
-		// Sentence:
-		// The first word is the event name or itemId like 'Death' or '5926bb2186f7744b1c6c6e60'
-		// Then each sound filename is placed in line with tags before it enclosed in sqaure brackets [ ], each tag inside is separated by commas ','.
-		// Multiple tags per file are supported, so something like '[delay:0.5,loop:2,pitch:1.2,volume:0.8]filename' will work
-		// Example sentence: Death [loop:2]fx/beep [delay:0.1,loop:2]fx/beep [delay:0.1]fx/beep [delay:0.1]fx/beep [delay:0.1,pitch:1.2,volume:0.5]fx/flatline
-		// 
-		// This parser has a few modes set by a '$mode' in the parsed file:
-		// $Events: These are normal, any length because there are no settings for them.
-		// $Weapons: These are a fixed length of 3 audio clips so we can selectively disable maker or caliber voicelines.
-		// $Types: These are also a fixed length of 3 so we can selectively disable caliber or extendedName voicelines.
-		// --------------------------------------------------------------
-		private HEVSentence ParseSentence(string sentence, SentenceType sentenceType)
-		{
-			Logger.LogInfo($"Parsing sentence of type {sentenceType}: {sentence}");
-
-			List<HEVAudioClip> clips = new();
-			string[] tokens = sentence.Split(' ');
-
-			// Parse tokenized sentence
-			for (int i = 1; i < tokens.Length; i++)
-			{
-				// Skip NULLs for those fixed length sentences
-				if (tokens[i].Contains("NULL"))
-					continue;
-
-				// Check if it's a weapon or type sentence, we may need to skip some parts
-				bool skip =
-					(sentenceType == SentenceType.Types && i == typeExtendedNameIndex && !sayExtendedOnChamberCheck.Value) ||
-					(sentenceType == SentenceType.Types && i == typeCaliberIndex && !sayTypeOnChamberCheck.Value) ||
-					(sentenceType == SentenceType.Weapons && i == weaponCaliberIndex && !sayTypeOnInspect.Value) ||
-					(sentenceType == SentenceType.Weapons && i == weaponMakerIndex && !sayMakerOnInspect.Value);
-
-				if (skip)
-					continue;
-
-				string clip;
-				int loops = 1;
-				float interval = 0f; // Default space between loops
-				float pitch = 1f;
-				float volume = globalVolume.Value;
-				float delay = Instance.defaultDelay.Value; // No delay for the first?
-
-				// For each token there may be parameters formatted like [param:value,param2:value]
-				if (tokens[i].StartsWith("["))
-				{
-					string[] parameters = tokens[i].Substring(1, tokens[i].IndexOf(']') - 1).Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-					for (int j = 0; j < parameters.Length; j++)
-					{
-						string[] paramValuePair = parameters[j].Split(':');
-
-						string key = paramValuePair[0];
-						string val = paramValuePair[1];
-
-						switch (key)
-						{
-							case "loops" when int.TryParse(val, out int lps): loops = lps; break;
-							case "interval" when float.TryParse(val, out float intvl): interval = intvl ; break;
-							case "pitch" when float.TryParse(val, out float pch): pitch = pch; break;
-							case "volume" when float.TryParse(val, out float vol): volume *= vol; break;
-							case "delay" when float.TryParse(val, out float dly): delay = dly; break;
-						}
-
-					}
-					clip = GetDirectory(i, sentenceType) + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
-				}
-				else // Token is just filename, no params
-				{
-					clip = GetDirectory(i, sentenceType) + tokens[i].ToLower() + ".wav";
-				}
-
-				clips.Add(new HEVAudioClip(clip, loops, interval, pitch, volume, delay));
-			}
-
-			return new HEVSentence(tokens[0], clips);
 		}
 	}
 }
