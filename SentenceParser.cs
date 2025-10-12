@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepInEx.Logging;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,6 +12,7 @@ namespace HEVSuitMod
 	{
 		private VoiceController voiceController;
 		private AssetBundle assets;
+		private string[] allFiles;
 		private const int weaponMakerIndex = 1;
 		private const int weaponModelIndex = 2;
 		private const int weaponCaliberIndex = 3;
@@ -35,18 +37,21 @@ namespace HEVSuitMod
 					return;
 			}
 
+			allFiles = assets.GetAllAssetNames();
 			ParseAllSentences();
 		}
 
 		private string GetDirectory(int index, SentenceType sentenceType)
 		{
+			// Types have every file is in the same place
 			if (sentenceType == SentenceType.Types)
-				return "Assets/Sounds/Weapons/Types/"; // Every file is in the same place
+				return "Assets/Sounds/Weapons/Types/";
 
+			// Events have partial paths aready
 			if (sentenceType == SentenceType.Events)
 				return "Assets/Sounds/";
 
-			// Must be a weapon
+			// Must be a weapon, index based directory
 			switch (index)
 			{
 				case weaponMakerIndex: return "Assets/Sounds/Weapons/Maker/";
@@ -65,7 +70,6 @@ namespace HEVSuitMod
 
 		public void ParseAllSentences()
 		{
-			// Parse event sentences
 			TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>("assets/scripts/sentences.txt");
 			if (hevSentencesFile == null)
 			{
@@ -84,8 +88,9 @@ namespace HEVSuitMod
 				{
 					string sentenceTypeText = hevSentence.Substring(1);
 					if (!Enum.TryParse(sentenceTypeText, out sentenceType))
-						HEVMod.Log.LogError($"Could not set SentenceType {sentenceTypeText}");
+						HEVMod.Log.LogError($"Unknown parse mode {sentenceTypeText}!");
 
+					HEVMod.Log.LogInfo($"Parsing {sentenceTypeText}");
 					continue;
 				}
 
@@ -107,10 +112,9 @@ namespace HEVSuitMod
 		// --------------------------------------------------------------
 		private HEVSentence ParseSentence(string sentence, SentenceType sentenceType)
 		{
-			HEVMod.Log.LogInfo($"Parsing sentence of type {sentenceType}: {sentence}");
-
 			List<HEVAudioClip> clips = new();
 			string[] tokens = sentence.Split(' ');
+			HEVMod.Log.LogInfo($"ParseSentence: {sentence}");
 
 			// Parse tokenized sentence
 			for (int i = 1; i < tokens.Length; i++)
@@ -162,6 +166,12 @@ namespace HEVSuitMod
 				else // Token is just filename, no params
 				{
 					clip = GetDirectory(i, sentenceType) + tokens[i].ToLower() + ".wav";
+				}
+
+				if (!Array.Exists(allFiles, s => s.ToLower() == clip.ToLower()))
+				{
+					HEVMod.Log.LogError($"File not found {clip}");
+					continue;
 				}
 
 				clips.Add(new HEVAudioClip(clip, loops, interval, pitch, volume, delay));

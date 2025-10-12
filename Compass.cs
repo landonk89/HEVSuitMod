@@ -4,14 +4,15 @@ namespace HEVSuitMod
 {
 	public static class Compass
 	{
-		public static int GetBearing(Vector3 lookDir)
+		// TODO: Make sure this works when using something other than MyPlayer.LookDirection
+		public static int GetBearing(Vector3 direction)
 		{
-			lookDir = -lookDir;
-			lookDir.y = 0f;
-			if (lookDir == Vector3.zero)
+			direction = -direction; // FIXME: Player.LookDirection needs to be negated to get the correct direction
+			direction.y = 0f;
+			if (direction == Vector3.zero)
 				return 0;
 
-			float angle = Mathf.Atan2(lookDir.x, lookDir.z) * Mathf.Rad2Deg;
+			float angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
 			if (angle < 0f)
 				angle += 360f;
 

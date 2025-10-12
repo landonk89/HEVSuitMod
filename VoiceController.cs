@@ -29,10 +29,8 @@ namespace HEVSuitMod
 				sentencePlayer = StartCoroutine(PlaySentences());
 		}
 
-		// TODO: Sanity checks?
 		public void AddSentence(HEVSentence sentence)
 		{
-			HEVMod.Log.LogInfo($"Adding sentence: {sentence.Identifier}");
 			allSentences.Add(sentence);
 		}
 
@@ -61,9 +59,7 @@ namespace HEVSuitMod
 				foreach (var file in sentence.Clips)
 				{
 					if (!Array.Exists(allFiles, s => s.ToLower() == file.ClipName.ToLower()))
-					{
 						HEVMod.Log.LogError($"Sentence {sentence.Identifier}, File not found: {file.ClipName}");
-					}
 				}
 			}
 		}
@@ -91,7 +87,8 @@ namespace HEVSuitMod
 					for (int i = 0; i < clip.Loops; i++)
 					{
 						audioSource.Play();
-						// TODO: Look into BetterAudio class
+						// TODO: Look into BetterAudio
+						//Singleton<BetterAudio>.Instance.PlayAtPoint(GamePlayerOwner.MyPlayer.Position, audioSource.clip, CameraClass.Instance.Distance(GamePlayerOwner.MyPlayer.Position), BetterAudio.AudioSourceGroupType.Character, 15, 1f, EOcclusionTest.Fast);
 						yield return new WaitForSeconds(audioSource.clip.length + clip.Interval);
 					}
 				}
@@ -107,7 +104,14 @@ namespace HEVSuitMod
 
 		public void PlaySentenceById(string identifier)
 		{
-			pendingSentences.Add(GetSentenceById(identifier));
+			HEVSentence sentence = GetSentenceById(identifier);
+			if (sentence == null)
+			{
+				HEVMod.Log.LogError("GetSentenceById is null!");
+				return;
+			}
+
+			PlaySentence(sentence);
 		}
 
 		/// <summary>
@@ -124,7 +128,7 @@ namespace HEVSuitMod
 		/// </summary>
 		/// <param name="number"></param>
 		/// <returns></returns>
-		public static HEVSentence GetNumberSentence(int number)
+		public HEVSentence GetNumberSentence(int number)
 		{
 			List<HEVAudioClip> clips = new();
 			string[] clipNames = GetNumberClips(number);
@@ -143,7 +147,7 @@ namespace HEVSuitMod
 		/// </summary>
 		/// <param name="bearing"></param>
 		/// <returns></returns>
-		public static HEVSentence GetDirectionSentence(int bearing)
+		public HEVSentence GetDirectionSentence(int bearing)
 		{
 			return new HEVSentence(null, [new HEVAudioClip(GetDirectionClip(bearing))]);
 		}
@@ -153,7 +157,7 @@ namespace HEVSuitMod
 		/// </summary>
 		/// <param name="bearing"></param>
 		/// <returns></returns>
-		public static string GetDirectionClip(int bearing)
+		public string GetDirectionClip(int bearing)
 		{
 			string[] directions = {
 				"North", "Northeast", "East", "Southeast",
@@ -168,7 +172,7 @@ namespace HEVSuitMod
 		/// </summary>
 		/// <param name="number"></param>
 		/// <returns>An array of file names for generating the HEVClip</returns>
-		private static string[] GetNumberClips(int number)
+		private string[] GetNumberClips(int number)
 		{
 			if (number == 0)
 				return ["zero"];

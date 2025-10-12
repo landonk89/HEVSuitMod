@@ -2,7 +2,6 @@
 using BepInEx.Configuration;
 using System;
 using System.IO;
-using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using EFT;
@@ -15,22 +14,13 @@ namespace HEVSuitMod
 	{
 		// Singleton
 		public static HEVMod Instance { get; private set; }
-		public static ManualLogSource Log;
+		public static ManualLogSource Log { get; private set; }
 
 		// File related stuff
 		public AssetBundle Assets { get; private set; }
 		private string bundlePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\hevsuit.bundle";
-		
-		// Parser stuff
-		private const int weaponMakerIndex = 1;
-		private const int weaponModelIndex = 2;
-		private const int weaponCaliberIndex = 3;
-		private const int typeCaliberIndex = 1;
-		private const int typeNameIndex = 2;
-		private const int typeExtendedNameIndex = 3;
 
 		// Config
-		public ConfigEntry<bool> debugValidate;
 		public ConfigEntry<bool> debugDrawCompass;
 		public ConfigEntry<string> debugSentence;
 		public ConfigEntry<string> debugNumberSentence;
@@ -44,6 +34,20 @@ namespace HEVSuitMod
 		public ConfigEntry<float> defaultDelay;
 		public ConfigEntry<bool> applySettings;
 
+		// Definitions for IEffect
+		// TODO: Verify these!!
+		private const string lightBleeding = "GInterface313";
+		private const string heavyBleeding = "GInterface314";
+		private const string fracture =	"GInterface316";
+		private const string dehydration = "GInterface317"; // TODO: Verify
+		private const string exhaustion = "GInterface318"; // TODO: Verify
+		private const string radExposure = "GInterface319"; // TODO: Verify
+		private const string intoxication = "GInterface320"; // Might actually be GInterface309??
+		private const string lethalIntoxication = "GInterface320";
+		private const string zombieInfection = "GInterface329";
+		private const string onPainKillers = "GInterface332";
+		private const string frostbite = "GInterface346";
+
 		// TEMPORARY!!!
 		private bool gameStarted = false;
 		private bool subscribed = false;
@@ -55,30 +59,11 @@ namespace HEVSuitMod
 		// Debug components
 		DebugUICompass debugCompass;
 
-		// Silly little helper
-		private string GetDirectory(int index, SentenceType sentenceType)
-		{
-			if (sentenceType == SentenceType.Types)
-				return "Assets/Sounds/Weapons/Types/"; // Every file is in the same place
-
-			if (sentenceType == SentenceType.Events)
-				return "Assets/Sounds/";
-
-			// Must be a weapon
-			switch (index)
-			{
-				case weaponMakerIndex: return "Assets/Sounds/Weapons/Maker/";
-				case weaponModelIndex: return "Assets/Sounds/Weapons/Model/";
-				case weaponCaliberIndex: return "Assets/Sounds/Weapons/Types/";
-				default: return "ERROR/";
-			}
-		}
-
 		private void Awake()
 		{
 			// Plugin startup logic
-			Log = base.Logger;
-			Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+			Log = Logger; // For other classes
+			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
 			if (Instance != null)
 			{
@@ -87,23 +72,14 @@ namespace HEVSuitMod
 			}
 
 			Instance = this;
-			//audioSource = gameObject.AddComponent<AudioSource>();
-
-			Logger.LogWarning($"Bundle: {bundlePath}");
 			Assets = AssetBundle.LoadFromFile(bundlePath);
 			if (Assets == null)
 			{
-				Logger.LogError("Couldn't load assetbundle!!!");
+				Logger.LogError("FATAL: Couldn't load assetbundle!!!");
+				return;
 			}
 
 			// Config stuff
-			debugValidate = Config.Bind(
-					"Debug",
-					"Validate all sentences",
-					false,
-					""
-				);
-
 			debugDrawCompass = Config.Bind(
 					"Debug",
 					"Draw temporary compass",
@@ -189,8 +165,7 @@ namespace HEVSuitMod
 			);
 
 			// Reload sentences when we need to
-			// TODO: See if this really has any performance hit or stutter, just do it on every setting change if not
-			applySettings.SettingChanged += (sender, args) =>
+			applySettings.SettingChanged += (_, _) =>
 			{
 				if (applySettings.Value)
 				{
@@ -199,16 +174,7 @@ namespace HEVSuitMod
 				}
 			};
 
-			debugValidate.SettingChanged += (sender, args) =>
-			{
-				if (debugValidate.Value)
-				{
-					voiceController.DebugValidateSentences();
-					debugValidate.Value = false;
-				}
-			};
-
-			debugDrawCompass.SettingChanged += (sender, args) =>
+			debugDrawCompass.SettingChanged += (_, _) =>
 			{
 				if (debugDrawCompass.Value)
 					debugCompass.enabled = true;
@@ -259,6 +225,7 @@ namespace HEVSuitMod
 				SubscribeEvents();
 		}
 
+		// TEMP for testing
 		private void DebugPlaySentence(string identifier)
 		{
 			HEVSentence sentence = voiceController.GetSentenceById(identifier);
@@ -266,6 +233,7 @@ namespace HEVSuitMod
 			voiceController.PlaySentence(sentence);
 		}
 
+		// TEMP for testing
 		private void DebugPlayNumberSentence(string number)
 		{
 			if (!int.TryParse(number, out int num))
@@ -274,26 +242,24 @@ namespace HEVSuitMod
 				return;
 			}
 
-			HEVSentence numberSentence = VoiceController.GetNumberSentence(num);
+			HEVSentence numberSentence = voiceController.GetNumberSentence(num);
 			Logger.LogInfo($"Playing number: {number}");
 			voiceController.PlaySentence(numberSentence);
 		}
 
+		// TEMP for testing
 		private void DebugCompassTest()
 		{
 			int lookDir = Compass.GetBearing(GamePlayerOwner.MyPlayer.LookDirection);
-			Logger.LogInfo($"CompassTest: {VoiceController.GetDirectionClip(lookDir)}");
-			voiceController.PlaySentence(VoiceController.GetDirectionSentence(lookDir));
+			Logger.LogInfo($"CompassTest: {voiceController.GetDirectionClip(lookDir)}");
+			voiceController.PlaySentence(voiceController.GetDirectionSentence(lookDir));
 		}
 
 		public void SubscribeEvents()
 		{
 			// Detect fractures, bleeds, etc
-			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent += HealthEffectAdded;
+			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
 			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
-
-			// Detect low health
-			// Discard the params for this one, we don't need them. We just want to know that health has changed
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
 			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDied();
 			subscribed = true;
@@ -301,7 +267,7 @@ namespace HEVSuitMod
 
 		public void UnsubscribeEvents()
 		{
-			GamePlayerOwner.MyPlayer.HealthController.EffectAddedEvent -= HealthEffectAdded;
+			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
 			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
 			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDied();
@@ -332,6 +298,9 @@ namespace HEVSuitMod
 			}
 		}
 
+		/// <summary>
+		/// Event triggered by player death
+		/// </summary>
 		private void PlayerDied()
 		{
 			voiceController.PlaySentenceById("Death");
@@ -353,24 +322,20 @@ namespace HEVSuitMod
 		/// <param name="effect"></param>
 		private void HealthEffectRemoved(IEffect effect)
 		{
-			switch (effect.Type.Name)
-			{
-				// TODO
-				default:
-					Logger.LogWarning($"HealthEffectRemoved: Unhandled IEffect {effect.Type.Name}");
-					break;
-			}
+			// TODO
 		}
 
 		/// <summary>
 		/// Play a sentence that describes the started effect where the type is <paramref name="effect.Type.Name"/>
 		/// </summary>
 		/// <param name="effect"></param>
-		private void HealthEffectAdded(IEffect effect)
+		private void HealthEffectStarted(IEffect effect)
 		{
+			// FIXME: This shit is broke as fuck, none of these effect names ever trigger, I only ever see GInterface###
+			Logger.LogWarning($"HealthEffectStarted({effect.Type.Name} effect)");
 			switch (effect.Type.Name)
 			{
-				case "Fracture":
+				case fracture:
 					switch (effect.BodyPart)
 					{
 						case EBodyPart.LeftLeg:
@@ -387,16 +352,16 @@ namespace HEVSuitMod
 					}
 					break;
 
-				case "HeavyBleeding":
+				case heavyBleeding:
 					voiceController.PlaySentenceById("HeavyBleeding");
 					break;
 
-				case "LightBleeding":
+				case lightBleeding:
 					voiceController.PlaySentenceById("LightBleeding");
 					break;
 
 				default:
-					Logger.LogWarning($"HealthEffectStarted: Unhandled IEffect {effect.Type.Name}");
+					//Logger.LogWarning($"HealthEffectStarted: Unhandled IEffect {effect.Type.Name}");
 					break;
 			}
 		}

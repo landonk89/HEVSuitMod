@@ -1,4 +1,6 @@
-﻿namespace HEVSuitMod
+﻿using UnityEngine;
+
+namespace HEVSuitMod
 {
 	public class HEVAudioClip
 	{
@@ -26,7 +28,7 @@
 			Interval = 0f;
 			Pitch = 1f;
 			Volume = HEVMod.Instance.globalVolume.Value;
-			Delay = 0f;
+			Delay = HEVMod.Instance.defaultDelay.Value;
 		}
 	}
 }
