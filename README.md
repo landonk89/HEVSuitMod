@@ -7,6 +7,11 @@ Please see https://github.com/landonk89/HEVSuitAssets for the related asset file
 
 Right now, this is very early in development. A few things work but it's buggy and unfinished.
 
+Working so far:
+* Inspecting your held weapon will play a voiceline identifying it.
+* Checking the chamber of your held weapon will play a voiceline matching the ammo type in it.
+* Heavy bleeds, light bleeds and fractures will play voicelines similar to those in Half-Life, more to come
+
 I am only slightly higher than a beginner when it comes to modding and coding in general, so I need to learn a lot
 more about Unity and EFT's systems to make this all work the way I want. Any contributions or advice are welcome,
 hopefully some talented people who love these two games as much as I do will stumble into this project and find interest!
@@ -18,7 +23,7 @@ The 'sentences.txt' file in 'scripts' is used to define HEV sentences in a (loos
 See code comments and comments in sentences.txt to understand how it works.
 
 There are some debugging keys: F7, F8, F9, F10
-F7 will play a random compass direction voiceline
-F8 will play the sentence name set in configuration manager (ex: HeavyBleeding).
-F9 will play a randomly selected sentence from all sentences.
-F10 will play a number sentence set in configuration manager (ex: 24, 250, 300, etc).
+* F7 will play a random compass direction voiceline
+* F8 will play the sentence name set in configuration manager (ex: HeavyBleeding).
+* F9 will play a randomly selected sentence from all sentences.
+* F10 will play a number sentence set in configuration manager (ex: 24, 250, 300, etc).
