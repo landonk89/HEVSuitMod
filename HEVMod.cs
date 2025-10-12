@@ -6,6 +6,9 @@ using System.Reflection;
 using UnityEngine;
 using EFT;
 using BepInEx.Logging;
+using System.Collections.Generic;
+using System.Collections;
+using EFT.InventoryLogic;
 
 namespace HEVSuitMod
 {
@@ -34,23 +37,22 @@ namespace HEVSuitMod
 		public ConfigEntry<float> defaultDelay;
 		public ConfigEntry<bool> applySettings;
 
-		// Definitions for IEffect
-		// TODO: Verify these!!
-		private const string lightBleeding = "GInterface313";
-		private const string heavyBleeding = "GInterface314";
-		private const string fracture =	"GInterface316";
-		private const string dehydration = "GInterface317"; // TODO: Verify
-		private const string exhaustion = "GInterface318"; // TODO: Verify
-		private const string radExposure = "GInterface319"; // TODO: Verify
-		private const string intoxication = "GInterface320"; // Might actually be GInterface309??
-		private const string lethalIntoxication = "GInterface320";
-		private const string zombieInfection = "GInterface329";
-		private const string onPainKillers = "GInterface332";
-		private const string frostbite = "GInterface346";
+		// TODO: Consider making this a config entry?
+		private float ignoreDuplicateEffectsTime = 30f;
+		private HashSet<string> activeStatusEffects = new();
 
-		// TEMPORARY!!!
-		private bool gameStarted = false;
-		private bool subscribed = false;
+		// Definitions for IEffect/StatusEffects
+		// TODO: Verify these!!
+		private const string LIGHT_BLEEDING = "GInterface313";
+		private const string HEAVY_BLEEDING = "GInterface314";
+		private const string FRACTURE =	"GInterface316";
+		private const string DEHYDRATION = "GInterface317";
+		private const string EXHAUSTION = "GInterface318";
+		private const string RAD_EXPOSURE = "GInterface319";
+		private const string INTOXICATION = "GInterface320"; // Might actually be GInterface309??
+		private const string ZOMBIE_INFECTION = "GInterface329";
+		private const string ON_PAINKILLERS = "GInterface332";
+		private const string FROSTBITE = "GInterface346";
 
 		// Components
 		VoiceController voiceController;
@@ -61,7 +63,6 @@ namespace HEVSuitMod
 
 		private void Awake()
 		{
-			// Plugin startup logic
 			Log = Logger; // For other classes
 			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
@@ -188,8 +189,15 @@ namespace HEVSuitMod
 
 			// Add debugging/temporary components
 			debugCompass = gameObject.AddComponent<DebugUICompass>();
+
+			// Enable patches
+			new OnNewGame().Enable();
+			new OnGameEnded().Enable();
+			new OnInspectWeapon().Enable();
+			new OnInspectChamber().Enable();
 		}
 
+#if DEBUG
 		private void Update()
 		{
 			// For debugging/testing
@@ -204,25 +212,6 @@ namespace HEVSuitMod
 
 			if (Input.GetKeyDown(KeyCode.F10))
 				DebugPlayNumberSentence(debugNumberSentence.Value);
-
-			// TODO: Just for testing here... Need to find a more correct way to do this.
-			// Tried some patching with harmony and that was a giant failure, need to learn more
-			// about GamePlayerOwner.MyPlayer and when it starts etc..
-			if(GamePlayerOwner.MyPlayer != null && !gameStarted)
-				gameStarted = true;
-			
-			if (!gameStarted)
-				return;
-
-			if (GamePlayerOwner.MyPlayer == null && subscribed)
-			{
-				gameStarted = false;
-				UnsubscribeEvents();
-				return;
-			}
-
-			if (!subscribed)
-				SubscribeEvents();
 		}
 
 		// TEMP for testing
@@ -254,24 +243,23 @@ namespace HEVSuitMod
 			Logger.LogInfo($"CompassTest: {voiceController.GetDirectionClip(lookDir)}");
 			voiceController.PlaySentence(voiceController.GetDirectionSentence(lookDir));
 		}
+#endif
 
-		public void SubscribeEvents()
+		public void OnGameStarted()
 		{
 			// Detect fractures, bleeds, etc
-			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
-			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
+			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStartedEvent;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemovedEvent;
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
-			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDied();
-			subscribed = true;
+			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDiedEvent();
 		}
 
-		public void UnsubscribeEvents()
+		public void OnGameEnded()
 		{
-			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
-			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
+			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStartedEvent;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemovedEvent;
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
-			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDied();
-			subscribed = false;
+			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDiedEvent();
 		}
 
 		/// <summary>
@@ -301,7 +289,7 @@ namespace HEVSuitMod
 		/// <summary>
 		/// Event triggered by player death
 		/// </summary>
-		private void PlayerDied()
+		private void PlayerDiedEvent()
 		{
 			voiceController.PlaySentenceById("Death");
 		}
@@ -320,22 +308,29 @@ namespace HEVSuitMod
 		/// Play a sentence that describes the removed effect where the type is <paramref name="effect.Type.Name"/>
 		/// </summary>
 		/// <param name="effect"></param>
-		private void HealthEffectRemoved(IEffect effect)
+		private void HealthEffectRemovedEvent(IEffect effect)
 		{
-			// TODO
+			// TODO: Auto-heal? and say stuff like "Bleeding has stopped" or "Splint Applied"
 		}
 
 		/// <summary>
 		/// Play a sentence that describes the started effect where the type is <paramref name="effect.Type.Name"/>
 		/// </summary>
 		/// <param name="effect"></param>
-		private void HealthEffectStarted(IEffect effect)
+		private void HealthEffectStartedEvent(IEffect effect)
 		{
-			// FIXME: This shit is broke as fuck, none of these effect names ever trigger, I only ever see GInterface###
-			Logger.LogWarning($"HealthEffectStarted({effect.Type.Name} effect)");
-			switch (effect.Type.Name)
+			string effectName = effect.Type.Name;
+			if (activeStatusEffects.Contains(effectName))
 			{
-				case fracture:
+				Logger.LogInfo($"HealthEffectStarted: Duplicate effect {effectName}");
+				return;
+			}
+
+			AddEffect(effectName); // Prevent duplicates within ignoreDuplicateEffectsTime
+
+			switch (effectName)
+			{
+				case FRACTURE:
 					switch (effect.BodyPart)
 					{
 						case EBodyPart.LeftLeg:
@@ -352,18 +347,41 @@ namespace HEVSuitMod
 					}
 					break;
 
-				case heavyBleeding:
+				case HEAVY_BLEEDING:
 					voiceController.PlaySentenceById("HeavyBleeding");
 					break;
 
-				case lightBleeding:
+				case LIGHT_BLEEDING:
 					voiceController.PlaySentenceById("LightBleeding");
 					break;
-
-				default:
-					//Logger.LogWarning($"HealthEffectStarted: Unhandled IEffect {effect.Type.Name}");
-					break;
 			}
+		}
+
+		private void AddEffect(string effectName)
+		{
+			activeStatusEffects.Add(effectName);
+			StartCoroutine(BeginExpireEffect(effectName));
+			Logger.LogInfo($"HealthEffectStarted: {effectName}, ignoring duplicates for {ignoreDuplicateEffectsTime} secs");
+		}
+
+		private IEnumerator BeginExpireEffect(string effectName)
+		{
+			yield return new WaitForSeconds(ignoreDuplicateEffectsTime);
+
+			activeStatusEffects.Remove(effectName);
+		}
+		
+		public void WeaponInspectEvent()
+		{
+			// Play sentence with identifier matching held weapon
+			voiceController.PlaySentenceById(GamePlayerOwner.MyPlayer.HandsController.Item.StringTemplateId);
+		}
+
+		public void ChamberInspectEvent()
+		{
+			// Play sentence with identifier matching ammo in chamber
+			Weapon weapon = GamePlayerOwner.MyPlayer.HandsController.Item as Weapon;
+			voiceController.PlaySentenceById(weapon.Chambers[0].ContainedItem.StringTemplateId);
 		}
 	}
 }

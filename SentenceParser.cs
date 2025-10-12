@@ -10,6 +10,7 @@ namespace HEVSuitMod
 	/// </summary>
 	public class SentenceParser
 	{
+		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
 		private VoiceController voiceController;
 		private AssetBundle assets;
 		private string[] allFiles;
@@ -24,7 +25,7 @@ namespace HEVSuitMod
 		{
 			if (HEVMod.Instance == null)
 			{
-				Debug.LogError("HEVSuitMod.SentenceParser: HEVMod.Instance is null!");
+				log.LogError("HEVSuitMod.SentenceParser: HEVMod.Instance is null!");
 				return;
 			}
 
@@ -33,7 +34,7 @@ namespace HEVSuitMod
 
 			if (voiceController == null || assets == null)
 			{
-					HEVMod.Log.LogError("SentenceParser: Null Reference in constructor");
+					log.LogError("SentenceParser: Null Reference in constructor");
 					return;
 			}
 
@@ -63,7 +64,7 @@ namespace HEVSuitMod
 
 		public void Reparse()
 		{
-			HEVMod.Log.LogWarning("Reparsing sentences...");
+			log.LogWarning("Reparsing sentences...");
 			voiceController.PurgeSentences();
 			ParseAllSentences();
 		}
@@ -73,7 +74,7 @@ namespace HEVSuitMod
 			TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>("assets/scripts/sentences.txt");
 			if (hevSentencesFile == null)
 			{
-				HEVMod.Log.LogError("Failed to load sentences!!");
+				log.LogError("Failed to load sentences!!");
 				return;
 			}
 
@@ -88,9 +89,9 @@ namespace HEVSuitMod
 				{
 					string sentenceTypeText = hevSentence.Substring(1);
 					if (!Enum.TryParse(sentenceTypeText, out sentenceType))
-						HEVMod.Log.LogError($"Unknown parse mode {sentenceTypeText}!");
+						log.LogError($"Unknown parse mode {sentenceTypeText}!");
 
-					HEVMod.Log.LogInfo($"Parsing {sentenceTypeText}");
+					log.LogInfo($"Parsing {sentenceTypeText}");
 					continue;
 				}
 
@@ -114,7 +115,7 @@ namespace HEVSuitMod
 		{
 			List<HEVAudioClip> clips = new();
 			string[] tokens = sentence.Split(' ');
-			HEVMod.Log.LogInfo($"ParseSentence: {sentence}");
+			log.LogInfo($"ParseSentence: {sentence}");
 
 			// Parse tokenized sentence
 			for (int i = 1; i < tokens.Length; i++)
@@ -170,7 +171,7 @@ namespace HEVSuitMod
 
 				if (!Array.Exists(allFiles, s => s.ToLower() == clip.ToLower()))
 				{
-					HEVMod.Log.LogError($"File not found {clip}");
+					log.LogError($"File not found {clip}");
 					continue;
 				}
 

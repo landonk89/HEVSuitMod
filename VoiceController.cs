@@ -1,4 +1,4 @@
-﻿using System;
+﻿using BepInEx.Logging;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,7 @@ namespace HEVSuitMod
 {
 	public class VoiceController : MonoBehaviour
 	{
+		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.VoiceController");
 		private AudioSource audioSource;
 		private List<HEVSentence> allSentences = new();
 		private List<HEVSentence> pendingSentences = new();
@@ -18,11 +19,7 @@ namespace HEVSuitMod
 			audioSource = gameObject.AddComponent<AudioSource>();
 		}
 
-		// TODO: Right now this will just play everything added to the list until it's empty,
-		// this will need a little system to keep from adding duplicate sentences and stop things
-		// from getting out of hand, we don't want to pile up 50 sentences and play them all.
-		// We need to be smart about what to add and what to skip. For example, 2 bleeds at the
-		// same time or within a certain time shouldn't both be played. Same for 2 fractures, and so on.
+		// Update just monitors pendingSentences and starts playing if there are any
 		private void Update()
 		{
 			if (pendingSentences.Count > 0 && sentencePlayer == null)
@@ -47,21 +44,8 @@ namespace HEVSuitMod
 		public void DebugPlayRandomSentence()
 		{
 			HEVSentence sentence = allSentences.PickRandom();
-			HEVMod.Log.LogInfo($"Playing Sentence: {sentence.Identifier}");
+			log.LogInfo($"Playing Sentence: {sentence.Identifier}");
 			PlaySentence(sentence);
-		}
-
-		public void DebugValidateSentences()
-		{
-			string[] allFiles = HEVMod.Instance.Assets.GetAllAssetNames();
-			foreach (var sentence in allSentences)
-			{
-				foreach (var file in sentence.Clips)
-				{
-					if (!Array.Exists(allFiles, s => s.ToLower() == file.ClipName.ToLower()))
-						HEVMod.Log.LogError($"Sentence {sentence.Identifier}, File not found: {file.ClipName}");
-				}
-			}
 		}
 
 		// This handles the playback, triggered by Update() when needed
@@ -79,7 +63,7 @@ namespace HEVSuitMod
 					// Handle missing files
 					if (audioSource.clip == null)
 					{
-						HEVMod.Log.LogError($"Missing clip: {clip.ClipName}");
+						log.LogError($"Missing clip: {clip.ClipName}");
 						continue;
 					}
 
@@ -107,7 +91,7 @@ namespace HEVSuitMod
 			HEVSentence sentence = GetSentenceById(identifier);
 			if (sentence == null)
 			{
-				HEVMod.Log.LogError("GetSentenceById is null!");
+				log.LogError("GetSentenceById is null!");
 				return;
 			}
 
@@ -120,7 +104,26 @@ namespace HEVSuitMod
 		/// <param name="identifier"></param>
 		public HEVSentence GetSentenceById(string identifier)
 		{
-			return allSentences.Where(x => x.Identifier == identifier).PickRandom();
+			if (string.IsNullOrEmpty(identifier))
+			{
+				log.LogWarning("GetSentenceById was called with a null or empty identifier.");
+				return null;
+			}
+
+			if (allSentences == null || allSentences.Count == 0)
+			{
+				log.LogWarning("GetSentenceById: allSentences is null or empty.");
+				return null;
+			}
+			
+			var matches = allSentences.Where(x => x != null && x.Identifier == identifier).ToList();
+			if (matches.Count == 0)
+			{
+				Debug.LogWarning($"GetSentenceById: No sentence found for identifier '{identifier}'.");
+				return null;
+			}
+
+			return matches.PickRandom();
 		}
 
 		/// <summary>
