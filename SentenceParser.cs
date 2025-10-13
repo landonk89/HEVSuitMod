@@ -42,14 +42,14 @@ namespace HEVSuitMod
 			ParseAllSentences();
 		}
 
-		private string GetDirectory(int index, SentenceType sentenceType)
+		private string GetDirectory(int index, ESentenceType sentenceType)
 		{
 			// Types have every file is in the same place
-			if (sentenceType == SentenceType.Types)
+			if (sentenceType == ESentenceType.Types)
 				return "Assets/Sounds/Weapons/Types/";
 
 			// Events have partial paths aready
-			if (sentenceType == SentenceType.Events)
+			if (sentenceType == ESentenceType.Events)
 				return "Assets/Sounds/";
 
 			// Must be a weapon, index based directory
@@ -78,7 +78,7 @@ namespace HEVSuitMod
 				return;
 			}
 
-			SentenceType sentenceType = SentenceType.None;
+			ESentenceType sentenceType = ESentenceType.None;
 			string[] hevSentences = hevSentencesFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 			foreach (string hevSentence in hevSentences)
 			{
@@ -111,7 +111,7 @@ namespace HEVSuitMod
 		// $Weapons: These are a fixed length of 3 audio clips so we can selectively disable maker or caliber voicelines.
 		// $Types: These are also a fixed length of 3 so we can selectively disable caliber or extendedName voicelines.
 		// --------------------------------------------------------------
-		private HEVSentence ParseSentence(string sentence, SentenceType sentenceType)
+		private HEVSentence ParseSentence(string sentence, ESentenceType sentenceType)
 		{
 			List<HEVAudioClip> clips = new();
 			string[] tokens = sentence.Split(' ');
@@ -126,10 +126,10 @@ namespace HEVSuitMod
 
 				// Check if it's a weapon or type sentence, we may need to skip some parts
 				bool skip =
-					(sentenceType == SentenceType.Types && i == typeExtendedNameIndex && !HEVMod.Instance.sayExtendedOnChamberCheck.Value) ||
-					(sentenceType == SentenceType.Types && i == typeCaliberIndex && !HEVMod.Instance.sayTypeOnChamberCheck.Value) ||
-					(sentenceType == SentenceType.Weapons && i == weaponCaliberIndex && !HEVMod.Instance.sayTypeOnInspect.Value) ||
-					(sentenceType == SentenceType.Weapons && i == weaponMakerIndex && !HEVMod.Instance.sayMakerOnInspect.Value);
+					(sentenceType == ESentenceType.Types && i == typeExtendedNameIndex && !HEVMod.Instance.sayExtendedOnChamberCheck.Value) ||
+					(sentenceType == ESentenceType.Types && i == typeCaliberIndex && !HEVMod.Instance.sayTypeOnChamberCheck.Value) ||
+					(sentenceType == ESentenceType.Weapons && i == weaponCaliberIndex && !HEVMod.Instance.sayTypeOnInspect.Value) ||
+					(sentenceType == ESentenceType.Weapons && i == weaponMakerIndex && !HEVMod.Instance.sayMakerOnInspect.Value);
 
 				if (skip)
 					continue;

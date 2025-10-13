@@ -2,7 +2,7 @@
 
 namespace HEVSuitMod
 {
-	public enum SentenceType
+	public enum ESentenceType
 	{
 		None,
 		Events,
