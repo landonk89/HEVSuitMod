@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>HEVSuitMod</AssemblyName>
     <Description>HEV Suit from Half-Life for Escape from Tarkov</Description>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <PackageProjectUrl>https://github.com/landonk89/HEVSuitMod</PackageProjectUrl>
