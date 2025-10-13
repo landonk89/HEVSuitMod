@@ -59,7 +59,7 @@ namespace HEVSuitMod
 
 	internal class OnInspectChamber : ModulePatch
 	{
-		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.OnInspectWeapon");
+		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.OnInspectChamber");
 
 		protected override MethodBase GetTargetMethod()
 		{

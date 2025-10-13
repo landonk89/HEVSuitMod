@@ -148,7 +148,6 @@ namespace HEVSuitMod
 					for (int j = 0; j < parameters.Length; j++)
 					{
 						string[] paramValuePair = parameters[j].Split(':');
-
 						string key = paramValuePair[0];
 						string val = paramValuePair[1];
 
@@ -160,7 +159,6 @@ namespace HEVSuitMod
 							case "volume" when float.TryParse(val, out float vol): volume *= vol; break;
 							case "delay" when float.TryParse(val, out float dly): delay = dly; break;
 						}
-
 					}
 					clip = GetDirectory(i, sentenceType) + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
 				}
