@@ -154,6 +154,7 @@ namespace HEVSuitMod
 		/// <returns></returns>
 		public HEVSentence GetDirectionSentence(int bearing)
 		{
+			// TODO: Add directions to sentences.txt instead of generating them
 			return new HEVSentence(null, [new HEVAudioClip(GetDirectionClip(bearing))]);
 		}
 
@@ -164,10 +165,7 @@ namespace HEVSuitMod
 		/// <returns></returns>
 		public string GetDirectionClip(int bearing)
 		{
-			string[] directions = {
-				"North", "Northeast", "East", "Southeast",
-				"South", "Southwest", "West", "Northwest"
-			};
+			string[] directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest" };
 			int index = Mathf.FloorToInt((bearing + 22.5f) / 45f) % 8;
 			return $"assets/sounds/compass/{directions[index]}.wav";
 		}

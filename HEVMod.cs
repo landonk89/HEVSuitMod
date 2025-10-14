@@ -14,13 +14,27 @@ namespace HEVSuitMod
 	[BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
 	public class HEVMod : BaseUnityPlugin
 	{
+		// Constants
+		public const float DEFAULT_PLAYBACK_DELAY = 0.25f;
+		public const string MOD_DIR = "HEVSuitMod";
+		public const string BUNDLE_FILE = "hevsuit.bundle";
+		private const string LIGHT_BLEEDING = "GInterface313";
+		private const string HEAVY_BLEEDING = "GInterface314";
+		private const string FRACTURE = "GInterface316";
+		private const string DEHYDRATION = "GInterface317"; // Unverified
+		private const string EXHAUSTION = "GInterface318"; // Unverified
+		private const string RAD_EXPOSURE = "GInterface319"; // Unverified
+		private const string INTOXICATION = "GInterface320"; // Might actually be GInterface309??
+		private const string ZOMBIE_INFECTION = "GInterface329"; // Unverified
+		private const string ON_PAINKILLERS = "GInterface332"; // Unverified
+		private const string FROSTBITE = "GInterface346"; // Unverified
+
 		// Singleton
 		public static HEVMod Instance { get; private set; }
-		public static ManualLogSource Log { get; private set; }
 
 		// File related stuff
 		public AssetBundle Assets { get; private set; }
-		private string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, "HEVSuitMod", "hevsuit.bundle");
+		public string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, MOD_DIR, BUNDLE_FILE);
 
 		// Config
 #if DEBUG
@@ -29,31 +43,17 @@ namespace HEVSuitMod
 		public ConfigEntry<string> debugNumberSentence;
 #endif
 		public ConfigEntry<float> globalVolume;
+		public ConfigEntry<float> ignoreDuplicateEffectsTime;
 		public ConfigEntry<bool> sayMakerOnInspect;
 		public ConfigEntry<bool> sayModelOnInspect;
 		public ConfigEntry<bool> sayTypeOnInspect;
 		public ConfigEntry<bool> sayTypeOnChamberCheck;
 		public ConfigEntry<bool> sayNameOnChamberCheck;
 		public ConfigEntry<bool> sayExtendedOnChamberCheck;
-		public ConfigEntry<float> defaultDelay;
 		public ConfigEntry<bool> applySettings;
 
-		// TODO: Consider making this a config entry?
-		private float ignoreDuplicateEffectsTime = 30f;
+		// Track active effects for ignoreDuplicateEffectsTime
 		private HashSet<string> activeStatusEffects = new();
-
-		// Definitions for IEffect/StatusEffects
-		// TODO: Verify these!!
-		private const string LIGHT_BLEEDING = "GInterface313";
-		private const string HEAVY_BLEEDING = "GInterface314";
-		private const string FRACTURE =	"GInterface316";
-		private const string DEHYDRATION = "GInterface317";
-		private const string EXHAUSTION = "GInterface318";
-		private const string RAD_EXPOSURE = "GInterface319";
-		private const string INTOXICATION = "GInterface320"; // Might actually be GInterface309??
-		private const string ZOMBIE_INFECTION = "GInterface329";
-		private const string ON_PAINKILLERS = "GInterface332";
-		private const string FROSTBITE = "GInterface346";
 
 		// Components
 		VoiceController voiceController;
@@ -65,12 +65,11 @@ namespace HEVSuitMod
 #endif
 		private void Awake()
 		{
-			Log = Logger; // For other classes
-			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_NAME} is loaded!");
 
 			if (Instance != null)
 			{
-				Logger.LogError($"Attempted to create duplicate instance of {PluginInfo.PLUGIN_GUID}!!");
+				Logger.LogError($"Attempted to create duplicate instance of {PluginInfo.PLUGIN_NAME}!!");
 				return;
 			}
 
@@ -78,7 +77,7 @@ namespace HEVSuitMod
 			Assets = AssetBundle.LoadFromFile(bundlePath);
 			if (Assets == null)
 			{
-				Logger.LogError("FATAL: Couldn't load assetbundle!!!");
+				Logger.LogFatal($"Couldn't load assetbundle, please reinstall {PluginInfo.PLUGIN_NAME}");
 				return;
 			}
 
@@ -105,6 +104,13 @@ namespace HEVSuitMod
 					"Min:1 Max:9999"
 				);
 #endif
+			ignoreDuplicateEffectsTime = Config.Bind(
+					"Suit Settings",
+					"Ignore duplicate events time",
+					30.0f,
+					"Don't play the same voiceline more than once within this amount of time (seconds)"
+				);
+
 			globalVolume = Config.Bind(
 					"Voicelines",
 					"Volume",
@@ -152,13 +158,6 @@ namespace HEVSuitMod
 					"Say ammo exdended name when checking chamber (Ex: Subsonic, Tracer)",
 					true,
 					"When inspecting a weapon's chamber, the HEV will say its extended name last (ex: Tracer)"
-				);
-
-			defaultDelay = Config.Bind(
-					"HEV",
-					"Default clip delay",
-					0.25f,
-					""
 				);
 
 			applySettings = Config.Bind(
@@ -325,7 +324,9 @@ namespace HEVSuitMod
 			string effectName = effect.Type.Name;
 			if (activeStatusEffects.Contains(effectName))
 			{
+#if DEBUG
 				Logger.LogInfo($"HealthEffectStarted: Duplicate effect {effectName}");
+#endif
 				return;
 			}
 
@@ -364,12 +365,14 @@ namespace HEVSuitMod
 		{
 			activeStatusEffects.Add(effectName);
 			StartCoroutine(BeginExpireEffect(effectName));
-			Logger.LogInfo($"HealthEffectStarted: {effectName}, ignoring duplicates for {ignoreDuplicateEffectsTime} secs");
+#if DEBUG
+			Logger.LogInfo($"HealthEffectStarted: {effectName}, ignoring duplicates for {ignoreDuplicateEffectsTime.Value} secs");
+#endif
 		}
 
 		private IEnumerator BeginExpireEffect(string effectName)
 		{
-			yield return new WaitForSeconds(ignoreDuplicateEffectsTime);
+			yield return new WaitForSeconds(ignoreDuplicateEffectsTime.Value);
 
 			activeStatusEffects.Remove(effectName);
 		}

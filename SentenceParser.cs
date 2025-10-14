@@ -1,6 +1,7 @@
 ﻿using BepInEx.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace HEVSuitMod
@@ -13,7 +14,8 @@ namespace HEVSuitMod
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
 		private VoiceController voiceController;
 		private AssetBundle assets;
-		private string[] allFiles;
+		private List<string> allFiles = new();
+		private List<string> missingFiles = new(); // Catch 404s
 		private const int weaponMakerIndex = 1;
 		private const int weaponModelIndex = 2;
 		private const int weaponCaliberIndex = 3;
@@ -38,7 +40,7 @@ namespace HEVSuitMod
 					return;
 			}
 
-			allFiles = assets.GetAllAssetNames();
+			allFiles = assets.GetAllAssetNames().ToList();
 			ParseAllSentences();
 		}
 
@@ -46,18 +48,18 @@ namespace HEVSuitMod
 		{
 			// Types have every file is in the same place
 			if (sentenceType == ESentenceType.Types)
-				return "Assets/Sounds/Weapons/Types/";
+				return "assets/sounds/weapons/types/";
 
 			// Events have partial paths aready
 			if (sentenceType == ESentenceType.Events)
-				return "Assets/Sounds/";
+				return "assets/sounds/";
 
 			// Must be a weapon, index based directory
 			switch (index)
 			{
-				case weaponMakerIndex: return "Assets/Sounds/Weapons/Maker/";
-				case weaponModelIndex: return "Assets/Sounds/Weapons/Model/";
-				case weaponCaliberIndex: return "Assets/Sounds/Weapons/Types/";
+				case weaponMakerIndex: return "assets/sounds/weapons/maker/";
+				case weaponModelIndex: return "assets/sounds/weapons/model/";
+				case weaponCaliberIndex: return "assets/sounds/weapons/types/";
 				default: return "ERROR/";
 			}
 		}
@@ -80,6 +82,7 @@ namespace HEVSuitMod
 
 			ESentenceType sentenceType = ESentenceType.None;
 			string[] hevSentences = hevSentencesFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+			int sentenceCount = 0;
 			foreach (string hevSentence in hevSentences)
 			{
 				if (hevSentence.StartsWith("//")) // Skip comments
@@ -90,13 +93,19 @@ namespace HEVSuitMod
 					string sentenceTypeText = hevSentence.Substring(1);
 					if (!Enum.TryParse(sentenceTypeText, out sentenceType))
 						log.LogError($"Unknown parse mode {sentenceTypeText}!");
-
+#if DEBUG
 					log.LogInfo($"Parsing {sentenceTypeText}");
+#endif
 					continue;
 				}
-
+				sentenceCount++;
 				voiceController.AddSentence(ParseSentence(hevSentence, sentenceType));
 			}
+
+			log.LogInfo($"Parsed {sentenceCount} sentences.");
+			// FIXME: missingFiles.Count is coming back as 48 when 40 are actually missing..
+			if (missingFiles.Count > 0)
+				log.LogError($"Encountered {missingFiles.Count} missing files:\n{Utils.FileTree(missingFiles)}");
 		}
 
 		// --------------------------------------------------------------
@@ -115,8 +124,9 @@ namespace HEVSuitMod
 		{
 			List<HEVAudioClip> clips = new();
 			string[] tokens = sentence.Split(' ');
+#if DEBUG
 			log.LogInfo($"ParseSentence: {sentence}");
-
+#endif
 			// Parse tokenized sentence
 			for (int i = 1; i < tokens.Length; i++)
 			{
@@ -139,7 +149,7 @@ namespace HEVSuitMod
 				float interval = 0f; // Default space between loops
 				float pitch = 1f;
 				float volume = HEVMod.Instance.globalVolume.Value;
-				float delay = HEVMod.Instance.defaultDelay.Value; // No delay for the first?
+				float delay = HEVMod.DEFAULT_PLAYBACK_DELAY;
 
 				// For each token there may be parameters formatted like [param:value,param2:value]
 				if (tokens[i].StartsWith("["))
@@ -167,9 +177,9 @@ namespace HEVSuitMod
 					clip = GetDirectory(i, sentenceType) + tokens[i].ToLower() + ".wav";
 				}
 
-				if (!Array.Exists(allFiles, s => s.ToLower() == clip.ToLower()))
+				if (!allFiles.Contains(clip.ToLower()))
 				{
-					log.LogError($"File not found {clip}");
+					missingFiles.Add($"{HEVMod.BUNDLE_FILE}/{clip}");
 					continue;
 				}
 

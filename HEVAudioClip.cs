@@ -26,7 +26,7 @@
 			Interval = 0f;
 			Pitch = 1f;
 			Volume = HEVMod.Instance.globalVolume.Value;
-			Delay = HEVMod.Instance.defaultDelay.Value;
+			Delay = HEVMod.DEFAULT_PLAYBACK_DELAY;
 		}
 	}
 }
