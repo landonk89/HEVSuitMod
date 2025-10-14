@@ -2,7 +2,6 @@
 using BepInEx.Configuration;
 using System;
 using System.IO;
-using System.Reflection;
 using UnityEngine;
 using EFT;
 using BepInEx.Logging;
@@ -21,12 +20,14 @@ namespace HEVSuitMod
 
 		// File related stuff
 		public AssetBundle Assets { get; private set; }
-		private string bundlePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\hevsuit.bundle";
+		private string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, "HEVSuitMod", "hevsuit.bundle");
 
 		// Config
+#if DEBUG
 		public ConfigEntry<bool> debugDrawCompass;
 		public ConfigEntry<string> debugSentence;
 		public ConfigEntry<string> debugNumberSentence;
+#endif
 		public ConfigEntry<float> globalVolume;
 		public ConfigEntry<bool> sayMakerOnInspect;
 		public ConfigEntry<bool> sayModelOnInspect;
@@ -59,8 +60,9 @@ namespace HEVSuitMod
 		SentenceParser parser;
 
 		// Debug components
+#if DEBUG
 		DebugUICompass debugCompass;
-
+#endif
 		private void Awake()
 		{
 			Log = Logger; // For other classes
@@ -81,6 +83,7 @@ namespace HEVSuitMod
 			}
 
 			// Config stuff
+#if DEBUG
 			debugDrawCompass = Config.Bind(
 					"Debug",
 					"Draw temporary compass",
@@ -101,7 +104,7 @@ namespace HEVSuitMod
 					"123",
 					"Min:1 Max:9999"
 				);
-
+#endif
 			globalVolume = Config.Bind(
 					"Voicelines",
 					"Volume",
@@ -175,6 +178,13 @@ namespace HEVSuitMod
 				}
 			};
 
+			// Add components
+			voiceController = gameObject.AddComponent<VoiceController>();
+			parser = new(voiceController, Assets);
+
+			// Add debugging/temporary components
+#if DEBUG
+			debugCompass = gameObject.AddComponent<DebugUICompass>();
 			debugDrawCompass.SettingChanged += (_, _) =>
 			{
 				if (debugDrawCompass.Value)
@@ -182,14 +192,7 @@ namespace HEVSuitMod
 				else
 					debugCompass.enabled = false;
 			};
-
-			// Add components
-			voiceController = gameObject.AddComponent<VoiceController>();
-			parser = new(voiceController, Assets);
-
-			// Add debugging/temporary components
-			debugCompass = gameObject.AddComponent<DebugUICompass>();
-
+#endif
 			// Enable patches
 			new OnNewGame().Enable();
 			new OnGameEnded().Enable();

@@ -1,4 +1,5 @@
-﻿using EFT;
+﻿#if DEBUG
+using EFT;
 using System.Text;
 using UnityEngine;
 
@@ -74,3 +75,4 @@ namespace HEVSuitMod
 		}
 	}
 }
+#endif

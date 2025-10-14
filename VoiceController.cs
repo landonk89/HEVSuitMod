@@ -9,6 +9,7 @@ namespace HEVSuitMod
 	public class VoiceController : MonoBehaviour
 	{
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.VoiceController");
+		private AssetBundle assets;
 		private AudioSource audioSource;
 		private List<HEVSentence> allSentences = new();
 		private List<HEVSentence> pendingSentences = new();
@@ -17,6 +18,7 @@ namespace HEVSuitMod
 		private void Awake()
 		{
 			audioSource = gameObject.AddComponent<AudioSource>();
+			assets = HEVMod.Instance.Assets;
 		}
 
 		// Update just monitors pendingSentences and starts playing if there are any
@@ -40,14 +42,14 @@ namespace HEVSuitMod
 			pendingSentences.Clear();
 			allSentences.Clear();
 		}
-
+#if DEBUG
 		public void DebugPlayRandomSentence()
 		{
 			HEVSentence sentence = allSentences.PickRandom();
 			log.LogInfo($"Playing Sentence: {sentence.Identifier}");
 			PlaySentence(sentence);
 		}
-
+#endif
 		// This handles the playback, triggered by Update() when needed
 		private IEnumerator PlaySentences()
 		{
@@ -56,7 +58,7 @@ namespace HEVSuitMod
 				HEVSentence sentence = pendingSentences[0];
 				foreach (HEVAudioClip clip in sentence.Clips)
 				{
-					audioSource.clip = HEVMod.Instance.Assets.LoadAsset<AudioClip>(clip.ClipName);
+					audioSource.clip = assets.LoadAsset<AudioClip>(clip.ClipName);
 					audioSource.pitch = clip.Pitch;
 					audioSource.volume = clip.Volume;
 
@@ -119,7 +121,7 @@ namespace HEVSuitMod
 			var matches = allSentences.Where(x => x != null && x.Identifier == identifier).ToList();
 			if (matches.Count == 0)
 			{
-				Debug.LogWarning($"GetSentenceById: No sentence found for identifier '{identifier}'.");
+				log.LogWarning($"GetSentenceById: No sentence found for identifier '{identifier}'.");
 				return null;
 			}
 
