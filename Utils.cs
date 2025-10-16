@@ -2,12 +2,29 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using UnityEngine;
+using BepInEx.Logging;
 
 namespace HEVSuitMod
 {
 	// Some useful stuff goes here
 	public static class Utils
 	{
+		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Utils");
+
+		// Simple tree node
+		private class Node
+		{
+			public string Name { get; }
+			public Dictionary<string, Node> Children { get; }
+
+			public Node(string name)
+			{
+				Name = name;
+				Children = new Dictionary<string, Node>(StringComparer.OrdinalIgnoreCase);
+			}
+		}
+
 		/// <summary>
 		/// Generate a tree of files similar to Windows TREE /F
 		/// </summary>
@@ -35,31 +52,48 @@ namespace HEVSuitMod
 				BuildTreeRecursive(sb, child, "", isLast: child == tree.Children.Values.Last());
 
 			return sb.ToString();
-		}
 
-		private static void BuildTreeRecursive(StringBuilder sb, Node node, string prefix, bool isLast)
-		{
-			sb.Append(prefix);
-			sb.Append(prefix.IsNullOrEmpty() ? null : (isLast ? "└── " : "├── "));
-			sb.AppendLine(node.Name);
-			string childPrefix = prefix + (isLast ? "    " : "│   ");
-			int i = 0;
-
-			foreach (var child in node.Children.Values.OrderBy(c => c.Name))
-				BuildTreeRecursive(sb, child, childPrefix, ++i == node.Children.Count);
-		}
-
-		// Simple tree node
-		private class Node
-		{
-			public string Name { get; }
-			public Dictionary<string, Node> Children { get; }
-
-			public Node(string name)
+			void BuildTreeRecursive(StringBuilder sb, Node node, string prefix, bool isLast)
 			{
-				Name = name;
-				Children = new Dictionary<string, Node>(StringComparer.OrdinalIgnoreCase);
+				sb.Append(prefix);
+				sb.Append(prefix.IsNullOrEmpty() ? null : (isLast ? "└── " : "├── "));
+				sb.AppendLine(node.Name);
+				string childPrefix = prefix + (isLast ? "    " : "│   ");
+				int i = 0;
+
+				foreach (var child in node.Children.Values.OrderBy(c => c.Name))
+					BuildTreeRecursive(sb, child, childPrefix, ++i == node.Children.Count);
 			}
+		}
+
+		/// <summary>
+		/// Log game object hierarchy with components
+		/// </summary>
+		/// <param name="root"></param>
+		public static void LogGameObjectHierarchy(GameObject root)
+		{
+			void LogRecursive(GameObject obj, int indent = 0)
+			{
+				string prefix = new string(' ', indent * 2);
+				log.LogWarning($"{prefix}- {obj.name}");
+
+				// List components on this GameObject
+				foreach (var comp in obj.GetComponents<Component>())
+				{
+					if (comp == null)
+						continue; // skip missing scripts
+
+					log.LogWarning($"{prefix}  • Component: {comp.GetType().Name}");
+				}
+
+				// Recurse into children
+				foreach (Transform child in obj.transform)
+					LogRecursive(child.gameObject, indent + 1);
+			}
+
+			log.LogWarning($"=== GameObject Hierarchy for {root.name} ===");
+			LogRecursive(root);
+			log.LogWarning($"=== End of Hierarchy ===");
 		}
 	}
 }

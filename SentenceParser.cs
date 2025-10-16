@@ -48,6 +48,10 @@ namespace HEVSuitMod
 			}
 
 			allFiles = assets.GetAllAssetNames().ToList();
+#if DEBUG
+			log.LogInfo("Asset bundle tree:");
+			log.LogInfo(Utils.FileTree(allFiles));
+#endif
 			ParseAllSentences();
 		}
 

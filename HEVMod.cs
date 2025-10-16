@@ -56,6 +56,7 @@ namespace HEVSuitMod
 
 		// Components
 		VoiceController voiceController;
+		HudController hudController;
 		SentenceParser parser;
 
 		// Debug components
@@ -253,6 +254,8 @@ namespace HEVSuitMod
 			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemovedEvent;
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
 			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDiedEvent();
+
+			hudController = gameObject.AddComponent<HudController>();
 		}
 
 		public void OnGameEnded()
@@ -261,6 +264,8 @@ namespace HEVSuitMod
 			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemovedEvent;
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
 			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDiedEvent();
+
+			Destroy(hudController);
 		}
 
 		/// <summary>
@@ -379,14 +384,24 @@ namespace HEVSuitMod
 		public void WeaponInspectEvent()
 		{
 			// Play sentence with identifier matching held weapon
-			voiceController.PlaySentenceById(GamePlayerOwner.MyPlayer.HandsController.Item.StringTemplateId);
+			string templateId = GamePlayerOwner.MyPlayer.HandsController.Item.StringTemplateId;
+			if (templateId == null)
+				return;
+
+			voiceController.PlaySentenceById(templateId);
 		}
 
 		public void ChamberInspectEvent()
 		{
 			// Play sentence with identifier matching ammo in chamber
-			Weapon weapon = GamePlayerOwner.MyPlayer.HandsController.Item as Weapon;
-			voiceController.PlaySentenceById(weapon.Chambers[0].ContainedItem.StringTemplateId);
+			if (GamePlayerOwner.MyPlayer.HandsController.Item is not Weapon weapon)
+				return;
+
+			string templateId = weapon.Chambers[0].ContainedItem.StringTemplateId;
+			if (templateId == null)
+				return;
+
+			voiceController.PlaySentenceById(templateId);
 		}
 	}
 }
