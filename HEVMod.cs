@@ -397,6 +397,9 @@ namespace HEVSuitMod
 			if (GamePlayerOwner.MyPlayer.HandsController.Item is not Weapon weapon)
 				return;
 
+			if (weapon.ChamberAmmoCount < 1)
+				return;
+
 			string templateId = weapon.Chambers[0].ContainedItem.StringTemplateId;
 			if (templateId == null)
 				return;

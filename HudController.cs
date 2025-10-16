@@ -1,5 +1,6 @@
 ﻿using BepInEx.Logging;
 using EFT;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,16 +9,17 @@ namespace HEVSuitMod
 	public class HudController : MonoBehaviour
 	{
 		// Just for readability
-		const int up = 0;
-		const int right = 1;
-		const int down = 2;
-		const int left = 3;
+		const int UP = 0;
+		const int RIGHT = 1;
+		const int DOWN = 2;
+		const int LEFT = 3;
 
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
 		private AssetBundle assets;
 		private GameObject hudPrefab;
 		private Image[] hitIndicators = new Image[4]; // Order: Up Right Down Left
 		private float[] hitIndicatorTimers = new float[4];
+		private Coroutine hideHitIndicators = null;
 
 		private void Start()
 		{
@@ -30,30 +32,60 @@ namespace HEVSuitMod
 			assets = HEVMod.Instance.Assets;
 			hudPrefab = assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab");
 			GameObject hud = Instantiate(hudPrefab);
-			Utils.LogGameObjectHierarchy(hud);
+			//Utils.LogGameObjectHierarchy(hud);
 			hitIndicators = hud.GetComponentsInChildren<Image>(true);
-			hitIndicators[up].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageup.png");
-			hitIndicators[right].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageright.png");
-			hitIndicators[down].sprite = assets.LoadAsset<Sprite>("assets/sprites/damagedown.png");
-			hitIndicators[left].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageleft.png");
+			hitIndicators[UP].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageup.png");
+			hitIndicators[RIGHT].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageright.png");
+			hitIndicators[DOWN].sprite = assets.LoadAsset<Sprite>("assets/sprites/damagedown.png");
+			hitIndicators[LEFT].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageleft.png");
+
+			// Hide them until we're hit
+			hitIndicators[UP].enabled = false;
+			hitIndicators[RIGHT].enabled = false;
+			hitIndicators[DOWN].enabled = false;
+			hitIndicators[LEFT].enabled = false;
 
 			GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => OnTakeDamage(damageInfo);
 		}
 
 		private void OnDestroy()
 		{
+			// Maybe not needed if MyPlayer clears by itself
 			GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => OnTakeDamage(damageInfo);
 		}
 
-		private void Update()
+		private IEnumerator HideHitIndicators()
 		{
-			// Handle hit indicators
-			for (int i = 0; i < 4; i++)
+#if DEBUG
+			log.LogInfo("HideHitIndicators() started");
+#endif
+			while (true)
 			{
-				if (hitIndicatorTimers[i] <= 0f && hitIndicators[i].enabled)
-					hitIndicators[i].enabled = false;
-				else
-					hitIndicatorTimers[i] -= Time.deltaTime;
+				bool anyActive = false;
+
+				for (int i = 0; i < 4; i++)
+				{
+					if (hitIndicators[i].enabled)
+					{
+						hitIndicatorTimers[i] -= Time.deltaTime;
+
+						if (hitIndicatorTimers[i] <= 0f)
+							hitIndicators[i].enabled = false;
+						else
+							anyActive = true;
+					}
+				}
+
+				if (!anyActive)
+				{
+#if DEBUG
+					log.LogInfo("HideHitIndicators() stopped");
+#endif
+					hideHitIndicators = null;
+					yield break; // Stop coroutine when nothing is visible
+				}
+
+				yield return null;
 			}
 		}
 
@@ -64,6 +96,10 @@ namespace HEVSuitMod
 				hitIndicators[i].enabled = true;
 				hitIndicatorTimers[i] = 0.5f;
 			}
+
+			// In case we're hit 2 or more times within a short period
+			if (hideHitIndicators == null)
+				hideHitIndicators = StartCoroutine(HideHitIndicators());
 		}
 
 		/// <summary>
@@ -91,21 +127,21 @@ namespace HEVSuitMod
 			// Decide which directions to show based on angle
 			int[] indicators;
 			if (angle >= 337.5f || angle < 22.5f)
-				indicators = [up];                      // Front
+				indicators = [UP];                      // Front
 			else if (angle >= 22.5f && angle < 67.5f)
-				indicators = [up, right];               // Front-Right
+				indicators = [UP, RIGHT];               // Front-Right
 			else if (angle >= 67.5f && angle < 112.5f)
-				indicators = [right];                      // Right
+				indicators = [RIGHT];                      // Right
 			else if (angle >= 112.5f && angle < 157.5f)
-				indicators = [right, down];                // Back-Right
+				indicators = [RIGHT, DOWN];                // Back-Right
 			else if (angle >= 157.5f && angle < 202.5f)
-				indicators = [down];                       // Back
+				indicators = [DOWN];                       // Back
 			else if (angle >= 202.5f && angle < 247.5f)
-				indicators = [down, left];                 // Back-Left
+				indicators = [DOWN, LEFT];                 // Back-Left
 			else if (angle >= 247.5f && angle < 292.5f)
-				indicators = [left];                       // Left
+				indicators = [LEFT];                       // Left
 			else // 292.5–337.5
-				indicators = [left, up];                // Front-Left
+				indicators = [LEFT, UP];                // Front-Left
 
 			// Show the indicators
 			ShowHitIndicators(indicators);
