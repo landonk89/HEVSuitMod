@@ -11,9 +11,9 @@ namespace HEVSuitMod
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.VoiceController");
 		private AssetBundle assets;
 		private AudioSource audioSource;
-		private List<HEVSentence> allSentences = new();
-		private List<HEVSentence> pendingSentences = new();
 		private Coroutine sentencePlayer;
+		private readonly List<HEVSentence> allSentences = [];
+		private readonly List<HEVSentence> pendingSentences = [];
 
 		private void Awake()
 		{
@@ -108,7 +108,7 @@ namespace HEVSuitMod
 		{
 			if (string.IsNullOrEmpty(identifier))
 			{
-				log.LogWarning("GetSentenceById was called with a null or empty identifier.");
+				log.LogError("GetSentenceById was called with a null or empty identifier.");
 				return null;
 			}
 

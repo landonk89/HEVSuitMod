@@ -19,5 +19,13 @@ namespace HEVSuitMod
 			int bearing = ((int)angle + 270) % 360;
 			return bearing;
 		}
+
+		public static string GetDirection(Vector3 direction)
+		{
+			string[] directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest" };
+			int bearing = GetBearing(direction);
+			int index = Mathf.FloorToInt((bearing + 22.5f) / 45f) % 8;
+			return directions[index];
+		}
 	}
 }

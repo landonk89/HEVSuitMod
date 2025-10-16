@@ -2,12 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <AssemblyName>HEVSuitMod</AssemblyName>
+    <AssemblyName>com.redcrowbar.hevsuitmod</AssemblyName>
     <Description>HEV Suit from Half-Life for Escape from Tarkov</Description>
     <Version>0.0.2</Version>
+	<Product>HEVSuitMod</Product>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
-    <PackageProjectUrl>https://github.com/landonk89/HEVSuitMod</PackageProjectUrl>
+    <PackageProjectUrl></PackageProjectUrl>
     <RepositoryUrl>https://github.com/landonk89/HEVSuitMod</RepositoryUrl>
   </PropertyGroup>
 

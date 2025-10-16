@@ -11,11 +11,18 @@ namespace HEVSuitMod
 	/// </summary>
 	public class SentenceParser
 	{
+		// Constants
+		private const string SOUND_BASE_DIR = "assets/sounds/";
+		private const string SOUND_MAKER_DIR = "weapons/maker/";
+		private const string SOUND_MODEL_DIR = "weapons/model/";
+		private const string SOUND_TYPES_DIR = "weapons/types/";
+		private const string SENTENCES_FILE = "assets/scripts/sentences.txt";
+
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
 		private VoiceController voiceController;
 		private AssetBundle assets;
-		private List<string> allFiles = new();
-		private List<string> missingFiles = new(); // Catch 404s
+		private List<string> allFiles = [];
+		private List<string> missingFiles = []; // Catch 404s
 		private const int weaponMakerIndex = 1;
 		private const int weaponModelIndex = 2;
 		private const int weaponCaliberIndex = 3;
@@ -48,32 +55,37 @@ namespace HEVSuitMod
 		{
 			// Types have every file is in the same place
 			if (sentenceType == ESentenceType.Types)
-				return "assets/sounds/weapons/types/";
+				return SOUND_BASE_DIR + SOUND_TYPES_DIR;
 
 			// Events have partial paths aready
 			if (sentenceType == ESentenceType.Events)
-				return "assets/sounds/";
+				return SOUND_BASE_DIR;
 
 			// Must be a weapon, index based directory
 			switch (index)
 			{
-				case weaponMakerIndex: return "assets/sounds/weapons/maker/";
-				case weaponModelIndex: return "assets/sounds/weapons/model/";
-				case weaponCaliberIndex: return "assets/sounds/weapons/types/";
-				default: return "ERROR/";
+				case weaponMakerIndex: return SOUND_BASE_DIR + SOUND_MAKER_DIR;
+				case weaponModelIndex: return SOUND_BASE_DIR + SOUND_MODEL_DIR;
+				case weaponCaliberIndex: return SOUND_BASE_DIR + SOUND_TYPES_DIR;
+				
+				// Shouldn't happen ever
+				default:
+					log.LogError($"GetDirectory(index: {index}, sentenceType: {sentenceType}) failed");
+					return null;
 			}
 		}
 
 		public void Reparse()
 		{
 			log.LogWarning("Reparsing sentences...");
+			missingFiles.Clear();
 			voiceController.PurgeSentences();
 			ParseAllSentences();
 		}
 
 		public void ParseAllSentences()
 		{
-			TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>("assets/scripts/sentences.txt");
+			TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>(SENTENCES_FILE);
 			if (hevSentencesFile == null)
 			{
 				log.LogError("Failed to load sentences!!");
@@ -103,9 +115,8 @@ namespace HEVSuitMod
 			}
 
 			log.LogInfo($"Parsed {sentenceCount} sentences.");
-			// FIXME: missingFiles.Count is coming back as 48 when 40 are actually missing..
 			if (missingFiles.Count > 0)
-				log.LogError($"Encountered {missingFiles.Count} missing files:\n{Utils.FileTree(missingFiles)}");
+				log.LogWarning($"Encountered {missingFiles.Count} missing files:\n{Utils.FileTree(missingFiles)}");
 		}
 
 		// --------------------------------------------------------------
@@ -179,7 +190,10 @@ namespace HEVSuitMod
 
 				if (!allFiles.Contains(clip.ToLower()))
 				{
-					missingFiles.Add($"{HEVMod.BUNDLE_FILE}/{clip}");
+					string missingFile = $"{HEVMod.BUNDLE_FILE}/{clip}";
+					if (!missingFiles.Contains(missingFile))
+						missingFiles.Add(missingFile);
+					
 					continue;
 				}
 

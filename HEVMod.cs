@@ -1,12 +1,11 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using System;
+using System.Collections.Generic;
+using System.Collections;
 using System.IO;
 using UnityEngine;
 using EFT;
-using BepInEx.Logging;
-using System.Collections.Generic;
-using System.Collections;
 using EFT.InventoryLogic;
 
 namespace HEVSuitMod
@@ -16,7 +15,7 @@ namespace HEVSuitMod
 	{
 		// Constants
 		public const float DEFAULT_PLAYBACK_DELAY = 0.25f;
-		public const string MOD_DIR = "HEVSuitMod";
+		public const string MOD_DIR = PluginInfo.PLUGIN_NAME;
 		public const string BUNDLE_FILE = "hevsuit.bundle";
 		private const string LIGHT_BLEEDING = "GInterface313";
 		private const string HEAVY_BLEEDING = "GInterface314";
@@ -34,7 +33,7 @@ namespace HEVSuitMod
 
 		// File related stuff
 		public AssetBundle Assets { get; private set; }
-		public string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, MOD_DIR, BUNDLE_FILE);
+		private readonly string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, MOD_DIR, BUNDLE_FILE);
 
 		// Config
 #if DEBUG
@@ -53,7 +52,7 @@ namespace HEVSuitMod
 		public ConfigEntry<bool> applySettings;
 
 		// Track active effects for ignoreDuplicateEffectsTime
-		private HashSet<string> activeStatusEffects = new();
+		private readonly HashSet<string> activeStatusEffects = [];
 
 		// Components
 		VoiceController voiceController;
