@@ -23,19 +23,19 @@ namespace HEVSuitMod
 				Name = name;
 				Children = new Dictionary<string, Node>(StringComparer.OrdinalIgnoreCase);
 			}
+
+			public bool IsFile => Children.Count == 0;
 		}
 
 		/// <summary>
 		/// Generate a tree of files similar to Windows TREE /F
 		/// </summary>
-		/// <param name="files"></param>
-		/// <returns></returns>
 		public static string FileTree(List<string> files)
 		{
 			var tree = new Node("ROOT");
 			foreach (var file in files)
 			{
-				var parts = file.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+				var parts = file.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
 				Node current = tree;
 
 				foreach (var part in parts)
@@ -48,23 +48,33 @@ namespace HEVSuitMod
 			}
 
 			var sb = new StringBuilder();
-			foreach (var child in tree.Children.Values)
-				BuildTreeRecursive(sb, child, "", isLast: child == tree.Children.Values.Last());
+			var children = tree.Children.Values.ToList();
+
+			for (int i = 0; i < children.Count; i++)
+				BuildTreeRecursive(sb, children[i], "", i == children.Count - 1);
 
 			return sb.ToString();
 
 			void BuildTreeRecursive(StringBuilder sb, Node node, string prefix, bool isLast)
 			{
 				sb.Append(prefix);
-				sb.Append(prefix.IsNullOrEmpty() ? null : (isLast ? "└── " : "├── "));
+				if (!string.IsNullOrEmpty(prefix))
+					sb.Append(isLast ? "└── " : "├── ");
 				sb.AppendLine(node.Name);
-				string childPrefix = prefix + (isLast ? "    " : "│   ");
-				int i = 0;
 
-				foreach (var child in node.Children.Values.OrderBy(c => c.Name))
-					BuildTreeRecursive(sb, child, childPrefix, ++i == node.Children.Count);
+				string childPrefix = prefix + (isLast ? "    " : "│   ");
+
+				// Files first
+				var orderedChildren = node.Children.Values
+					.OrderByDescending(c => c.IsFile)
+					.ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+					.ToList();
+
+				for (int i = 0; i < orderedChildren.Count; i++)
+					BuildTreeRecursive(sb, orderedChildren[i], childPrefix, i == orderedChildren.Count - 1);
 			}
 		}
+
 
 		/// <summary>
 		/// Log game object hierarchy with components

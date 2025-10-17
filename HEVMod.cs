@@ -7,8 +7,6 @@ using System.IO;
 using UnityEngine;
 using EFT;
 using EFT.InventoryLogic;
-using HarmonyLib;
-using EFT.HealthSystem;
 
 namespace HEVSuitMod
 {
@@ -263,7 +261,7 @@ namespace HEVSuitMod
 		/// <summary>
 		/// Event triggered by player's HP falling below a threshold value
 		/// </summary>
-		private void LowHealthEvent()
+		private void LowHealthEvent() // TODO: Maybe replace this with HealthEffectStartedEvent IEffect:LowEdgeHealth
 		{
 			// Determine current total HP, if below threshold say something dramatic
 			// FIXME: Is there no built in way to get total hp?? This seems stupid but I can't find one
@@ -299,7 +297,7 @@ namespace HEVSuitMod
 		/// <param name="damageType"></param>
 		private void BodyPartDestroyedEvent(EBodyPart bodyPart, EDamageType damageType)
 		{
-			// TODO: Investigate ActiveHealthController.BodyPartDestroyedEvent further, HEV should say something like "Major injury, seek medical attention"
+			// TODO: HEV should say something like "Major injury, seek medical attention"
 		}
 
 		/// <summary>

@@ -9,10 +9,13 @@ namespace HEVSuitMod
 	public class HudController : MonoBehaviour
 	{
 		// Just for readability
-		const int UP = 0;
-		const int RIGHT = 1;
-		const int DOWN = 2;
-		const int LEFT = 3;
+		private const int UP = 0;
+		private const int RIGHT = 1;
+		private const int DOWN = 2;
+		private const int LEFT = 3;
+		
+		// TODO: Maybe make configurable? 0.5 Looks good
+		private const float hitIndicatorFadeTime = 0.5f;
 
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
 		private AssetBundle assets;
@@ -63,13 +66,12 @@ namespace HEVSuitMod
 			while (true)
 			{
 				bool anyActive = false;
-
 				for (int i = 0; i < 4; i++)
 				{
 					if (hitIndicators[i].enabled)
 					{
 						hitIndicatorTimers[i] -= Time.deltaTime;
-						hitIndicators[i].color = new(1, 1, 1, hitIndicatorTimers[i] * 2); // TEST!!!
+						hitIndicators[i].color = new(1, 1, 1, hitIndicatorTimers[i] * 2);
 
 						if (hitIndicatorTimers[i] <= 0f)
 							hitIndicators[i].enabled = false;
@@ -96,7 +98,7 @@ namespace HEVSuitMod
 			foreach (var i in list)
 			{
 				hitIndicators[i].enabled = true;
-				hitIndicatorTimers[i] = 0.5f;
+				hitIndicatorTimers[i] = hitIndicatorFadeTime;
 			}
 
 			// In case we're hit 2 or more times within a short period
@@ -110,6 +112,15 @@ namespace HEVSuitMod
 		/// <param name="damageInfo"></param>
 		public void OnTakeDamage(DamageInfoStruct damageInfo)
 		{
+			int[] indicators;
+			if (damageInfo.Player == null)
+			{
+				// World damage, show all of them
+				indicators = [UP, RIGHT, DOWN, LEFT];
+				ShowHitIndicators(indicators);
+				return;
+			}
+
 			Vector3 attackerPos = damageInfo.Player.iPlayer.Position;
 			Vector3 myPos = GamePlayerOwner.MyPlayer.Position;
 			Vector3 myLookDir = GamePlayerOwner.MyPlayer.LookDirection.normalized;
@@ -127,7 +138,6 @@ namespace HEVSuitMod
 			if (angle < 0) angle += 360f;
 
 			// Decide which directions to show based on angle
-			int[] indicators;
 			if (angle >= 337.5f || angle < 22.5f)
 				indicators = [UP];                      // Front
 			else if (angle >= 22.5f && angle < 67.5f)
