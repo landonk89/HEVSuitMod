@@ -93,7 +93,9 @@ namespace HEVSuitMod
 			HEVSentence sentence = GetSentenceById(identifier);
 			if (sentence == null)
 			{
+#if DEBUG
 				log.LogError("GetSentenceById is null!");
+#endif
 				return;
 			}
 

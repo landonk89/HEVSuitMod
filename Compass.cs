@@ -2,6 +2,7 @@
 
 namespace HEVSuitMod
 {
+	// Temporary? Tarkov's compass class is really wonky, might just keep this and expand on it..
 	public static class Compass
 	{
 		// TODO: Make sure this works when using something other than MyPlayer.LookDirection

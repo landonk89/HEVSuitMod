@@ -7,6 +7,8 @@ using System.IO;
 using UnityEngine;
 using EFT;
 using EFT.InventoryLogic;
+using HarmonyLib;
+using EFT.HealthSystem;
 
 namespace HEVSuitMod
 {
@@ -17,16 +19,6 @@ namespace HEVSuitMod
 		public const float DEFAULT_PLAYBACK_DELAY = 0.25f;
 		public const string MOD_DIR = PluginInfo.PLUGIN_NAME;
 		public const string BUNDLE_FILE = "hevsuit.bundle";
-		private const string LIGHT_BLEEDING = "GInterface313";
-		private const string HEAVY_BLEEDING = "GInterface314";
-		private const string FRACTURE = "GInterface316";
-		private const string DEHYDRATION = "GInterface317"; // Unverified
-		private const string EXHAUSTION = "GInterface318"; // Unverified
-		private const string RAD_EXPOSURE = "GInterface319"; // Unverified
-		private const string INTOXICATION = "GInterface320"; // Might actually be GInterface309??
-		private const string ZOMBIE_INFECTION = "GInterface329"; // Unverified
-		private const string ON_PAINKILLERS = "GInterface332"; // Unverified
-		private const string FROSTBITE = "GInterface346"; // Unverified
 
 		// Singleton
 		public static HEVMod Instance { get; private set; }
@@ -325,7 +317,8 @@ namespace HEVSuitMod
 		/// <param name="effect"></param>
 		private void HealthEffectStartedEvent(IEffect effect)
 		{
-			string effectName = effect.Type.Name;
+			Type effectType = effect.GetType(); // All effect classes are protected
+			string effectName = effectType.Name;
 			if (activeStatusEffects.Contains(effectName))
 			{
 #if DEBUG
@@ -335,10 +328,9 @@ namespace HEVSuitMod
 			}
 
 			AddEffect(effectName); // Prevent duplicates within ignoreDuplicateEffectsTime
-
 			switch (effectName)
 			{
-				case FRACTURE:
+				case "Fracture":
 					switch (effect.BodyPart)
 					{
 						case EBodyPart.LeftLeg:
@@ -355,12 +347,33 @@ namespace HEVSuitMod
 					}
 					break;
 
-				case HEAVY_BLEEDING:
+				case "HeavyBleeding":
 					voiceController.PlaySentenceById("HeavyBleeding");
 					break;
 
-				case LIGHT_BLEEDING:
+				case "LightBleeding":
 					voiceController.PlaySentenceById("LightBleeding");
+					break;
+
+				case "Pain":
+					break;
+
+				case "PainKiller": // Grabbin pills
+					break;
+
+				case "Intoxication":
+					break;
+
+				case "Exhaustion":
+					break;
+
+				case "Dehydration":
+					break;
+
+				case "RadExposure":
+					break;
+
+				case "ZombieInfection":
 					break;
 			}
 		}

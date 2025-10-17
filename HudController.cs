@@ -34,10 +34,10 @@ namespace HEVSuitMod
 			GameObject hud = Instantiate(hudPrefab);
 			//Utils.LogGameObjectHierarchy(hud);
 			hitIndicators = hud.GetComponentsInChildren<Image>(true);
-			hitIndicators[UP].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageup.png");
-			hitIndicators[RIGHT].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageright.png");
-			hitIndicators[DOWN].sprite = assets.LoadAsset<Sprite>("assets/sprites/damagedown.png");
-			hitIndicators[LEFT].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageleft.png");
+			hitIndicators[UP].sprite	= assets.LoadAsset<Sprite>("assets/sprites/damageup.tga");
+			hitIndicators[RIGHT].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageright.tga");
+			hitIndicators[DOWN].sprite	= assets.LoadAsset<Sprite>("assets/sprites/damagedown.tga");
+			hitIndicators[LEFT].sprite	= assets.LoadAsset<Sprite>("assets/sprites/damageleft.tga");
 
 			// Hide them until we're hit
 			hitIndicators[UP].enabled = false;
@@ -45,6 +45,7 @@ namespace HEVSuitMod
 			hitIndicators[DOWN].enabled = false;
 			hitIndicators[LEFT].enabled = false;
 
+			// HL1 style damage direction indicators
 			GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => OnTakeDamage(damageInfo);
 		}
 
@@ -68,6 +69,7 @@ namespace HEVSuitMod
 					if (hitIndicators[i].enabled)
 					{
 						hitIndicatorTimers[i] -= Time.deltaTime;
+						hitIndicators[i].color = new(1, 1, 1, hitIndicatorTimers[i] * 2); // TEST!!!
 
 						if (hitIndicatorTimers[i] <= 0f)
 							hitIndicators[i].enabled = false;
