@@ -8,6 +8,7 @@ Please see https://github.com/landonk89/HEVSuitAssets for the related asset file
 Right now, this is very early in development. A few things work but it's buggy and unfinished.
 
 Working so far:
+* HUD damage direction indicators from HL1
 * Inspecting your held weapon will play a voiceline identifying it.
 * Checking the chamber of your held weapon will play a voiceline matching the ammo type in it.
 * Heavy bleeds, light bleeds and fractures will play voicelines similar to those in Half-Life, more to come
