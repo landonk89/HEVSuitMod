@@ -266,10 +266,7 @@ namespace HEVSuitMod
 		private void LowHealthEvent() // TODO: Maybe replace this with HealthEffectStartedEvent IEffect:LowEdgeHealth
 		{
 			// Determine current total HP, if below threshold say something dramatic
-			// FIXME: Is there no built in way to get total hp?? This seems stupid but I can't find one
-			float health = 0;
-			foreach (EBodyPart part in Enum.GetValues(typeof(EBodyPart)))
-				health += GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(part).Current;
+			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
 
 			// TODO: replace this magic number with a ConfigEntry<float> name like lowHealth
 			if (health < 250f)

@@ -108,20 +108,35 @@ namespace HEVSuitMod
 		}
 
 		/// <summary>
-		/// Find a nested gameObject component <typeparamref name="T"/> within parent <paramref name="root"/>
+		/// Find a component <typeparamref name="T"/> in children of <paramref name="path"/>
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="root"></param>
 		/// <param name="path"></param>
 		/// <returns></returns>
-		public static T FindInChildren<T>(GameObject root, string path) where T : Component
+		public static T FindComponent<T>(GameObject root, string path) where T : Component
 		{
-			return root.transform.Find(path)?.GetComponent<T>();
+			T component = root.transform.Find(path)?.GetComponent<T>();
+			if (component == null)
+				log.LogWarning($"FindInChildren: {root.name}/{path}\n\tComponent of type {typeof(T)} not found");
+
+			return component;
 		}
 
-		public static T[] FindAllInChildren<T>(GameObject root, string path) where T : Component
+		/// <summary>
+		/// Find every component of type <typeparamref name="T"/> in children of <paramref name="path"/>
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="root"></param>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public static T[] FindComponentsInChildren<T>(GameObject root, string path) where T : Component
 		{
-			return root.transform.Find(path)?.GetComponentsInChildren<T>();
+			T[] components = root.transform.Find(path)?.GetComponentsInChildren<T>();
+			if (components == null)
+				log.LogWarning($"FindAllInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
+			
+			return components;
 		}
 	}
 }
