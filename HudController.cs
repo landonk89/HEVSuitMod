@@ -13,56 +13,188 @@ namespace HEVSuitMod
 		private const int RIGHT = 1;
 		private const int DOWN = 2;
 		private const int LEFT = 3;
-		
-		// TODO: Maybe make configurable? 0.5 Looks good
+
+		// TODO: 0.5 looks pretty good, tweak later
 		private const float hitIndicatorFadeTime = 0.5f;
+		
+		//Singleton
+		public static HudController Instance { get; private set; }
 
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
 		private AssetBundle assets;
 		private GameObject hudPrefab;
-		private Image[] hitIndicators = new Image[4]; // Order: Up Right Down Left
-		private float[] hitIndicatorTimers = new float[4];
-		private Coroutine hideHitIndicators = null;
 
-		private void Start()
+		// General purpose
+		private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
+
+		// Health/SuitPower
+		private Image[] healthValue = new Image[3]; // Each digit of health
+		private Image[] suitPowerValue = new Image[3]; // Each digit of health
+		private Image suitIconFull;
+
+		// Ammo counter
+		private Image ammoCounterIcon;
+		private Image[] ammoCounterValue = new Image[3];
+
+		// Flashlight
+		private Image flashlightFull;
+		private Image flashlightBeam;
+
+		// Hit indicators
+		private Image[] hitIndicators = new Image[4]; // Order: Up Right Down Left
+		private Coroutine hideHitIndicators = null;
+		private readonly float[] hitIndicatorTimers = new float[4];
+		private readonly int[][] hitIndicatorDirections =
 		{
-			if (HEVMod.Instance == null)
+			[UP],          // 0: Front
+			[UP, RIGHT],   // 1: Front-Right
+			[RIGHT],       // 2: Right
+			[RIGHT, DOWN], // 3: Back-Right
+			[DOWN],        // 4: Back
+			[DOWN, LEFT],  // 5: Back-Left
+			[LEFT],        // 6: Left
+			[LEFT, UP]     // 7: Front-Left
+		};
+
+		private void Awake()
+		{
+			if (HEVMod.Instance == null) // How the hell did you even get here then???
 			{
-				// How did you even get here then???
+				log.LogError("HEVMod.Instance == null!");
 				return;
 			}
 
+			Instance = this;
 			assets = HEVMod.Instance.Assets;
+			if (assets == null) // Can't happen, but you can bet it will somehow...
+			{
+				log.LogError("Couldn't get assetbundle!");
+				return;
+			}
+
 			hudPrefab = assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab");
 			GameObject hud = Instantiate(hudPrefab);
-			//Utils.LogGameObjectHierarchy(hud);
-			hitIndicators = hud.GetComponentsInChildren<Image>(true);
-			hitIndicators[UP].sprite	= assets.LoadAsset<Sprite>("assets/sprites/damageup.tga");
-			hitIndicators[RIGHT].sprite = assets.LoadAsset<Sprite>("assets/sprites/damageright.tga");
-			hitIndicators[DOWN].sprite	= assets.LoadAsset<Sprite>("assets/sprites/damagedown.tga");
-			hitIndicators[LEFT].sprite	= assets.LoadAsset<Sprite>("assets/sprites/damageleft.tga");
 
-			// Hide them until we're hit
-			hitIndicators[UP].enabled = false;
+			// Load number sprites, index 10 is a blank sprite
+			numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
+			for (int i = 0; i < 10; i++)
+				numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
+
+			// Health digits
+			for (int i = 0; i < 3; i++)
+				healthValue[i] = Utils.FindInChildren<Image>(hud, $"HealthAndSuitPower/HealthValue/Digit{i}");
+
+			// SuitPower digits and icon
+			suitIconFull = Utils.FindInChildren<Image>(hud, "HealthAndSuitPower/SuitIconFull");
+			for (int i = 0; i < 3; i++)
+				suitPowerValue[i] = Utils.FindInChildren<Image>(hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}");
+
+			// Ammo counter
+			ammoCounterIcon = Utils.FindInChildren<Image>(hud, "AmmoCounter/Icon");
+			for (int i = 0; i < 3; i++)
+				ammoCounterValue[i] = Utils.FindInChildren<Image>(hud, $"AmmoCounter/Value/Digit{i}");
+
+			// Flashlight indicator
+			flashlightFull = Utils.FindInChildren<Image>(hud, "Flashlight/IconFull");
+			flashlightBeam = Utils.FindInChildren<Image>(hud, "Flashlight/Beam");
+			flashlightBeam.enabled = false; // start off and full battery
+			flashlightFull.fillAmount = 1f;
+
+			// Hit indicators
+			hitIndicators = Utils.FindAllInChildren<Image>(hud, "HitIndicators");
+			hitIndicators[UP].enabled = false; // Hide indicators until we're hit
 			hitIndicators[RIGHT].enabled = false;
 			hitIndicators[DOWN].enabled = false;
 			hitIndicators[LEFT].enabled = false;
 
-			// HL1 style damage direction indicators
+			// Subscribe events
 			GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => OnTakeDamage(damageInfo);
+			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
+
+			// Init value sprites
+			HealthChanged();
+			//SuitPowerChanged(440);
 		}
 
 		private void OnDestroy()
 		{
 			// Maybe not needed if MyPlayer clears by itself
 			GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => OnTakeDamage(damageInfo);
+			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
+		}
+
+		public void HealthChanged()
+		{
+			// FIXME/TODO: Assumes normal 440 health player, may break if health is modded higher
+			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
+			int normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+			char[] digits = normalizedHealth.ToString("000").ToCharArray();
+
+			bool foundNonZero = false;
+			for (int i = 0; i < 3; i++)
+			{
+				int digit = digits[i] - '0';
+
+				// Hide leading zeros until we hit a nonzero digit
+				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
+				{
+					healthValue[i].sprite = numberSprites[10]; // 10 = blank
+				}
+				else
+				{
+					foundNonZero = true;
+					healthValue[i].sprite = numberSprites[digit];
+				}
+			}
+
+
+			// TODO: Temporary, just match suitpower to health until it does its own thing
+			SuitPowerChanged(health);
+		}
+
+		// TODO: This is just temporary to get the display actually doing something
+		public void SuitPowerChanged(float power)
+		{
+			int normalizedHealth = Mathf.CeilToInt(power / 440f * 100f);
+			char[] digits = normalizedHealth.ToString("000").ToCharArray();
+
+			suitIconFull.fillAmount = normalizedHealth / 100;
+
+			bool foundNonZero = false;
+			for (int i = 0; i < 3; i++)
+			{
+				int digit = digits[i] - '0';
+
+				// Hide leading zeros until we hit a nonzero digit
+				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
+				{
+					suitPowerValue[i].sprite = numberSprites[10]; // 10 = blank
+				}
+				else
+				{
+					foundNonZero = true;
+					suitPowerValue[i].sprite = numberSprites[digit];
+				}
+			}
+		}
+
+		public void SetFlashlightBattery(float battery)
+		{
+			flashlightFull.fillAmount = battery;
+		}
+
+		public void FlashlightOff()
+		{
+			flashlightBeam.enabled = false;
+		}
+
+		public void FlashlightOn()
+		{
+			flashlightBeam.enabled = true;
 		}
 
 		private IEnumerator HideHitIndicators()
 		{
-#if DEBUG
-			log.LogInfo("HideHitIndicators() started");
-#endif
 			while (true)
 			{
 				bool anyActive = false;
@@ -82,9 +214,6 @@ namespace HEVSuitMod
 
 				if (!anyActive)
 				{
-#if DEBUG
-					log.LogInfo("HideHitIndicators() stopped");
-#endif
 					hideHitIndicators = null;
 					yield break; // Stop coroutine when nothing is visible
 				}
@@ -112,7 +241,7 @@ namespace HEVSuitMod
 		/// <param name="damageInfo"></param>
 		public void OnTakeDamage(DamageInfoStruct damageInfo)
 		{
-			int[] indicators;
+			int[] indicators = [0];
 			if (damageInfo.Player == null)
 			{
 				// World damage, show all of them
@@ -138,22 +267,8 @@ namespace HEVSuitMod
 			if (angle < 0) angle += 360f;
 
 			// Decide which directions to show based on angle
-			if (angle >= 337.5f || angle < 22.5f)
-				indicators = [UP];                      // Front
-			else if (angle >= 22.5f && angle < 67.5f)
-				indicators = [UP, RIGHT];               // Front-Right
-			else if (angle >= 67.5f && angle < 112.5f)
-				indicators = [RIGHT];                      // Right
-			else if (angle >= 112.5f && angle < 157.5f)
-				indicators = [RIGHT, DOWN];                // Back-Right
-			else if (angle >= 157.5f && angle < 202.5f)
-				indicators = [DOWN];                       // Back
-			else if (angle >= 202.5f && angle < 247.5f)
-				indicators = [DOWN, LEFT];                 // Back-Left
-			else if (angle >= 247.5f && angle < 292.5f)
-				indicators = [LEFT];                       // Left
-			else // 292.5–337.5
-				indicators = [LEFT, UP];                // Front-Left
+			int dirIndex = Mathf.FloorToInt(((angle + 22.5f) % 360f) / 45f);
+			indicators = hitIndicatorDirections[dirIndex];
 
 			// Show the indicators
 			ShowHitIndicators(indicators);

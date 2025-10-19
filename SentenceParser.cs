@@ -47,7 +47,7 @@ namespace HEVSuitMod
 					return;
 			}
 
-			allFiles = assets.GetAllAssetNames().ToList();
+			allFiles = [..assets.GetAllAssetNames()];
 #if DEBUG
 			log.LogInfo($"Asset bundle contents:\n{Utils.FileTree(allFiles)}");
 #endif
@@ -136,7 +136,7 @@ namespace HEVSuitMod
 		// --------------------------------------------------------------
 		private HEVSentence ParseSentence(string sentence, ESentenceType sentenceType)
 		{
-			List<HEVAudioClip> clips = new();
+			List<HEVAudioClip> clips = [];
 			string[] tokens = sentence.Split(' ');
 #if DEBUG
 			log.LogInfo($"ParseSentence: {sentence}");

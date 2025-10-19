@@ -4,6 +4,7 @@ using System.Text;
 using System.Linq;
 using UnityEngine;
 using BepInEx.Logging;
+using System.Runtime.Remoting.Messaging;
 
 namespace HEVSuitMod
 {
@@ -104,6 +105,23 @@ namespace HEVSuitMod
 			log.LogWarning($"=== GameObject Hierarchy for {root.name} ===");
 			LogRecursive(root);
 			log.LogWarning($"=== End of Hierarchy ===");
+		}
+
+		/// <summary>
+		/// Find a nested gameObject component <typeparamref name="T"/> within parent <paramref name="root"/>
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="root"></param>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public static T FindInChildren<T>(GameObject root, string path) where T : Component
+		{
+			return root.transform.Find(path)?.GetComponent<T>();
+		}
+
+		public static T[] FindAllInChildren<T>(GameObject root, string path) where T : Component
+		{
+			return root.transform.Find(path)?.GetComponentsInChildren<T>();
 		}
 	}
 }

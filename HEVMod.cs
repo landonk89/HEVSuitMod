@@ -48,6 +48,7 @@ namespace HEVSuitMod
 		VoiceController voiceController;
 		HudController hudController;
 		SentenceParser parser;
+		Flashlight flashlight;
 
 		// Debug components
 #if DEBUG
@@ -245,6 +246,7 @@ namespace HEVSuitMod
 			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
 			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDiedEvent();
 
+			flashlight = gameObject.AddComponent<Flashlight>();
 			hudController = gameObject.AddComponent<HudController>();
 		}
 
