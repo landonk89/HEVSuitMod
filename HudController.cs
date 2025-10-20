@@ -141,10 +141,15 @@ namespace HEVSuitMod
 			hitIndicators[RIGHT].enabled = false;
 			hitIndicators[DOWN].enabled = false;
 			hitIndicators[LEFT].enabled = false;
+		}
 
+		private void Start()
+		{
 			// Subscribe events
 			GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => OnTakeDamage(damageInfo);
 			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
+			HEVMod.Instance.flashlight.Toggled += FlashlightToggled;
+			HEVMod.Instance.flashlight.BatteryUpdated += SetFlashlightBattery;
 
 			// Init value sprites
 			HealthChanged();
@@ -165,6 +170,8 @@ namespace HEVSuitMod
 			// Maybe not needed if MyPlayer clears by itself
 			GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => OnTakeDamage(damageInfo);
 			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
+			HEVMod.Instance.flashlight.Toggled -= FlashlightToggled;
+			HEVMod.Instance.flashlight.BatteryUpdated -= SetFlashlightBattery;
 		}
 
 		public void HealthChanged()
@@ -179,7 +186,7 @@ namespace HEVSuitMod
 			{
 				int digit = digits[i] - '0'; // Neat trick so we don't need a call to int.TryParse
 
-				// Hide leading zeros until we hit a nonzero digit
+				// Hide leading zeros
 				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
 				{
 					healthValue[i].sprite = numberSprites[10]; // 10 = blank
@@ -211,7 +218,7 @@ namespace HEVSuitMod
 			{
 				int digit = digits[i] - '0';
 
-				// Hide leading zeros until we hit a nonzero digit
+				// Hide leading zeros
 				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
 				{
 					suitPowerValue[i].sprite = numberSprites[10]; // 10 = blank
@@ -248,7 +255,11 @@ namespace HEVSuitMod
 			}
 		}
 
-
+		public void FlashlightToggled(bool isOn)
+		{
+			flashlightBeam.enabled = isOn;
+		}
+/*
 		public void FlashlightOff()
 		{
 			flashlightBeam.enabled = false;
@@ -258,7 +269,7 @@ namespace HEVSuitMod
 		{
 			flashlightBeam.enabled = true;
 		}
-
+*/
 		/// <summary>
 		/// Display a notification icon, if <paramref name="leftSide"/> is true display on left, else displays on right
 		/// </summary>

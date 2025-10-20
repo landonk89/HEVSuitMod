@@ -1,4 +1,5 @@
 ﻿using BepInEx.Logging;
+using System;
 using EFT;
 using UnityEngine;
 
@@ -11,9 +12,6 @@ namespace HEVSuitMod
 	{
 		//private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
 
-		// Singleton
-		public static Flashlight Instance { get; private set; }
-
 		private Light lightSource;
 		private AudioSource audioSource; // TODO: use BetterAudio
 		public bool isOn;
@@ -21,20 +19,20 @@ namespace HEVSuitMod
 		private float batteryDrainRate = 0.01f;
 		private float batteryChargeRate = 0.05f;
 
+		public event Action<bool> Toggled;
+		public event Action<float, bool> BatteryUpdated;
+
 		private void Awake()
 		{
-			if (Instance == null)
-				Instance = this;
-
-			GameObject lightGo = new("FlashlightContainer");
-			audioSource = lightGo.AddComponent<AudioSource>();
+			GameObject flashlight = new("FlashlightContainer");
+			audioSource = flashlight.AddComponent<AudioSource>();
 			audioSource.clip = HEVMod.Instance.Assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
-			lightSource = lightGo.AddComponent<Light>();
+			lightSource = flashlight.AddComponent<Light>();
 			lightSource.type = LightType.Spot;
 			lightSource.spotAngle = 65f;
 			lightSource.enabled = false;
-			lightGo.transform.SetPositionAndRotation(GamePlayerOwner.MyPlayer.CameraPosition.position, GamePlayerOwner.MyPlayer.CameraPosition.rotation);
-			lightGo.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition;
+			flashlight.transform.SetPositionAndRotation(GamePlayerOwner.MyPlayer.CameraPosition.position, GamePlayerOwner.MyPlayer.CameraPosition.rotation);
+			flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition;
 		}
 
 		private void Update()
@@ -53,8 +51,8 @@ namespace HEVSuitMod
 				if (batteryLevel < 1f)
 					batteryLevel = Mathf.Clamp01(batteryLevel + batteryChargeRate * Time.deltaTime);
 			}
-
-			HudController.Instance.SetFlashlightBattery(batteryLevel, isOn);
+			BatteryUpdated.Invoke(batteryLevel, isOn);
+			//HudController.Instance.SetFlashlightBattery(batteryLevel, isOn);
 		}
 
 		public void Toggle()
@@ -65,20 +63,21 @@ namespace HEVSuitMod
 				TurnOn();
 
 			audioSource.Play();
+			Toggled.Invoke(isOn);
 		}
 
 		private void TurnOn()
 		{
 			lightSource.enabled = true;
 			isOn = true;
-			HudController.Instance.FlashlightOn();
+			//HudController.Instance.FlashlightOn();
 		}
 
 		private void TurnOff()
 		{
 			lightSource.enabled = false;
 			isOn = false;
-			HudController.Instance.FlashlightOff();
+			//HudController.Instance.FlashlightOff();
 		}
 	}
 }

@@ -45,10 +45,10 @@ namespace HEVSuitMod
 		private readonly HashSet<string> activeStatusEffects = [];
 
 		// Components
-		VoiceController voiceController;
-		HudController hudController;
-		SentenceParser parser;
-		Flashlight flashlight;
+		private VoiceController voiceController;
+		private HudController hudController;
+		public Flashlight flashlight;
+		private SentenceParser parser;
 
 		// Debug components
 #if DEBUG
@@ -243,7 +243,6 @@ namespace HEVSuitMod
 			// Detect fractures, bleeds, etc
 			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStartedEvent;
 			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemovedEvent;
-			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent += (_, _, _) => LowHealthEvent();
 			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDiedEvent();
 
 			flashlight = gameObject.AddComponent<Flashlight>();
@@ -254,31 +253,10 @@ namespace HEVSuitMod
 		{
 			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStartedEvent;
 			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemovedEvent;
-			GamePlayerOwner.MyPlayer.HealthController.HealthChangedEvent -= (_, _, _) => LowHealthEvent();
 			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDiedEvent();
 
 			Destroy(hudController);
-		}
-
-		/// <summary>
-		/// Event triggered by player's HP falling below a threshold value
-		/// </summary>
-		private void LowHealthEvent() // TODO: Maybe replace this with HealthEffectStartedEvent IEffect:LowEdgeHealth
-		{
-			// Determine current total HP, if below threshold say something dramatic
-			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
-
-			// TODO: replace this magic number with a ConfigEntry<float> name like lowHealth
-			if (health < 250f)
-			{
-				// Say our health is low, suggest healing
-				voiceController.PlaySentenceById("LowHealth");
-			}
-			else if (health < 100f)
-			{
-				// Say death is imminent, seek medical attention
-				voiceController.PlaySentenceById("NearDeath");
-			}
+			Destroy(flashlight);
 		}
 
 		/// <summary>
@@ -350,6 +328,10 @@ namespace HEVSuitMod
 
 				case "LightBleeding":
 					voiceController.PlaySentenceById("LightBleeding");
+					break;
+
+				case "LowEdgeHealth":
+					voiceController.PlaySentenceById("NearDeath");
 					break;
 
 				case "Pain":
