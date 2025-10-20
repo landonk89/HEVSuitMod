@@ -9,17 +9,23 @@ namespace HEVSuitMod
 	/// </summary>
 	public class Flashlight : MonoBehaviour
 	{
-		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
+		//private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
+
+		// Singleton
+		public static Flashlight Instance { get; private set; }
 
 		private Light lightSource;
 		private AudioSource audioSource; // TODO: use BetterAudio
-		private bool isOn;
+		public bool isOn;
 		private float batteryLevel = 1f; // 0..1
 		private float batteryDrainRate = 0.01f;
 		private float batteryChargeRate = 0.05f;
 
 		private void Awake()
 		{
+			if (Instance == null)
+				Instance = this;
+
 			GameObject lightGo = new("FlashlightContainer");
 			audioSource = lightGo.AddComponent<AudioSource>();
 			audioSource.clip = HEVMod.Instance.Assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
@@ -48,14 +54,11 @@ namespace HEVSuitMod
 					batteryLevel = Mathf.Clamp01(batteryLevel + batteryChargeRate * Time.deltaTime);
 			}
 
-			HudController.Instance.SetFlashlightBattery(batteryLevel);
+			HudController.Instance.SetFlashlightBattery(batteryLevel, isOn);
 		}
 
 		public void Toggle()
 		{
-#if DEBUG
-			log.LogInfo($"Toggle: isOn={isOn} batteryLevel={batteryLevel}");
-#endif
 			if (isOn)
 				TurnOff();
 			else

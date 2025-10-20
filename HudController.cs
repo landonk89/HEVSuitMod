@@ -2,7 +2,7 @@
 using EFT;
 using System.Collections;
 using System.Collections.Generic;
-using System.Timers;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +10,7 @@ namespace HEVSuitMod
 {
 	public class HudController : MonoBehaviour
 	{
-		public class ImageFade(Image img, Color from, Color to)
+		public class ImageModulator(Image img, Color from, Color to)
 		{
 			public Image image = img;
 			public Color colorFrom = from;
@@ -25,26 +25,37 @@ namespace HEVSuitMod
 		private const int LEFT = 3;
 
 		// TODO: 0.5 looks pretty good, tweak later
-		private const float hitIndicatorFadeTime = 0.5f;
+		private const float HIT_FADE_TIME = 0.5f;
 		
 		//Singleton
 		public static HudController Instance { get; private set; }
-
-		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
+		private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
 		private AssetBundle assets;
 		private GameObject hudPrefab;
+		private GameObject hud;
 		
-		// TODO: Highlight and fade images on demand
-		private Color hudColor = new(1f, 0.6f, 0f, 0.75f); // Orange 75% opacity
-		private Color hudColorHighlight = new(1f, 0.75f, 0f, 1f); // Lerp from here to hudColor over fadeTime
-		private Color hudColorDanger = new(1f, 0f, 0f, 0.75f); // Red 75% opacity
-		private Color hudColorDangerHighlight = new(1f, 0.75f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
-		private float fadeTime = 0.75f;
-		private List<ImageFade> imageFades = [];
+		// Highlight and fade images on demand
+		private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
+		private Color hudColorHighlight = new(1f, 0.9f, 0f, 1f); // Lerp from here to hudColor over fadeTime
+		private Color hudColorDanger = new(1f, 0f, 0f, 0.4f); // Red
+		private Color hudColorDangerHighlight = new(1f, 0f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
+		private float highlightTime = 2f;
+		private List<ImageModulator> activeHighlights = [];
+		private Coroutine highlightHandler;
 
-		// General purpose
+		// Pulse images like a blinking light, this is intended for world damage indicators (fire, etc)
+		// ...but can be used on any hud image safely
+		// TODO: Prevent pulsing and highlighting at the same time
+		private List<ImageModulator> activePulses = [];
+		private Coroutine pulseHandler;
+
+		// Notification icons
+		private Dictionary<GameObject, float> activeNotifyIcons = [];
+		private float notifyIconLifetime = 3f; // TODO: tune
+		private Coroutine notifyIconHandler;
+
+		// Dynamic sprites
 		private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
-		private Coroutine fadeHandler;
 
 		// Health/SuitPower
 		private Image healthIcon;
@@ -94,7 +105,7 @@ namespace HEVSuitMod
 			}
 
 			hudPrefab = assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab");
-			GameObject hud = Instantiate(hudPrefab);
+			hud = Instantiate(hudPrefab);
 
 			// Load number sprites, index 10 is a blank sprite
 			numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
@@ -140,6 +151,15 @@ namespace HEVSuitMod
 			//SuitPowerChanged(440);
 		}
 
+		// For testing
+		private void Update()
+		{
+			if (Input.GetKeyDown(KeyCode.F6))
+			{
+				NotifyIcon("assets/sprites/hud_item_healthkit.tga");
+			}
+		}
+
 		private void OnDestroy()
 		{
 			// Maybe not needed if MyPlayer clears by itself
@@ -172,7 +192,7 @@ namespace HEVSuitMod
 			}
 
 			// TODO: Test
-			StartFade([healthIcon, healthValue[0], healthValue[1], healthValue[2]], normalizedHealth <= 0.25f);
+			Highlight([healthIcon, healthValue[0], healthValue[1], healthValue[2]], normalizedHealth <= 0.25f);
 
 			// TODO: Temporary, just match suitpower to health until it does its own thing
 			SuitPowerChanged(health);
@@ -185,9 +205,6 @@ namespace HEVSuitMod
 			char[] digits = normalizedHealth.ToString("000").ToCharArray();
 
 			suitIcon.fillAmount = normalizedHealth / 100f;
-#if DEBUG
-			log.LogInfo($"normalizedHealth: {normalizedHealth}, suitIcon.fillAmount: {suitIcon.fillAmount}");
-#endif
 
 			bool foundNonZero = false;
 			for (int i = 0; i < 3; i++)
@@ -205,25 +222,32 @@ namespace HEVSuitMod
 					suitPowerValue[i].sprite = numberSprites[digit];
 				}
 			}
+
+			// Suit power never turns red in HL1
+			Highlight([suitIcon, suitPowerValue[0], suitPowerValue[1], suitPowerValue[2]], false);
 		}
 
-		public void SetFlashlightBattery(float battery)
+		public void SetFlashlightBattery(float battery, bool isOn)
 		{
 			flashlightFull.fillAmount = battery;
+			bool isLow = battery < 0.25f;
+			Color baseColor = isLow ? hudColorDanger : hudColor;
+			Color highlightColor = isLow ? hudColorDangerHighlight : hudColorHighlight;
 
-			if (battery < 0.25f)
+			if (isOn)
 			{
-				flashlightEmpty.color = Color.red;
-				flashlightFull.color = Color.red;
-				flashlightBeam.color = Color.red;
+				flashlightEmpty.color = highlightColor;
+				flashlightFull.color = highlightColor;
+				flashlightBeam.color = highlightColor;
 			}
 			else
 			{
-				flashlightEmpty.color = hudColor;
-				flashlightFull.color = hudColor;
-				flashlightBeam.color = hudColor;
+				flashlightEmpty.color = baseColor;
+				flashlightFull.color = baseColor;
+				flashlightBeam.color = baseColor;
 			}
 		}
+
 
 		public void FlashlightOff()
 		{
@@ -235,38 +259,79 @@ namespace HEVSuitMod
 			flashlightBeam.enabled = true;
 		}
 
-		// TODO: TEST!!!  
-		private IEnumerator HandleFades()
+		/// <summary>
+		/// Display a notification icon, if <paramref name="leftSide"/> is true display on left, else displays on right
+		/// </summary>
+		/// <param name="fileName"></param>
+		/// <param name="leftSide"></param>
+		private void NotifyIcon(string fileName)
 		{
-#if DEBUG
-			log.LogInfo("HandleFades started");
-#endif
+			GameObject iconGo = new("Pickup");
+			iconGo.transform.parent = hud.transform.Find("RightNotifyArea");
+			Image iconImage = iconGo.AddComponent<Image>();
+			iconImage.sprite = assets.LoadAsset<Sprite>(fileName);
+			ImageModulator modulator = Highlight(iconImage, false);
+			modulator.colorTo = new(0, 0, 0, 0); // Override so it fades out completely
+			activeNotifyIcons.Add(iconGo, notifyIconLifetime);
+			notifyIconHandler ??= StartCoroutine(NotifyIconHandler());
+		}
+
+		private IEnumerator NotifyIconHandler()
+		{
 			while (true)
 			{
-				imageFades.RemoveAll(fade =>
+				List<GameObject> expired = [];
+				foreach (var icon in activeNotifyIcons.Keys.ToList())
+				{
+					activeNotifyIcons[icon] -= Time.deltaTime;
+					if (activeNotifyIcons[icon] <= 0f)
+						expired.Add(icon);
+				}
+
+				if (expired != null)
+				{
+					foreach (var icon in expired)
+					{
+						activeNotifyIcons.Remove(icon);
+						Destroy(icon);
+					}
+
+					if (activeNotifyIcons.Count == 0)
+					{
+						notifyIconHandler = null;
+						yield break;
+					}
+				}
+
+				yield return null;
+			}
+		}
+
+		private IEnumerator HandleHighlights()
+		{
+			while (true)
+			{
+				activeHighlights.RemoveAll(fade =>
 				{
 					if (fade.image == null)
 						return true;
 
 					fade.elapsed += Time.deltaTime;
 
-					if (fade.elapsed >= fadeTime)
+					if (fade.elapsed >= highlightTime)
 					{
 						fade.image.color = fade.colorTo;
 						return true;
 					}
 
-					float t = fade.elapsed / fadeTime;
+					float t = fade.elapsed / highlightTime;
 					fade.image.color = Color.Lerp(fade.colorFrom, fade.colorTo, t);
 					return false;
 				});
 
-				if (imageFades.Count == 0)
+				if (activeHighlights.Count == 0)
 				{
-#if DEBUG
-					log.LogInfo("HandleFades stopped");
-#endif
-					fadeHandler = null;
+					highlightHandler = null;
 					yield break;
 				}
 
@@ -274,23 +339,42 @@ namespace HEVSuitMod
 			}
 		}
 
-		public void StartFade(Image[] images, bool isDanger)
+		// Returns reference so we can modify it if we want
+		public ImageModulator Highlight(Image image, bool isDanger)
+		{
+			if (image == null)
+				return null;
+
+			Color from = isDanger ? hudColorDangerHighlight : hudColorHighlight;
+			Color to = isDanger ? hudColorDanger : hudColor;
+			ImageModulator modulator = new(image, from, to);
+			activeHighlights.RemoveAll(f => f.image == image); // Remove existing
+			activeHighlights.Add(modulator);
+			highlightHandler ??= StartCoroutine(HandleHighlights());
+			return modulator;
+		}
+
+		// Returns reference so we can modify it if we want
+		public ImageModulator[] Highlight(Image[] images, bool isDanger)
 		{
 			if (images == null)
-				return;
+				return [];
 
-			// Prevent duplicates by removing any existing fade for this image
+			List<ImageModulator> modulators = [];
 			Color from = isDanger ? hudColorDangerHighlight : hudColorHighlight;
 			Color to = isDanger ? hudColorDanger : hudColor;
 			foreach (Image image in images)
 			{
-				imageFades.RemoveAll(f => f.image == image);
-				imageFades.Add(new ImageFade(image, from, to));
+				ImageModulator modulator = new(image, from, to);
+				activeHighlights.RemoveAll(f => f.image == image);
+				activeHighlights.Add(modulator);
+				modulators.Add(modulator);
 			}
 
 			// Start coroutine if not already running
-			if (fadeHandler == null)
-				fadeHandler = StartCoroutine(HandleFades());
+			highlightHandler ??= StartCoroutine(HandleHighlights());
+
+			return [..modulators];
 		}
 
 		private IEnumerator HideHitIndicators()
@@ -327,12 +411,10 @@ namespace HEVSuitMod
 			foreach (var i in list)
 			{
 				hitIndicators[i].enabled = true;
-				hitIndicatorTimers[i] = hitIndicatorFadeTime;
+				hitIndicatorTimers[i] = HIT_FADE_TIME;
 			}
 
-			// In case we're hit 2 or more times within a short period
-			if (hideHitIndicators == null)
-				hideHitIndicators = StartCoroutine(HideHitIndicators());
+			hideHitIndicators ??= StartCoroutine(HideHitIndicators());
 		}
 
 		/// <summary>

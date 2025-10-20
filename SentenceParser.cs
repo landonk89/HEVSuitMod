@@ -18,7 +18,7 @@ namespace HEVSuitMod
 		private const string SOUND_TYPES_DIR = "weapons/types/";
 		private const string SENTENCES_FILE = "assets/scripts/sentences.txt";
 
-		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
+		private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
 		private VoiceController voiceController;
 		private AssetBundle assets;
 		private List<string> allFiles = [];
