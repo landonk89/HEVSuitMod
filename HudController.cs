@@ -7,10 +7,7 @@ using UnityEngine.UI;
 namespace HEVSuitMod
 {
 	public class HudController : MonoBehaviour
-	{
-		// TODO: 0.5 looks pretty good, tweak later
-		private const float HIT_FADE_TIME = 0.5f;
-		
+	{		
 		//Singleton
 		public static HudController Instance { get; private set; }
 		private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
@@ -18,16 +15,15 @@ namespace HEVSuitMod
 		private GameObject hudPrefab;
 		private GameObject hud;
 		
-		// Highlight and fade images on demand
+		// Colors and times
 		private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
 		private Color hudColorBlank = new(0f, 0f, 0f, 0f);
 		private Color hudColorActive = new(1f, 0.9f, 0f, 1f); // Lerp from here to hudColor over fadeTime
 		private Color hudColorDanger = new(1f, 0f, 0f, 0.4f); // Red
 		private Color hudColorDangerActive = new(1f, 0f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
-		private float flashTime = 0.5f;
-
-		// Notification icons
-		private float notifyIconLifetime = 3f; // TODO: tune
+		private float flashFadeTime = 0.5f;
+		private float hitFadeTime = 0.5f;
+		private float notifyIconLifetime = 3f;
 
 		// Dynamic sprites
 		private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
@@ -52,8 +48,7 @@ namespace HEVSuitMod
 		private HudImage flashBeam;
 		private HudImage[] flashGroup = new HudImage[3];
 
-		// Hit indicators
-		//private Image[] hitIndicatorImg = new Image[4]; // Order: Up Right Down Left
+		// Hit indicators - Order in scene: Up Right Down Left
 		private HudImage hitIndicatorUp;
 		private HudImage hitIndicatorRight;
 		private HudImage hitIndicatorDown;
@@ -83,8 +78,8 @@ namespace HEVSuitMod
 			hud = Instantiate(hudPrefab);
 
 			// Load number sprites, index 10 is a blank sprite
-			numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
 			for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
+			numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
 
 			// Health digits and icon
 			for (int i = 0; i < 3; i++) healthVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/HealthValue/Digit{i}"));
@@ -92,14 +87,14 @@ namespace HEVSuitMod
 			healthGroup = [ healthIcon, healthVal[0], healthVal[1], healthVal[2] ];
 
 			// SuitPower digits and icon
+			for (int i = 0; i < 3; i++) suitVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}"));
 			suitEmpty = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconEmpty"));
 			suitFull = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconFull"));
-			for (int i = 0; i < 3; i++) suitVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}"));
 			suitGroup = [suitFull, suitEmpty, suitVal[0], suitVal[1], suitVal[2]];
 
 			// Ammo counter
-			ammo = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
 			for (int i = 0; i < 3; i++)	ammoVal[i] = new(Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}"));
+			ammo = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
 			ammoGroup = [ammo, ammoVal[0], ammoVal[1], ammoVal[2]];
 
 			// Flashlight indicator
@@ -116,8 +111,7 @@ namespace HEVSuitMod
 			hitIndicatorRight = new(hitIndicatorImg[1]);
 			hitIndicatorDown = new(hitIndicatorImg[2]);
 			hitIndicatorLeft = new(hitIndicatorImg[3]);
-			foreach (Image hit in hitIndicatorImg) // Make them start clear
-				hit.color = Color.clear;
+			foreach (Image hit in hitIndicatorImg) hit.color = Color.clear;
 
 			// Map the 8 hit directions to our indicators
 			hitIndicatorDirections =
@@ -219,7 +213,7 @@ namespace HEVSuitMod
 
 					case EImageState.EndHighlight:
 						img.Timer += Time.deltaTime;
-						if (img.Timer >= flashTime)
+						if (img.Timer >= flashFadeTime)
 						{
 							img.Image.color = idleColor;
 							img.Timer = 0f;
@@ -227,7 +221,7 @@ namespace HEVSuitMod
 							break;
 						}
 
-						t = img.Timer / flashTime;
+						t = img.Timer / flashFadeTime;
 						img.Image.color = Color.Lerp(activeColor, idleColor, t);
 						break;
 
@@ -239,14 +233,14 @@ namespace HEVSuitMod
 
 					case EImageState.EndHitIndicator:
 						img.Timer += Time.deltaTime;
-						if (img.Timer >= HIT_FADE_TIME)
+						if (img.Timer >= hitFadeTime)
 						{
 							img.Image.color = Color.clear;
 							img.State = EImageState.Idle;
 							break;
 						}
 
-						t = img.Timer / HIT_FADE_TIME;
+						t = img.Timer / hitFadeTime;
 						img.Image.color = Color.Lerp(Color.white, Color.clear, t);
 						break;
 
@@ -262,7 +256,7 @@ namespace HEVSuitMod
 
 					case EImageState.Notify: // Never used on permanent hud elements!!!
 						img.Timer += Time.deltaTime;
-						if (img.Timer >= notifyIconLifetime)
+						if (img.Timer >= flashFadeTime)
 						{
 							img.Image.color = idleColor;
 							img.Timer = 0f;
@@ -270,7 +264,7 @@ namespace HEVSuitMod
 							break;
 						}
 
-						t = img.Timer / flashTime;
+						t = img.Timer / flashFadeTime;
 						img.Image.color = Color.Lerp(activeColor, idleColor, t);
 						break;
 
@@ -299,7 +293,7 @@ namespace HEVSuitMod
 			HEVMod.Instance.flashlight.BatteryUpdated -= SetFlashlightBattery;
 		}
 
-		public void HealthChanged()
+		private void HealthChanged()
 		{
 			// FIXME/TODO: Assumes normal 440 health player, may break if health is modded higher
 			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
@@ -325,8 +319,6 @@ namespace HEVSuitMod
 				}
 			}
 
-			// TODO: Test
-			//Highlight([healthImg, healthValImg[0], healthValImg[1], healthValImg[2]], normalizedHealth <= 0.25f);
 			SetCritical([healthIcon, healthVal[0], healthVal[1], healthVal[2]], normalizedHealth <= 0.25f);
 			Highlight([healthIcon, healthVal[0], healthVal[1], healthVal[2]]);
 
@@ -335,12 +327,10 @@ namespace HEVSuitMod
 		}
 
 		// TODO: This is just temporary to get the display actually doing something
-		public void SuitPowerChanged(float power)
+		private void SuitPowerChanged(float power)
 		{
 			int normalizedHealth = Mathf.CeilToInt(power / 440f * 100f);
 			char[] digits = normalizedHealth.ToString("000").ToCharArray();
-
-			//suitFullImg.fillAmount = normalizedHealth / 100f;
 			suitFull.Image.fillAmount = normalizedHealth / 100f;
 
 			bool foundNonZero = false;
@@ -351,13 +341,11 @@ namespace HEVSuitMod
 				// Hide leading zeros
 				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
 				{
-					//suitValImg[i].sprite = numberSprites[10]; // 10 = blank
 					suitVal[i].Image.sprite = numberSprites[10]; // 10 = blank
 				}
 				else
 				{
 					foundNonZero = true;
-					//suitValImg[i].sprite = numberSprites[digit];
 					suitVal[i].Image.sprite = numberSprites[digit];
 				}
 			}
@@ -366,19 +354,19 @@ namespace HEVSuitMod
 			Highlight(suitGroup);
 		}
 
-		public void SetCritical(HudImage[] images, bool critical)
+		private void SetCritical(HudImage[] images, bool critical)
 		{
 			foreach (HudImage image in images)
 				image.Critical = critical;
 		}
 
-		public void Highlight(HudImage[] images)
+		private void Highlight(HudImage[] images)
 		{
 			foreach (HudImage image in images)
 				image.State = EImageState.StartHighlight;
 		}
 
-		public void SetFlashlightBattery(float battery, bool isOn)
+		private void SetFlashlightBattery(float battery, bool isOn)
 		{
 			flashFull.Image.fillAmount = battery;
 			bool isLow = battery < 0.25f;
@@ -389,7 +377,7 @@ namespace HEVSuitMod
 				image.Image.color = isOn ? highlightColor : baseColor;
 		}
 
-		public void FlashlightToggled(bool isOn)
+		private void FlashlightToggled(bool isOn)
 		{
 			flashBeam.Image.enabled = isOn;
 			foreach (HudImage image in flashGroup)
@@ -416,7 +404,7 @@ namespace HEVSuitMod
 		/// Event
 		/// </summary>
 		/// <param name="damageInfo"></param>
-		public void OnTakeDamage(DamageInfoStruct damageInfo)
+		private void OnTakeDamage(DamageInfoStruct damageInfo)
 		{
 			// FIXME: Switch to damageInfo.Direction when you finally make sense of it
 			if (damageInfo.Player == null)
