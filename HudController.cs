@@ -8,7 +8,6 @@ namespace HEVSuitMod
 {
 	public class HudController : MonoBehaviour
 	{		
-		//Singleton
 		public static HudController Instance { get; private set; }
 		private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
 		private AssetBundle assets;
@@ -17,15 +16,14 @@ namespace HEVSuitMod
 		
 		// Colors and times
 		private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
-		private Color hudColorActive = new(1f, 0.9f, 0f, 1f); // Lerp from here to hudColor over fadeTime
-		private Color hudColorDanger = new(1f, 0f, 0f, 0.4f); // Red
-		private Color hudColorDangerActive = new(1f, 0f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
-		private float flashFadeTime = 0.5f;
-		private float hitFadeTime = 0.5f;
-		private float notifyIconLifetime = 3f;
+		private Color hudColorActive = new(1f, 0.9f, 0f, 1f); // Brighter yellow
+		private Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
+		private Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
+		private float fadeTime = 0.5f;
+		private float notifyIconLifetime = 1.5f;
 		private float activationTime = 0.25f;
 
-		// Dynamic sprites
+		// Number sprites
 		private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
 
 		// Health/SuitPower
@@ -186,7 +184,7 @@ namespace HEVSuitMod
 				ammo.State = EImageState.PulseHi;
 
 			if (Input.GetKeyDown(KeyCode.F3))
-				ammo.State= EImageState.Activate;
+				ammo.State = EImageState.Activate;
 
 			if (Input.GetKeyDown(KeyCode.F2))
 				ammo.State = EImageState.Deactivate;
@@ -198,9 +196,8 @@ namespace HEVSuitMod
 			for (int i = allHudImages.Count -1; i >= 0; i--)
 			{
 				HudImage img = allHudImages[i];
-				Color idleColor = img.Critical ? hudColorDanger : hudColor;
-				Color activeColor = img.Critical ? hudColorDangerActive : hudColorActive;
-				//float t;
+				Color idleColor = img.Critical ? hudColorCritical : hudColor;
+				Color activeColor = img.Critical ? hudColorCriticalActive : hudColorActive;
 
 				switch (img.State)
 				{
@@ -208,11 +205,6 @@ namespace HEVSuitMod
 						break;
 
 					case EImageState.Active:
-						break;
-
-					case EImageState.SetCritical:
-						img.Image.color = img.LastState == EImageState.Active ? activeColor : idleColor;
-						img.State = img.LastState;
 						break;
 
 					case EImageState.Deactivate:
@@ -236,11 +228,11 @@ namespace HEVSuitMod
 
 					case EImageState.Highlight:
 						img.Image.color = activeColor;
-						StartTransition(img, EImageState.FadeHighlight, hudColor);
+						StartTransition(img, EImageState.FadeHighlight, idleColor);
 						break;
 
 					case EImageState.FadeHighlight:
-						UpdateTransition(img, flashFadeTime, idleColor);
+						UpdateTransition(img, fadeTime, idleColor);
 						break;
 
 					case EImageState.HitIndicator:
@@ -249,30 +241,30 @@ namespace HEVSuitMod
 						break;
 
 					case EImageState.FadeHitIndicator:
-						UpdateTransition(img, hitFadeTime, Color.clear);
+						UpdateTransition(img, fadeTime, Color.clear);
 						break;
 
 					case EImageState.PulseLow:
-						img.Image.color = Color.Lerp(Color.clear, idleColor,
-							(Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
+						img.Image.color = Color.Lerp(Color.clear, idleColor, (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
 						break;
 
 					case EImageState.PulseHi:
-						img.Image.color = Color.Lerp(idleColor, activeColor,
-							(Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
+						img.Image.color = Color.Lerp(idleColor, activeColor, (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
 						break;
 
 					case EImageState.Notify:
-						if (UpdateTransition(img, flashFadeTime, idleColor))
+						if (UpdateTransition(img, fadeTime, idleColor))
 							img.Timer = 0f;
 						break;
 
 					case EImageState.Destroy:
-						StartTransition(img, EImageState.Destroying, Color.clear);
+						img.Timer += Time.deltaTime;
+						if (img.Timer > notifyIconLifetime)
+							StartTransition(img, EImageState.Destroying, Color.clear);
 						break;
 
 					case EImageState.Destroying:
-						if (UpdateTransition(img, notifyIconLifetime, Color.clear))
+						if (UpdateTransition(img, fadeTime, Color.clear))
 						{
 							Destroy(img.Image.gameObject);
 							allHudImages.RemoveAt(i);
@@ -290,6 +282,7 @@ namespace HEVSuitMod
 			img.State = nextState;
 		}
 
+		// Returns true if transition completed
 		private bool UpdateTransition(HudImage img, float duration, Color target)
 		{
 			img.Timer += Time.deltaTime;
@@ -315,8 +308,11 @@ namespace HEVSuitMod
 			foreach (HudImage image in images)
 			{
 				image.Critical = critical;
-				image.LastState = image.State;
-				image.State = EImageState.SetCritical;
+				image.Image.color = image.State switch
+				{
+					EImageState.Inactive => critical ? hudColorCritical : hudColor,
+					_ => critical ? hudColorCriticalActive : hudColorActive
+				};
 			}
 		}
 
@@ -358,18 +354,16 @@ namespace HEVSuitMod
 				// Hide leading zeros
 				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
 				{
-					//healthValImg[i].sprite = numberSprites[10]; // 10 = blank
-					healthVal[i].Image.sprite = numberSprites[10];
+					healthVal[i].Image.sprite = numberSprites[10]; // 10 = blank
 				}
 				else
 				{
 					foundNonZero = true;
-					//healthValImg[i].sprite = numberSprites[digit];
 					healthVal[i].Image.sprite = numberSprites[digit];
 				}
 			}
 
-			SetCritical([healthIcon, healthVal[0], healthVal[1], healthVal[2]], normalizedHealth <= 0.25f);
+			SetCritical([healthIcon, healthVal[0], healthVal[1], healthVal[2]], normalizedHealth <= 25);
 			Highlight([healthIcon, healthVal[0], healthVal[1], healthVal[2]]);
 
 			// TODO: Temporary, just match suitpower to health until it does its own thing
