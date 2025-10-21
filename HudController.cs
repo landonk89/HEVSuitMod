@@ -277,7 +277,7 @@ namespace HEVSuitMod
 		private void StartTransition(HudImage img, EImageState nextState, Color target)
 		{
 			img.Timer = 0f;
-			img.PreviousColor = img.Image.color;
+			img.LastColor = img.Image.color;
 			img.LastState = img.State;
 			img.State = nextState;
 		}
@@ -299,7 +299,7 @@ namespace HEVSuitMod
 				return true;
 			}
 			float t = img.Timer / duration;
-			img.Image.color = Color.Lerp(img.PreviousColor, target, t);
+			img.Image.color = Color.Lerp(img.LastColor, target, t);
 			return false;
 		}
 
@@ -394,7 +394,7 @@ namespace HEVSuitMod
 				}
 			}
 
-			SetCritical(suitGroup, normalizedHealth <= 25);
+			//SetCritical(suitGroup, normalizedHealth <= 25);
 			Highlight(suitGroup);
 		}
 
