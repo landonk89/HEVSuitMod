@@ -1,8 +1,6 @@
 ﻿using BepInEx.Logging;
 using EFT;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,51 +8,6 @@ namespace HEVSuitMod
 {
 	public class HudController : MonoBehaviour
 	{
-		// -------------------------------------
-		// Testing Zone
-		// -------------------------------------
-
-		public class HudImage(string name, Image image, ImageState state = ImageState.Idle, bool isCritical = false, float timer = 0f)
-		{
-			public string Name { get; } = name;
-			public Image Image { get; } = image;
-			public ImageState State { get; set; } = state;
-			public bool Critical { get; set; } = isCritical;
-			public float Timer { get; set;} = timer;
-		}
-
-		public enum ImageState
-		{
-			Idle,
-			Deactivate,
-			Activate,
-			FlashOnce,
-			PulseBlank,
-			PulseHighlight,
-			Notify,
-			Destroy
-		}
-
-		public List<HudImage> allHudImages = [];
-
-		// -------------------------------------
-		// End Testing Zone
-		// -------------------------------------
-
-		public class ImageModulator(Image img, Color from, Color to)
-		{
-			public Image image = img;
-			public Color colorFrom = from;
-			public Color colorTo = to;
-			public float elapsed = 0f;
-		}
-
-		// Just for readability
-		private const int UP = 0;
-		private const int RIGHT = 1;
-		private const int DOWN = 2;
-		private const int LEFT = 3;
-
 		// TODO: 0.5 looks pretty good, tweak later
 		private const float HIT_FADE_TIME = 0.5f;
 		
@@ -71,55 +24,44 @@ namespace HEVSuitMod
 		private Color hudColorActive = new(1f, 0.9f, 0f, 1f); // Lerp from here to hudColor over fadeTime
 		private Color hudColorDanger = new(1f, 0f, 0f, 0.4f); // Red
 		private Color hudColorDangerActive = new(1f, 0f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
-		private float highlightTime = 2f;
 		private float flashTime = 0.5f;
-		private List<ImageModulator> activeHighlights = [];
-		private Coroutine highlightHandler;
-
-		// Pulse images like a blinking light, this is intended for world damage indicators (fire, etc)
-		// ...but can be used on any hud image safely
-		// TODO: Prevent pulsing and highlighting at the same time
-		private List<ImageModulator> activePulses = [];
-		private Coroutine pulseHandler;
 
 		// Notification icons
-		private Dictionary<GameObject, float> activeNotifyIcons = [];
 		private float notifyIconLifetime = 3f; // TODO: tune
-		private Coroutine notifyIconHandler;
 
 		// Dynamic sprites
 		private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
 
 		// Health/SuitPower
-		private Image healthIcon;
-		private Image[] healthValue = new Image[3]; // Each digit of health
-		private Image suitIcon;
-		private Image[] suitPowerValue = new Image[3]; // Each digit of power
+		private HudImage healthIcon;
+		private HudImage[] healthVal = new HudImage[3];
+		private HudImage[] healthGroup = new HudImage[4]; // Group of all health images
+		private HudImage suitEmpty;
+		private HudImage suitFull;
+		private HudImage[] suitVal = new HudImage[3];
+		private HudImage[] suitGroup = new HudImage[5]; // Group of all suit images
 
 		// Ammo counter
-		private Image ammoCounterIcon;
-		private Image[] ammoCounterValue = new Image[3];
+		private HudImage ammo;
+		private HudImage[] ammoVal = new HudImage[3];
+		private HudImage[] ammoGroup = new HudImage[4]; // Group of all ammo images
 
 		// Flashlight
-		private Image flashlightEmpty;
-		private Image flashlightFull;
-		private Image flashlightBeam;
+		private HudImage flashEmpty;
+		private HudImage flashFull;
+		private HudImage flashBeam;
+		private HudImage[] flashGroup = new HudImage[3];
 
 		// Hit indicators
-		private Image[] hitIndicators = new Image[4]; // Order: Up Right Down Left
-		private Coroutine hideHitIndicators;
-		private readonly float[] hitIndicatorTimers = new float[4];
-		private readonly int[][] hitIndicatorDirections =
-		{
-			[UP],          // 0: Front
-			[UP, RIGHT],   // 1: Front-Right
-			[RIGHT],       // 2: Right
-			[RIGHT, DOWN], // 3: Back-Right
-			[DOWN],        // 4: Back
-			[DOWN, LEFT],  // 5: Back-Left
-			[LEFT],        // 6: Left
-			[LEFT, UP]     // 7: Front-Left
-		};
+		//private Image[] hitIndicatorImg = new Image[4]; // Order: Up Right Down Left
+		private HudImage hitIndicatorUp;
+		private HudImage hitIndicatorRight;
+		private HudImage hitIndicatorDown;
+		private HudImage hitIndicatorLeft;
+		private HudImage[][] hitIndicatorDirections;
+
+		// For state machine
+		private List<HudImage> allHudImages = [];
 
 		private void Awake()
 		{
@@ -142,41 +84,75 @@ namespace HEVSuitMod
 
 			// Load number sprites, index 10 is a blank sprite
 			numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
-			for (int i = 0; i < 10; i++)
-				numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
+			for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
 
 			// Health digits and icon
-			healthIcon = Utils.FindComponent<Image>(hud, "HealthAndSuitPower/HealthIcon");
-			for (int i = 0; i < 3; i++)
-				healthValue[i] = Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/HealthValue/Digit{i}");
+			for (int i = 0; i < 3; i++) healthVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/HealthValue/Digit{i}"));
+			healthIcon = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/HealthIcon"));
+			healthGroup = [ healthIcon, healthVal[0], healthVal[1], healthVal[2] ];
 
 			// SuitPower digits and icon
-			suitIcon = Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconFull");
-			for (int i = 0; i < 3; i++)
-				suitPowerValue[i] = Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}");
+			suitEmpty = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconEmpty"));
+			suitFull = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconFull"));
+			for (int i = 0; i < 3; i++) suitVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}"));
+			suitGroup = [suitFull, suitEmpty, suitVal[0], suitVal[1], suitVal[2]];
 
 			// Ammo counter
-			ammoCounterIcon = Utils.FindComponent<Image>(hud, "AmmoCounter/Icon");
-			for (int i = 0; i < 3; i++)
-				ammoCounterValue[i] = Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}");
+			ammo = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
+			for (int i = 0; i < 3; i++)	ammoVal[i] = new(Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}"));
+			ammoGroup = [ammo, ammoVal[0], ammoVal[1], ammoVal[2]];
 
 			// Flashlight indicator
-			flashlightEmpty = Utils.FindComponent<Image>(hud, "Flashlight/IconEmpty");
-			flashlightFull = Utils.FindComponent<Image>(hud, "Flashlight/IconFull");
-			flashlightBeam = Utils.FindComponent<Image>(hud, "Flashlight/Beam");
-
-			flashlightBeam.enabled = false; // start off and full battery
-			flashlightFull.fillAmount = 1f;
+			flashEmpty = new(Utils.FindComponent<Image>(hud, "Flashlight/IconEmpty"));
+			flashFull = new(Utils.FindComponent<Image>(hud, "Flashlight/IconFull"));
+			flashBeam = new(Utils.FindComponent<Image>(hud, "Flashlight/Beam"));
+			flashBeam.Image.enabled = false; // start off and full battery
+			flashFull.Image.fillAmount = 1f;
+			flashGroup = [flashEmpty, flashFull, flashBeam];
 
 			// Hit indicators
-			hitIndicators = Utils.FindComponentsInChildren<Image>(hud, "HitIndicators");
-			hitIndicators[UP].enabled = false; // Hide indicators until we're hit
-			hitIndicators[RIGHT].enabled = false;
-			hitIndicators[DOWN].enabled = false;
-			hitIndicators[LEFT].enabled = false;
+			Image[] hitIndicatorImg = Utils.FindComponentsInChildren<Image>(hud, "HitIndicators");
+			hitIndicatorUp = new(hitIndicatorImg[0]);
+			hitIndicatorRight = new(hitIndicatorImg[1]);
+			hitIndicatorDown = new(hitIndicatorImg[2]);
+			hitIndicatorLeft = new(hitIndicatorImg[3]);
+			foreach (Image hit in hitIndicatorImg) // Make them start clear
+				hit.color = Color.clear;
 
-			// Testing new HudImage class stuff
-			allHudImages.Add(new("TEST", ammoCounterIcon)); // TODO: Replace name string with enum?
+			// Map the 8 hit directions to our indicators
+			hitIndicatorDirections =
+			[
+				[hitIndicatorUp],
+				[hitIndicatorUp, hitIndicatorRight],
+				[hitIndicatorRight],
+				[hitIndicatorRight, hitIndicatorDown],
+				[hitIndicatorDown],
+				[hitIndicatorDown, hitIndicatorLeft],
+				[hitIndicatorLeft],
+				[hitIndicatorLeft, hitIndicatorUp]
+			];
+
+			// For Update()
+			allHudImages.Add(healthIcon);
+			allHudImages.Add(healthVal[0]);
+			allHudImages.Add(healthVal[1]);
+			allHudImages.Add(healthVal[2]);
+			allHudImages.Add(suitEmpty);
+			allHudImages.Add(suitFull);
+			allHudImages.Add(suitVal[0]);
+			allHudImages.Add(suitVal[1]);
+			allHudImages.Add(suitVal[2]);
+			allHudImages.Add(flashEmpty);
+			allHudImages.Add(flashFull);
+			allHudImages.Add(flashBeam);
+			allHudImages.Add(ammo);
+			allHudImages.Add(ammoVal[0]);
+			allHudImages.Add(ammoVal[1]);
+			allHudImages.Add(ammoVal[2]);
+			allHudImages.Add(hitIndicatorUp);
+			allHudImages.Add(hitIndicatorRight);
+			allHudImages.Add(hitIndicatorDown);
+			allHudImages.Add(hitIndicatorLeft);
 		}
 
 		private void Start()
@@ -195,25 +171,25 @@ namespace HEVSuitMod
 		// For testing
 		private void Update()
 		{
+#if DEBUG
 			if (Input.GetKeyDown(KeyCode.F6))
 				NotifyIcon("assets/sprites/hud_item_healthkit.tga");
 
 			if (Input.GetKeyDown(KeyCode.F5))
-				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.PulseBlank;
+				ammo.State = EImageState.PulseBlank;
 
 			if (Input.GetKeyDown(KeyCode.F4))
-				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.PulseHighlight;
+				ammo.State = EImageState.PulseHighlight;
 
 			if (Input.GetKeyDown(KeyCode.F3))
-				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.Activate;
+				ammo.State= EImageState.Activate;
 
 			if (Input.GetKeyDown(KeyCode.F2))
-				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.Deactivate;
+				ammo.State = EImageState.Deactivate;
 
 			if (Input.GetKeyDown(KeyCode.F1))
-				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.Notify;
-
-			// Testing new HudImage class stuff
+				ammo.State = EImageState.Notify;
+#endif
 			for (int i = allHudImages.Count -1; i >= 0; i--)
 			{
 				HudImage img = allHudImages[i];
@@ -222,26 +198,32 @@ namespace HEVSuitMod
 				float t;
 				switch (img.State)
 				{
-					case ImageState.Idle:
+					case EImageState.Idle:
 						break;
 
-					case ImageState.Deactivate: // TODO: Gentle transition don't slam it
+					case EImageState.Deactivate: // TODO: Gentle transition don't slam it
 						img.Image.color = idleColor;
-						img.State = ImageState.Idle;
+						img.State = EImageState.Idle;
 						break;
 
-					case ImageState.Activate: // This image is slightly brighter than normal
+					case EImageState.Activate: // This image is slightly brighter than normal
 						img.Image.color = hudColorActive;
-						img.State = ImageState.Idle;
+						img.State = EImageState.Idle;
 						break;
 
-					case ImageState.FlashOnce:
+					case EImageState.StartHighlight:
+						img.Timer = 0f;
+						img.Image.color = activeColor;
+						img.State = EImageState.EndHighlight;
+						break;
+
+					case EImageState.EndHighlight:
 						img.Timer += Time.deltaTime;
 						if (img.Timer >= flashTime)
 						{
 							img.Image.color = idleColor;
 							img.Timer = 0f;
-							img.State = ImageState.Idle;
+							img.State = EImageState.Idle;
 							break;
 						}
 
@@ -249,39 +231,59 @@ namespace HEVSuitMod
 						img.Image.color = Color.Lerp(activeColor, idleColor, t);
 						break;
 
-					case ImageState.PulseBlank:
+					case EImageState.StartHitIndicator:
+						img.Timer = 0f;
+						img.Image.color = Color.white;
+						img.State = EImageState.EndHitIndicator;
+						break;
+
+					case EImageState.EndHitIndicator:
+						img.Timer += Time.deltaTime;
+						if (img.Timer >= HIT_FADE_TIME)
+						{
+							img.Image.color = Color.clear;
+							img.State = EImageState.Idle;
+							break;
+						}
+
+						t = img.Timer / HIT_FADE_TIME;
+						img.Image.color = Color.Lerp(Color.white, Color.clear, t);
+						break;
+
+					case EImageState.PulseBlank:
 						t = (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f;
 						img.Image.color = Color.Lerp(hudColorBlank, idleColor, t);
 						break;
 
-					case ImageState.PulseHighlight:
+					case EImageState.PulseHighlight:
 						t = (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f;
 						img.Image.color = Color.Lerp(idleColor, activeColor, t);
 						break;
 
-					case ImageState.Notify: // Never used on permanent hud elements!!!
+					case EImageState.Notify: // Never used on permanent hud elements!!!
 						img.Timer += Time.deltaTime;
-						if (img.Timer >= 1f)
+						if (img.Timer >= notifyIconLifetime)
 						{
 							img.Image.color = idleColor;
 							img.Timer = 0f;
-							img.State = ImageState.Destroy;
+							img.State = EImageState.Destroy;
+							break;
 						}
 
 						t = img.Timer / flashTime;
 						img.Image.color = Color.Lerp(activeColor, idleColor, t);
 						break;
 
-					case ImageState.Destroy: // Should ONLY be used by ImageState.Notify
+					case EImageState.Destroy: // Should ONLY be used by ImageState.Notify
 						img.Timer += Time.deltaTime;
-						if (img.Timer >= 3f)
+						if (img.Timer >= notifyIconLifetime)
 						{
 							Destroy(img.Image.gameObject);
 							allHudImages.RemoveAt(i);
 							break;
 						}
 
-						t = img.Timer / 3f;
+						t = img.Timer / notifyIconLifetime;
 						img.Image.color = Color.Lerp(idleColor, hudColorBlank, t);
 						break;
 				}
@@ -312,17 +314,21 @@ namespace HEVSuitMod
 				// Hide leading zeros
 				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
 				{
-					healthValue[i].sprite = numberSprites[10]; // 10 = blank
+					//healthValImg[i].sprite = numberSprites[10]; // 10 = blank
+					healthVal[i].Image.sprite = numberSprites[10];
 				}
 				else
 				{
 					foundNonZero = true;
-					healthValue[i].sprite = numberSprites[digit];
+					//healthValImg[i].sprite = numberSprites[digit];
+					healthVal[i].Image.sprite = numberSprites[digit];
 				}
 			}
 
 			// TODO: Test
-			Highlight([healthIcon, healthValue[0], healthValue[1], healthValue[2]], normalizedHealth <= 0.25f);
+			//Highlight([healthImg, healthValImg[0], healthValImg[1], healthValImg[2]], normalizedHealth <= 0.25f);
+			SetCritical([healthIcon, healthVal[0], healthVal[1], healthVal[2]], normalizedHealth <= 0.25f);
+			Highlight([healthIcon, healthVal[0], healthVal[1], healthVal[2]]);
 
 			// TODO: Temporary, just match suitpower to health until it does its own thing
 			SuitPowerChanged(health);
@@ -334,7 +340,8 @@ namespace HEVSuitMod
 			int normalizedHealth = Mathf.CeilToInt(power / 440f * 100f);
 			char[] digits = normalizedHealth.ToString("000").ToCharArray();
 
-			suitIcon.fillAmount = normalizedHealth / 100f;
+			//suitFullImg.fillAmount = normalizedHealth / 100f;
+			suitFull.Image.fillAmount = normalizedHealth / 100f;
 
 			bool foundNonZero = false;
 			for (int i = 0; i < 3; i++)
@@ -344,43 +351,49 @@ namespace HEVSuitMod
 				// Hide leading zeros
 				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
 				{
-					suitPowerValue[i].sprite = numberSprites[10]; // 10 = blank
+					//suitValImg[i].sprite = numberSprites[10]; // 10 = blank
+					suitVal[i].Image.sprite = numberSprites[10]; // 10 = blank
 				}
 				else
 				{
 					foundNonZero = true;
-					suitPowerValue[i].sprite = numberSprites[digit];
+					//suitValImg[i].sprite = numberSprites[digit];
+					suitVal[i].Image.sprite = numberSprites[digit];
 				}
 			}
 
-			// Suit power never turns red in HL1
-			Highlight([suitIcon, suitPowerValue[0], suitPowerValue[1], suitPowerValue[2]], false);
+			SetCritical(suitGroup, normalizedHealth <= 25);
+			Highlight(suitGroup);
+		}
+
+		public void SetCritical(HudImage[] images, bool critical)
+		{
+			foreach (HudImage image in images)
+				image.Critical = critical;
+		}
+
+		public void Highlight(HudImage[] images)
+		{
+			foreach (HudImage image in images)
+				image.State = EImageState.StartHighlight;
 		}
 
 		public void SetFlashlightBattery(float battery, bool isOn)
 		{
-			flashlightFull.fillAmount = battery;
+			flashFull.Image.fillAmount = battery;
 			bool isLow = battery < 0.25f;
 			Color baseColor = isLow ? hudColorDanger : hudColor;
 			Color highlightColor = isLow ? hudColorDangerActive : hudColorActive;
 
-			if (isOn)
-			{
-				flashlightEmpty.color = highlightColor;
-				flashlightFull.color = highlightColor;
-				flashlightBeam.color = highlightColor;
-			}
-			else
-			{
-				flashlightEmpty.color = baseColor;
-				flashlightFull.color = baseColor;
-				flashlightBeam.color = baseColor;
-			}
+			foreach (HudImage image in flashGroup)
+				image.Image.color = isOn ? highlightColor : baseColor;
 		}
 
 		public void FlashlightToggled(bool isOn)
 		{
-			flashlightBeam.enabled = isOn;
+			flashBeam.Image.enabled = isOn;
+			foreach (HudImage image in flashGroup)
+				image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
 		}
 
 		/// <summary>
@@ -390,155 +403,13 @@ namespace HEVSuitMod
 		/// <param name="leftSide"></param>
 		private void NotifyIcon(string fileName)
 		{
-			GameObject iconGo = new("Pickup");
-			iconGo.transform.parent = hud.transform.Find("RightNotifyArea");
-			Image iconImage = iconGo.AddComponent<Image>();
+			GameObject iconObj = new("icon");
+			iconObj.transform.parent = hud.transform.Find("RightNotifyArea");
+			Image iconImage = iconObj.AddComponent<Image>();
 			iconImage.sprite = assets.LoadAsset<Sprite>(fileName);
-			ImageModulator modulator = Highlight(iconImage, false);
-			modulator.colorTo = new(0, 0, 0, 0); // Override so it fades out completely
-			activeNotifyIcons.Add(iconGo, notifyIconLifetime);
-			notifyIconHandler ??= StartCoroutine(NotifyIconHandler());
-		}
-
-		private IEnumerator NotifyIconHandler()
-		{
-			while (true)
-			{
-				List<GameObject> expired = [];
-				foreach (var icon in activeNotifyIcons.Keys.ToList())
-				{
-					activeNotifyIcons[icon] -= Time.deltaTime;
-					if (activeNotifyIcons[icon] <= 0f)
-						expired.Add(icon);
-				}
-
-				if (expired != null)
-				{
-					foreach (var icon in expired)
-					{
-						activeNotifyIcons.Remove(icon);
-						Destroy(icon);
-					}
-
-					if (activeNotifyIcons.Count == 0)
-					{
-						notifyIconHandler = null;
-						yield break;
-					}
-				}
-
-				yield return null;
-			}
-		}
-
-		private IEnumerator HandleHighlights()
-		{
-			while (true)
-			{
-				activeHighlights.RemoveAll(fade =>
-				{
-					if (fade.image == null)
-						return true;
-
-					fade.elapsed += Time.deltaTime;
-
-					if (fade.elapsed >= highlightTime)
-					{
-						fade.image.color = fade.colorTo;
-						return true;
-					}
-
-					float t = fade.elapsed / highlightTime;
-					fade.image.color = Color.Lerp(fade.colorFrom, fade.colorTo, t);
-					return false;
-				});
-
-				if (activeHighlights.Count == 0)
-				{
-					highlightHandler = null;
-					yield break;
-				}
-
-				yield return null;
-			}
-		}
-
-		// Returns reference so we can modify it if we want
-		public ImageModulator Highlight(Image image, bool isDanger)
-		{
-			if (image == null)
-				return null;
-
-			Color from = isDanger ? hudColorDangerActive : hudColorActive;
-			Color to = isDanger ? hudColorDanger : hudColor;
-			ImageModulator modulator = new(image, from, to);
-			activeHighlights.RemoveAll(f => f.image == image); // Remove existing
-			activeHighlights.Add(modulator);
-			highlightHandler ??= StartCoroutine(HandleHighlights());
-			return modulator;
-		}
-
-		// Returns reference so we can modify it if we want
-		public ImageModulator[] Highlight(Image[] images, bool isDanger)
-		{
-			if (images == null)
-				return [];
-
-			List<ImageModulator> modulators = [];
-			Color from = isDanger ? hudColorDangerActive : hudColorActive;
-			Color to = isDanger ? hudColorDanger : hudColor;
-			foreach (Image image in images)
-			{
-				ImageModulator modulator = new(image, from, to);
-				activeHighlights.RemoveAll(f => f.image == image);
-				activeHighlights.Add(modulator);
-				modulators.Add(modulator);
-			}
-
-			// Start coroutine if not already running
-			highlightHandler ??= StartCoroutine(HandleHighlights());
-
-			return [..modulators];
-		}
-
-		private IEnumerator HideHitIndicators()
-		{
-			while (true)
-			{
-				bool anyActive = false;
-				for (int i = 0; i < 4; i++)
-				{
-					if (hitIndicators[i].enabled)
-					{
-						hitIndicatorTimers[i] -= Time.deltaTime;
-						hitIndicators[i].color = new(1, 1, 1, hitIndicatorTimers[i] * 2);
-
-						if (hitIndicatorTimers[i] <= 0f)
-							hitIndicators[i].enabled = false;
-						else
-							anyActive = true;
-					}
-				}
-
-				if (!anyActive)
-				{
-					hideHitIndicators = null;
-					yield break; // Stop coroutine when nothing is visible
-				}
-
-				yield return null;
-			}
-		}
-
-		private void ShowHitIndicators(params int[] list)
-		{
-			foreach (var i in list)
-			{
-				hitIndicators[i].enabled = true;
-				hitIndicatorTimers[i] = HIT_FADE_TIME;
-			}
-
-			hideHitIndicators ??= StartCoroutine(HideHitIndicators());
+			HudImage hudImage = new(iconImage);
+			hudImage.State = EImageState.Notify;
+			allHudImages.Add(hudImage);
 		}
 
 		/// <summary>
@@ -547,12 +418,14 @@ namespace HEVSuitMod
 		/// <param name="damageInfo"></param>
 		public void OnTakeDamage(DamageInfoStruct damageInfo)
 		{
-			int[] indicators = [0];
+			// FIXME: Switch to damageInfo.Direction when you finally make sense of it
 			if (damageInfo.Player == null)
 			{
-				// World damage, show all of them
-				indicators = [UP, RIGHT, DOWN, LEFT];
-				ShowHitIndicators(indicators);
+				// World damage, show all damage indicators
+				hitIndicatorUp.State = EImageState.StartHitIndicator;
+				hitIndicatorRight.State = EImageState.StartHitIndicator;
+				hitIndicatorDown.State = EImageState.StartHitIndicator;
+				hitIndicatorLeft.State = EImageState.StartHitIndicator;
 				return;
 			}
 
@@ -572,12 +445,10 @@ namespace HEVSuitMod
 			float angle = Mathf.Atan2(localDir.x, localDir.z) * Mathf.Rad2Deg;
 			if (angle < 0) angle += 360f;
 
-			// Decide which directions to show based on angle
-			int dirIndex = Mathf.FloorToInt(((angle + 22.5f) % 360f) / 45f);
-			indicators = hitIndicatorDirections[dirIndex];
-
-			// Show the indicators
-			ShowHitIndicators(indicators);
+			// Decide which hit indicators to show based on angle
+			int dirIndex = Mathf.FloorToInt((angle + 22.5f) % 360f / 45f);
+			foreach (var image in hitIndicatorDirections[dirIndex])
+				image.State = EImageState.StartHitIndicator;
 		}
 	}
 }
