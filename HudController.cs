@@ -17,13 +17,13 @@ namespace HEVSuitMod
 		
 		// Colors and times
 		private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
-		private Color hudColorBlank = new(0f, 0f, 0f, 0f);
 		private Color hudColorActive = new(1f, 0.9f, 0f, 1f); // Lerp from here to hudColor over fadeTime
 		private Color hudColorDanger = new(1f, 0f, 0f, 0.4f); // Red
 		private Color hudColorDangerActive = new(1f, 0f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
 		private float flashFadeTime = 0.5f;
 		private float hitFadeTime = 0.5f;
 		private float notifyIconLifetime = 3f;
+		private float activationTime = 0.25f;
 
 		// Dynamic sprites
 		private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
@@ -155,14 +155,24 @@ namespace HEVSuitMod
 			GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => OnTakeDamage(damageInfo);
 			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
 			HEVMod.Instance.flashlight.Toggled += FlashlightToggled;
-			HEVMod.Instance.flashlight.BatteryUpdated += SetFlashlightBattery;
+			HEVMod.Instance.flashlight.BatteryUpdate += SetFlashlightBattery;
+			HEVMod.Instance.flashlight.BatteryLow += SetFlashlightBatteryCritical;
 
 			// Init value sprites
 			HealthChanged();
 			//SuitPowerChanged(440);
 		}
 
-		// For testing
+		private void OnDestroy()
+		{
+			// Maybe not needed if MyPlayer clears by itself
+			GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => OnTakeDamage(damageInfo);
+			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
+			HEVMod.Instance.flashlight.Toggled -= FlashlightToggled;
+			HEVMod.Instance.flashlight.BatteryUpdate -= SetFlashlightBattery;
+			HEVMod.Instance.flashlight.BatteryLow -= SetFlashlightBatteryCritical;
+		}
+
 		private void Update()
 		{
 #if DEBUG
@@ -170,10 +180,10 @@ namespace HEVSuitMod
 				NotifyIcon("assets/sprites/hud_item_healthkit.tga");
 
 			if (Input.GetKeyDown(KeyCode.F5))
-				ammo.State = EImageState.PulseBlank;
+				ammo.State = EImageState.PulseLow;
 
 			if (Input.GetKeyDown(KeyCode.F4))
-				ammo.State = EImageState.PulseHighlight;
+				ammo.State = EImageState.PulseHi;
 
 			if (Input.GetKeyDown(KeyCode.F3))
 				ammo.State= EImageState.Activate;
@@ -184,113 +194,153 @@ namespace HEVSuitMod
 			if (Input.GetKeyDown(KeyCode.F1))
 				ammo.State = EImageState.Notify;
 #endif
+			// Iterate backward so we can safely RemoveAt() for notification icons
 			for (int i = allHudImages.Count -1; i >= 0; i--)
 			{
 				HudImage img = allHudImages[i];
 				Color idleColor = img.Critical ? hudColorDanger : hudColor;
 				Color activeColor = img.Critical ? hudColorDangerActive : hudColorActive;
-				float t;
+				//float t;
+
 				switch (img.State)
 				{
-					case EImageState.Idle:
+					case EImageState.Inactive:
 						break;
 
-					case EImageState.Deactivate: // TODO: Gentle transition don't slam it
-						img.Image.color = idleColor;
-						img.State = EImageState.Idle;
+					case EImageState.Active:
 						break;
 
-					case EImageState.Activate: // This image is slightly brighter than normal
-						img.Image.color = hudColorActive;
-						img.State = EImageState.Idle;
+					case EImageState.SetCritical:
+						img.Image.color = img.LastState == EImageState.Active ? activeColor : idleColor;
+						img.State = img.LastState;
 						break;
 
-					case EImageState.StartHighlight:
-						img.Timer = 0f;
+					case EImageState.Deactivate:
 						img.Image.color = activeColor;
-						img.State = EImageState.EndHighlight;
+						StartTransition(img, EImageState.Deactivating, idleColor);
 						break;
 
-					case EImageState.EndHighlight:
-						img.Timer += Time.deltaTime;
-						if (img.Timer >= flashFadeTime)
-						{
-							img.Image.color = idleColor;
-							img.Timer = 0f;
-							img.State = EImageState.Idle;
-							break;
-						}
-
-						t = img.Timer / flashFadeTime;
-						img.Image.color = Color.Lerp(activeColor, idleColor, t);
+					case EImageState.Deactivating:
+						UpdateTransition(img, activationTime, idleColor);
 						break;
 
-					case EImageState.StartHitIndicator:
-						img.Timer = 0f;
+					case EImageState.Activate:
+						img.Image.color = idleColor;
+						img.LastState = img.State;
+						StartTransition(img, EImageState.Activating, activeColor);
+						break;
+
+					case EImageState.Activating:
+						UpdateTransition(img, activationTime, activeColor);
+						break;
+
+					case EImageState.Highlight:
+						img.Image.color = activeColor;
+						StartTransition(img, EImageState.FadeHighlight, hudColor);
+						break;
+
+					case EImageState.FadeHighlight:
+						UpdateTransition(img, flashFadeTime, idleColor);
+						break;
+
+					case EImageState.HitIndicator:
 						img.Image.color = Color.white;
-						img.State = EImageState.EndHitIndicator;
+						StartTransition(img, EImageState.FadeHitIndicator, Color.clear);
 						break;
 
-					case EImageState.EndHitIndicator:
-						img.Timer += Time.deltaTime;
-						if (img.Timer >= hitFadeTime)
-						{
-							img.Image.color = Color.clear;
-							img.State = EImageState.Idle;
-							break;
-						}
-
-						t = img.Timer / hitFadeTime;
-						img.Image.color = Color.Lerp(Color.white, Color.clear, t);
+					case EImageState.FadeHitIndicator:
+						UpdateTransition(img, hitFadeTime, Color.clear);
 						break;
 
-					case EImageState.PulseBlank:
-						t = (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f;
-						img.Image.color = Color.Lerp(hudColorBlank, idleColor, t);
+					case EImageState.PulseLow:
+						img.Image.color = Color.Lerp(Color.clear, idleColor,
+							(Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
 						break;
 
-					case EImageState.PulseHighlight:
-						t = (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f;
-						img.Image.color = Color.Lerp(idleColor, activeColor, t);
+					case EImageState.PulseHi:
+						img.Image.color = Color.Lerp(idleColor, activeColor,
+							(Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
 						break;
 
-					case EImageState.Notify: // Never used on permanent hud elements!!!
-						img.Timer += Time.deltaTime;
-						if (img.Timer >= flashFadeTime)
-						{
-							img.Image.color = idleColor;
+					case EImageState.Notify:
+						if (UpdateTransition(img, flashFadeTime, idleColor))
 							img.Timer = 0f;
-							img.State = EImageState.Destroy;
-							break;
-						}
-
-						t = img.Timer / flashFadeTime;
-						img.Image.color = Color.Lerp(activeColor, idleColor, t);
 						break;
 
-					case EImageState.Destroy: // Should ONLY be used by ImageState.Notify
-						img.Timer += Time.deltaTime;
-						if (img.Timer >= notifyIconLifetime)
+					case EImageState.Destroy:
+						StartTransition(img, EImageState.Destroying, Color.clear);
+						break;
+
+					case EImageState.Destroying:
+						if (UpdateTransition(img, notifyIconLifetime, Color.clear))
 						{
 							Destroy(img.Image.gameObject);
 							allHudImages.RemoveAt(i);
-							break;
 						}
-
-						t = img.Timer / notifyIconLifetime;
-						img.Image.color = Color.Lerp(idleColor, hudColorBlank, t);
 						break;
 				}
 			}
 		}
 
-		private void OnDestroy()
+		private void StartTransition(HudImage img, EImageState nextState, Color target)
 		{
-			// Maybe not needed if MyPlayer clears by itself
-			GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => OnTakeDamage(damageInfo);
-			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
-			HEVMod.Instance.flashlight.Toggled -= FlashlightToggled;
-			HEVMod.Instance.flashlight.BatteryUpdated -= SetFlashlightBattery;
+			img.Timer = 0f;
+			img.PreviousColor = img.Image.color;
+			img.LastState = img.State;
+			img.State = nextState;
+		}
+
+		private bool UpdateTransition(HudImage img, float duration, Color target)
+		{
+			img.Timer += Time.deltaTime;
+			if (img.Timer >= duration)
+			{
+				img.Image.color = target;
+				img.Timer = 0f;
+				if (img.State == EImageState.Notify)
+				{
+					img.State = EImageState.Destroy;
+					return true;
+				}
+				img.State = img.State == EImageState.Activating ? EImageState.Active : EImageState.Inactive;
+				return true;
+			}
+			float t = img.Timer / duration;
+			img.Image.color = Color.Lerp(img.PreviousColor, target, t);
+			return false;
+		}
+
+		private void SetCritical(HudImage[] images, bool critical)
+		{
+			foreach (HudImage image in images)
+			{
+				image.Critical = critical;
+				image.LastState = image.State;
+				image.State = EImageState.SetCritical;
+			}
+		}
+
+		private void Highlight(HudImage[] images)
+		{
+			foreach (HudImage image in images)
+				image.State = EImageState.Highlight;
+		}
+
+		private void SetFlashlightBattery(float battery)
+		{
+			flashFull.Image.fillAmount = battery;
+		}
+
+		private void SetFlashlightBatteryCritical(bool isLow)
+		{
+			SetCritical(flashGroup, isLow);
+		}
+
+		private void FlashlightToggled(bool isOn)
+		{
+			flashBeam.Image.enabled = isOn;
+			foreach (HudImage image in flashGroup)
+				image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
 		}
 
 		private void HealthChanged()
@@ -354,36 +404,6 @@ namespace HEVSuitMod
 			Highlight(suitGroup);
 		}
 
-		private void SetCritical(HudImage[] images, bool critical)
-		{
-			foreach (HudImage image in images)
-				image.Critical = critical;
-		}
-
-		private void Highlight(HudImage[] images)
-		{
-			foreach (HudImage image in images)
-				image.State = EImageState.StartHighlight;
-		}
-
-		private void SetFlashlightBattery(float battery, bool isOn)
-		{
-			flashFull.Image.fillAmount = battery;
-			bool isLow = battery < 0.25f;
-			Color baseColor = isLow ? hudColorDanger : hudColor;
-			Color highlightColor = isLow ? hudColorDangerActive : hudColorActive;
-
-			foreach (HudImage image in flashGroup)
-				image.Image.color = isOn ? highlightColor : baseColor;
-		}
-
-		private void FlashlightToggled(bool isOn)
-		{
-			flashBeam.Image.enabled = isOn;
-			foreach (HudImage image in flashGroup)
-				image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
-		}
-
 		/// <summary>
 		/// Display a notification icon, if <paramref name="leftSide"/> is true display on left, else displays on right
 		/// </summary>
@@ -395,6 +415,7 @@ namespace HEVSuitMod
 			iconObj.transform.parent = hud.transform.Find("RightNotifyArea");
 			Image iconImage = iconObj.AddComponent<Image>();
 			iconImage.sprite = assets.LoadAsset<Sprite>(fileName);
+			iconImage.color = hudColorActive;
 			HudImage hudImage = new(iconImage);
 			hudImage.State = EImageState.Notify;
 			allHudImages.Add(hudImage);
@@ -410,10 +431,10 @@ namespace HEVSuitMod
 			if (damageInfo.Player == null)
 			{
 				// World damage, show all damage indicators
-				hitIndicatorUp.State = EImageState.StartHitIndicator;
-				hitIndicatorRight.State = EImageState.StartHitIndicator;
-				hitIndicatorDown.State = EImageState.StartHitIndicator;
-				hitIndicatorLeft.State = EImageState.StartHitIndicator;
+				hitIndicatorUp.State = EImageState.HitIndicator;
+				hitIndicatorRight.State = EImageState.HitIndicator;
+				hitIndicatorDown.State = EImageState.HitIndicator;
+				hitIndicatorLeft.State = EImageState.HitIndicator;
 				return;
 			}
 
@@ -436,7 +457,7 @@ namespace HEVSuitMod
 			// Decide which hit indicators to show based on angle
 			int dirIndex = Mathf.FloorToInt((angle + 22.5f) % 360f / 45f);
 			foreach (var image in hitIndicatorDirections[dirIndex])
-				image.State = EImageState.StartHitIndicator;
+				image.State = EImageState.HitIndicator;
 		}
 	}
 }

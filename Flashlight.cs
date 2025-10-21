@@ -13,13 +13,16 @@ namespace HEVSuitMod
 		//private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
 		private Light lightSource;
 		private AudioSource audioSource; // TODO: use BetterAudio
-		private bool isOn;
+		private bool isOn = false;
+		private bool lowBattery = false;
+		private float lowBatteryThreshold = 0.25f;
 		private float batteryLevel = 1f; // 0..1
 		private float batteryDrainRate = 0.01f;
 		private float batteryChargeRate = 0.05f;
 
 		public event Action<bool> Toggled;
-		public event Action<float, bool> BatteryUpdated;
+		public event Action<float> BatteryUpdate;
+		public event Action<bool> BatteryLow;
 
 		private void Awake()
 		{
@@ -51,7 +54,14 @@ namespace HEVSuitMod
 					batteryLevel = Mathf.Clamp01(batteryLevel + batteryChargeRate * Time.deltaTime);
 			}
 
-			BatteryUpdated.Invoke(batteryLevel, isOn);
+			BatteryUpdate.Invoke(batteryLevel);
+
+			bool lowBatteryThisFrame = batteryLevel < lowBatteryThreshold;
+			if (lowBatteryThisFrame != lowBattery)
+			{
+				lowBattery = lowBatteryThisFrame;
+				BatteryLow.Invoke(lowBattery);
+			}
 		}
 
 		public void Toggle()
