@@ -11,10 +11,9 @@ namespace HEVSuitMod
 	public class Flashlight : MonoBehaviour
 	{
 		//private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
-
 		private Light lightSource;
 		private AudioSource audioSource; // TODO: use BetterAudio
-		public bool isOn;
+		private bool isOn;
 		private float batteryLevel = 1f; // 0..1
 		private float batteryDrainRate = 0.01f;
 		private float batteryChargeRate = 0.05f;
@@ -51,33 +50,25 @@ namespace HEVSuitMod
 				if (batteryLevel < 1f)
 					batteryLevel = Mathf.Clamp01(batteryLevel + batteryChargeRate * Time.deltaTime);
 			}
+
 			BatteryUpdated.Invoke(batteryLevel, isOn);
-			//HudController.Instance.SetFlashlightBattery(batteryLevel, isOn);
 		}
 
 		public void Toggle()
 		{
 			if (isOn)
-				TurnOff();
+			{
+				lightSource.enabled = false;
+				isOn = false;
+			}
 			else
-				TurnOn();
+			{
+				lightSource.enabled = true;
+				isOn = true;
+			}
 
 			audioSource.Play();
 			Toggled.Invoke(isOn);
-		}
-
-		private void TurnOn()
-		{
-			lightSource.enabled = true;
-			isOn = true;
-			//HudController.Instance.FlashlightOn();
-		}
-
-		private void TurnOff()
-		{
-			lightSource.enabled = false;
-			isOn = false;
-			//HudController.Instance.FlashlightOff();
 		}
 	}
 }

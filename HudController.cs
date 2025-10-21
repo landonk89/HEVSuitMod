@@ -10,6 +10,37 @@ namespace HEVSuitMod
 {
 	public class HudController : MonoBehaviour
 	{
+		// -------------------------------------
+		// Testing Zone
+		// -------------------------------------
+
+		public class HudImage(string name, Image image, ImageState state = ImageState.Idle, bool isCritical = false, float timer = 0f)
+		{
+			public string Name { get; } = name;
+			public Image Image { get; } = image;
+			public ImageState State { get; set; } = state;
+			public bool Critical { get; set; } = isCritical;
+			public float Timer { get; set;} = timer;
+		}
+
+		public enum ImageState
+		{
+			Idle,
+			Deactivate,
+			Activate,
+			FlashOnce,
+			PulseBlank,
+			PulseHighlight,
+			Notify,
+			Destroy
+		}
+
+		public List<HudImage> allHudImages = [];
+
+		// -------------------------------------
+		// End Testing Zone
+		// -------------------------------------
+
 		public class ImageModulator(Image img, Color from, Color to)
 		{
 			public Image image = img;
@@ -36,10 +67,12 @@ namespace HEVSuitMod
 		
 		// Highlight and fade images on demand
 		private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
-		private Color hudColorHighlight = new(1f, 0.9f, 0f, 1f); // Lerp from here to hudColor over fadeTime
+		private Color hudColorBlank = new(0f, 0f, 0f, 0f);
+		private Color hudColorActive = new(1f, 0.9f, 0f, 1f); // Lerp from here to hudColor over fadeTime
 		private Color hudColorDanger = new(1f, 0f, 0f, 0.4f); // Red
-		private Color hudColorDangerHighlight = new(1f, 0f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
+		private Color hudColorDangerActive = new(1f, 0f, 0f, 1f); // Lerp from here to hudColorDanger over fadeTime
 		private float highlightTime = 2f;
+		private float flashTime = 0.5f;
 		private List<ImageModulator> activeHighlights = [];
 		private Coroutine highlightHandler;
 
@@ -141,6 +174,9 @@ namespace HEVSuitMod
 			hitIndicators[RIGHT].enabled = false;
 			hitIndicators[DOWN].enabled = false;
 			hitIndicators[LEFT].enabled = false;
+
+			// Testing new HudImage class stuff
+			allHudImages.Add(new("TEST", ammoCounterIcon)); // TODO: Replace name string with enum?
 		}
 
 		private void Start()
@@ -160,8 +196,95 @@ namespace HEVSuitMod
 		private void Update()
 		{
 			if (Input.GetKeyDown(KeyCode.F6))
-			{
 				NotifyIcon("assets/sprites/hud_item_healthkit.tga");
+
+			if (Input.GetKeyDown(KeyCode.F5))
+				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.PulseBlank;
+
+			if (Input.GetKeyDown(KeyCode.F4))
+				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.PulseHighlight;
+
+			if (Input.GetKeyDown(KeyCode.F3))
+				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.Activate;
+
+			if (Input.GetKeyDown(KeyCode.F2))
+				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.Deactivate;
+
+			if (Input.GetKeyDown(KeyCode.F1))
+				allHudImages.Where(i => i.Name == "TEST").FirstOrDefault().State = ImageState.Notify;
+
+			// Testing new HudImage class stuff
+			for (int i = allHudImages.Count -1; i >= 0; i--)
+			{
+				HudImage img = allHudImages[i];
+				Color idleColor = img.Critical ? hudColorDanger : hudColor;
+				Color activeColor = img.Critical ? hudColorDangerActive : hudColorActive;
+				float t;
+				switch (img.State)
+				{
+					case ImageState.Idle:
+						break;
+
+					case ImageState.Deactivate: // TODO: Gentle transition don't slam it
+						img.Image.color = idleColor;
+						img.State = ImageState.Idle;
+						break;
+
+					case ImageState.Activate: // This image is slightly brighter than normal
+						img.Image.color = hudColorActive;
+						img.State = ImageState.Idle;
+						break;
+
+					case ImageState.FlashOnce:
+						img.Timer += Time.deltaTime;
+						if (img.Timer >= flashTime)
+						{
+							img.Image.color = idleColor;
+							img.Timer = 0f;
+							img.State = ImageState.Idle;
+							break;
+						}
+
+						t = img.Timer / flashTime;
+						img.Image.color = Color.Lerp(activeColor, idleColor, t);
+						break;
+
+					case ImageState.PulseBlank:
+						t = (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f;
+						img.Image.color = Color.Lerp(hudColorBlank, idleColor, t);
+						break;
+
+					case ImageState.PulseHighlight:
+						t = (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f;
+						img.Image.color = Color.Lerp(idleColor, activeColor, t);
+						break;
+
+					case ImageState.Notify: // Never used on permanent hud elements!!!
+						img.Timer += Time.deltaTime;
+						if (img.Timer >= 1f)
+						{
+							img.Image.color = idleColor;
+							img.Timer = 0f;
+							img.State = ImageState.Destroy;
+						}
+
+						t = img.Timer / flashTime;
+						img.Image.color = Color.Lerp(activeColor, idleColor, t);
+						break;
+
+					case ImageState.Destroy: // Should ONLY be used by ImageState.Notify
+						img.Timer += Time.deltaTime;
+						if (img.Timer >= 3f)
+						{
+							Destroy(img.Image.gameObject);
+							allHudImages.RemoveAt(i);
+							break;
+						}
+
+						t = img.Timer / 3f;
+						img.Image.color = Color.Lerp(idleColor, hudColorBlank, t);
+						break;
+				}
 			}
 		}
 
@@ -239,7 +362,7 @@ namespace HEVSuitMod
 			flashlightFull.fillAmount = battery;
 			bool isLow = battery < 0.25f;
 			Color baseColor = isLow ? hudColorDanger : hudColor;
-			Color highlightColor = isLow ? hudColorDangerHighlight : hudColorHighlight;
+			Color highlightColor = isLow ? hudColorDangerActive : hudColorActive;
 
 			if (isOn)
 			{
@@ -259,17 +382,7 @@ namespace HEVSuitMod
 		{
 			flashlightBeam.enabled = isOn;
 		}
-/*
-		public void FlashlightOff()
-		{
-			flashlightBeam.enabled = false;
-		}
 
-		public void FlashlightOn()
-		{
-			flashlightBeam.enabled = true;
-		}
-*/
 		/// <summary>
 		/// Display a notification icon, if <paramref name="leftSide"/> is true display on left, else displays on right
 		/// </summary>
@@ -356,7 +469,7 @@ namespace HEVSuitMod
 			if (image == null)
 				return null;
 
-			Color from = isDanger ? hudColorDangerHighlight : hudColorHighlight;
+			Color from = isDanger ? hudColorDangerActive : hudColorActive;
 			Color to = isDanger ? hudColorDanger : hudColor;
 			ImageModulator modulator = new(image, from, to);
 			activeHighlights.RemoveAll(f => f.image == image); // Remove existing
@@ -372,7 +485,7 @@ namespace HEVSuitMod
 				return [];
 
 			List<ImageModulator> modulators = [];
-			Color from = isDanger ? hudColorDangerHighlight : hudColorHighlight;
+			Color from = isDanger ? hudColorDangerActive : hudColorActive;
 			Color to = isDanger ? hudColorDanger : hudColor;
 			foreach (Image image in images)
 			{
