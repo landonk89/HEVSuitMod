@@ -1,5 +1,7 @@
 ﻿using BepInEx.Logging;
 using EFT;
+using EFT.InventoryLogic;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -60,7 +62,7 @@ namespace HEVSuitMod
 		{
 			if (HEVMod.Instance == null) // How the hell did you even get here then???
 			{
-				log.LogError("HEVMod.Instance == null!");
+				log.LogFatal("HEVMod.Instance == null!");
 				return;
 			}
 
@@ -68,7 +70,7 @@ namespace HEVSuitMod
 			assets = HEVMod.Instance.Assets;
 			if (assets == null) // Can't happen, but you can bet it will somehow...
 			{
-				log.LogError("Couldn't get assetbundle!");
+				log.LogFatal("Couldn't get assetbundle!");
 				return;
 			}
 
@@ -156,9 +158,26 @@ namespace HEVSuitMod
 			HEVMod.Instance.flashlight.BatteryUpdate += SetFlashlightBattery;
 			HEVMod.Instance.flashlight.BatteryLow += SetFlashlightBatteryCritical;
 
+			// Testing zone
+			GamePlayerOwner.MyPlayer.HandsChangingEvent += () => SetAmmoCounter(null as IHandsController);
+			GamePlayerOwner.MyPlayer.HandsChangedEvent += SubscribeOnHandsChanged; // subscribe to weapon events
+			//End testing
+
 			// Init value sprites
 			HealthChanged();
 			//SuitPowerChanged(440);
+		}
+
+		private void SubscribeOnHandsChanged(IHandsController handsController)
+		{
+			if (handsController is Player.FirearmController faController)
+			{
+				faController.OnShot += () => SetAmmoCounter(faController);
+			}
+			if (handsController.Item is Weapon weapon)
+			{
+				weapon.GetMagazineSlot().OnAddOrRemoveItem += (item) => SetAmmoCounter(item as MagazineItemClass);
+			}
 		}
 
 		private void OnDestroy()
@@ -178,19 +197,7 @@ namespace HEVSuitMod
 				NotifyIcon("assets/sprites/hud_item_healthkit.tga");
 
 			if (Input.GetKeyDown(KeyCode.F5))
-				ammo.State = EImageState.PulseLow;
-
-			if (Input.GetKeyDown(KeyCode.F4))
-				ammo.State = EImageState.PulseHi;
-
-			if (Input.GetKeyDown(KeyCode.F3))
-				ammo.State = EImageState.Activate;
-
-			if (Input.GetKeyDown(KeyCode.F2))
-				ammo.State = EImageState.Deactivate;
-
-			if (Input.GetKeyDown(KeyCode.F1))
-				ammo.State = EImageState.Notify;
+				SetAmmoCounter(GamePlayerOwner.MyPlayer.HandsController as Player.FirearmController);
 #endif
 			// Iterate backward so we can safely RemoveAt() for notification icons
 			for (int i = allHudImages.Count -1; i >= 0; i--)
@@ -339,13 +346,87 @@ namespace HEVSuitMod
 				image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
 		}
 
+		// TODO: The idea behind this method is to be invoked when:
+		// 1. The player's HandsController changed
+		// 2. The weapon in player's hands magazine was removed or inserted
+		// 3. The weapon was fired, or the bolt was otherwise cycled for some reason
+		private void SetAmmoCounter(IHandsController handsController)
+		{
+			if (handsController == null || handsController.Item is not Weapon weapon)
+			{
+				SetNumberDigits(ammoVal, 0);
+				Highlight(ammoGroup);
+				return;
+			}
+
+			// No mag
+			if (weapon.GetCurrentMagazine() == null)
+			{
+				SetNumberDigits(ammoVal, 0 + weapon.ChamberAmmoCount);
+			}
+			else
+			{
+				SetNumberDigits(ammoVal, weapon.GetCurrentMagazine().Count + weapon.ChamberAmmoCount);
+			}
+
+			Highlight(ammoGroup);
+		}
+
+		private void SetAmmoCounter(MagazineItemClass magazine)
+		{
+			Weapon weapon = GamePlayerOwner.MyPlayer.HandsController.Item as Weapon;
+			if (magazine.GetCurrentMagazine() == null)
+			{		
+				SetNumberDigits(ammoVal, 0 + weapon.ChamberAmmoCount);
+			}
+			else
+			{
+				SetNumberDigits(ammoVal, magazine.GetCurrentMagazine().Count + weapon.ChamberAmmoCount);
+			}
+
+			Highlight(ammoGroup);
+		}
+
+		private void SetNumberDigits(HudImage[] digitImages, int number)
+		{
+			if (number < 0 || number > 999)
+			{
+				log.LogWarning($"SetNumberDigits() value {number} out of range, min:0 max:999");
+				number = Mathf.Clamp(number, 0, 999);
+			}
+
+			if (digitImages.Length != 3)
+			{
+				log.LogError($"SetNumberDigits() expected 3 digit images but got {digitImages.Length}");
+				throw new InvalidOperationException();
+			}
+
+			char[] digits = number.ToString("000").ToCharArray();
+			bool foundNonZero = false;
+			for (int i = 0; i < 3; i++)
+			{
+				int digit = digits[i] - '0'; // Neat trick so we don't need a call to int.TryParse
+
+				// Hide leading zeros
+				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
+				{
+					digitImages[i].Image.sprite = numberSprites[10]; // 10 = blank
+				}
+				else
+				{
+					foundNonZero = true;
+					digitImages[i].Image.sprite = numberSprites[digit];
+				}
+			}
+		}
+
 		private void HealthChanged()
 		{
 			// FIXME/TODO: Assumes normal 440 health player, may break if health is modded higher
 			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
 			int normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+			/*
 			char[] digits = normalizedHealth.ToString("000").ToCharArray();
-
 			bool foundNonZero = false;
 			for (int i = 0; i < 3; i++)
 			{
@@ -362,7 +443,8 @@ namespace HEVSuitMod
 					healthVal[i].Image.sprite = numberSprites[digit];
 				}
 			}
-
+			*/
+			SetNumberDigits(healthVal, normalizedHealth);
 			SetCritical([healthIcon, healthVal[0], healthVal[1], healthVal[2]], normalizedHealth <= 25);
 			Highlight([healthIcon, healthVal[0], healthVal[1], healthVal[2]]);
 

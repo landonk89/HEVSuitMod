@@ -220,7 +220,7 @@ namespace HEVSuitMod
 		{
 			if (!int.TryParse(number, out int num))
 			{
-				Logger.LogError($"DebugPlayNumberSentence: int.TryParse(\"{number}\", out int num) failed.");
+				Logger.LogError($"DebugPlayNumberSentence: int.TryParse('{number}', out int num) failed.");
 				return;
 			}
 
