@@ -10,6 +10,8 @@ namespace HEVSuitMod
 	/// </summary>
 	public class SentenceParser
 	{
+		public static SentenceParser Instance { get; private set; }
+
 		// Constants
 		private const string SOUND_BASE_DIR = "assets/sounds/";
 		private const string SOUND_MAKER_DIR = "weapons/maker/";
@@ -18,7 +20,6 @@ namespace HEVSuitMod
 		private const string SENTENCES_FILE = "assets/scripts/sentences.txt";
 
 		private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
-		private VoiceController voiceController;
 		private AssetBundle assets;
 		private List<string> allFiles = [];
 		private List<string> missingFiles = []; // Catch 404s
@@ -28,21 +29,19 @@ namespace HEVSuitMod
 		private const int typeCaliberIndex = 1;
 		private const int typeNameIndex = 2;
 		private const int typeExtendedNameIndex = 3;
+		public readonly List<HEVSentence> allSentences = [];
 
-		public SentenceParser(VoiceController vc, AssetBundle a)
+		public SentenceParser(AssetBundle assetBundle)
 		{
-			if (HEVMod.Instance == null)
-			{
-				log.LogError("HEVSuitMod.SentenceParser: HEVMod.Instance is null!");
+			if (Instance != null && Instance != this)
 				return;
-			}
+			else
+				Instance = this;
 
-			voiceController = vc;
-			assets = a;
-
-			if (voiceController == null || assets == null)
+			assets = assetBundle;
+			if (assets == null)
 			{
-					log.LogError("SentenceParser: Null Reference in constructor");
+					log.LogError("Couldn't get assetbundle!");
 					return;
 			}
 
@@ -51,6 +50,12 @@ namespace HEVSuitMod
 			log.LogInfo($"Asset bundle contents:\n{Utils.FileTree(allFiles)}");
 #endif
 			ParseAllSentences();
+		}
+
+		// FIXME: Needed?
+		~SentenceParser()
+		{
+			Instance = null;
 		}
 
 		private string GetDirectory(int index, ESentenceType sentenceType)
@@ -80,8 +85,11 @@ namespace HEVSuitMod
 		public void Reparse()
 		{
 			log.LogWarning("Reparsing sentences...");
+			if (VoiceController.Instance.sentencePlayer != null)
+				VoiceController.Instance.StopCoroutine(VoiceController.Instance.sentencePlayer);
+			
 			missingFiles.Clear();
-			voiceController.PurgeSentences();
+			allSentences.Clear();
 			ParseAllSentences();
 		}
 
@@ -113,7 +121,7 @@ namespace HEVSuitMod
 					continue;
 				}
 				sentenceCount++;
-				voiceController.AddSentence(ParseSentence(hevSentence, sentenceType));
+				allSentences.Add(ParseSentence(hevSentence, sentenceType));
 			}
 
 			log.LogInfo($"Parsed {sentenceCount} sentences.");

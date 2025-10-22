@@ -55,18 +55,24 @@ namespace HEVSuitMod
 		private HudImage hitIndicatorLeft;
 		private HudImage[][] hitIndicatorDirections;
 
+		// Notification icons
+		private int maxNotifications = 7; // The area fits 7 images at 100x100 comfortably
+		private List<HudImage> leftNotifications = [];
+		private List<HudImage> activeNotifications = [];
+
 		// For state machine
 		private List<HudImage> allHudImages = [];
 
 		private void Awake()
 		{
-			if (HEVMod.Instance == null) // How the hell did you even get here then???
+			if (Instance != null && Instance != this)
 			{
-				log.LogFatal("HEVMod.Instance == null!");
+				Destroy(this);
 				return;
 			}
+			else
+				Instance = this;
 
-			Instance = this;
 			assets = HEVMod.Instance.Assets;
 			if (assets == null) // Can't happen, but you can bet it will somehow...
 			{
@@ -157,22 +163,19 @@ namespace HEVSuitMod
 			HEVMod.Instance.flashlight.Toggled += FlashlightToggled;
 			HEVMod.Instance.flashlight.BatteryUpdate += SetFlashlightBattery;
 			HEVMod.Instance.flashlight.BatteryLow += SetFlashlightBatteryCritical;
-
-			// Testing zone
-			GamePlayerOwner.MyPlayer.HandsChangingEvent += () => SetAmmoCounter(null as IHandsController);
-			GamePlayerOwner.MyPlayer.HandsChangedEvent += SubscribeOnHandsChanged; // subscribe to weapon events
-			//End testing
+			GamePlayerOwner.MyPlayer.HandsChangedEvent += OnHandsChanged; // subscribe to weapon events
 
 			// Init value sprites
 			HealthChanged();
-			//SuitPowerChanged(440);
+			SuitPowerChanged();
 		}
 
-		private void SubscribeOnHandsChanged(IHandsController handsController)
+		private void OnHandsChanged(IHandsController handsController)
 		{
 			if (handsController is Player.FirearmController faController)
 			{
 				faController.OnShot += () => SetAmmoCounter(faController);
+				faController.OnReadyToOperate += SetAmmoCounter;
 			}
 			if (handsController.Item is Weapon weapon)
 			{
@@ -259,23 +262,26 @@ namespace HEVSuitMod
 						img.Image.color = Color.Lerp(idleColor, activeColor, (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
 						break;
 
-					case EImageState.Notify:
+					case EImageState.Notification:
 						if (UpdateTransition(img, fadeTime, idleColor))
 							img.Timer = 0f;
 						break;
 
-					case EImageState.Destroy:
+					case EImageState.ExpireNotification:
 						img.Timer += Time.deltaTime;
 						if (img.Timer > notifyIconLifetime)
-							StartTransition(img, EImageState.Destroying, Color.clear);
+							StartTransition(img, EImageState.DestroyNotification, Color.clear);
 						break;
 
-					case EImageState.Destroying:
+					case EImageState.DestroyNotification:
 						if (UpdateTransition(img, fadeTime, Color.clear))
-						{
-							Destroy(img.Image.gameObject);
-							allHudImages.RemoveAt(i);
-						}
+							img.State = EImageState.DestroyNotificationImmediate;
+						break;
+
+					case EImageState.DestroyNotificationImmediate: // Rarely used, only if notifications overflow
+						Destroy(img.Image.gameObject);
+						allHudImages.RemoveAt(i);
+						activeNotifications.Remove(img);
 						break;
 				}
 			}
@@ -297,9 +303,9 @@ namespace HEVSuitMod
 			{
 				img.Image.color = target;
 				img.Timer = 0f;
-				if (img.State == EImageState.Notify)
+				if (img.State == EImageState.Notification)
 				{
-					img.State = EImageState.Destroy;
+					img.State = EImageState.ExpireNotification;
 					return true;
 				}
 				img.State = img.State == EImageState.Activating ? EImageState.Active : EImageState.Inactive;
@@ -346,10 +352,7 @@ namespace HEVSuitMod
 				image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
 		}
 
-		// TODO: The idea behind this method is to be invoked when:
-		// 1. The player's HandsController changed
-		// 2. The weapon in player's hands magazine was removed or inserted
-		// 3. The weapon was fired, or the bolt was otherwise cycled for some reason
+		// Overload for GamePlayerOwner.MyPlayer.HandsChangingEvent / HandsChangedEvent
 		private void SetAmmoCounter(IHandsController handsController)
 		{
 			if (handsController == null || handsController.Item is not Weapon weapon)
@@ -362,7 +365,7 @@ namespace HEVSuitMod
 			// No mag
 			if (weapon.GetCurrentMagazine() == null)
 			{
-				SetNumberDigits(ammoVal, 0 + weapon.ChamberAmmoCount);
+				SetNumberDigits(ammoVal, weapon.ChamberAmmoCount);
 			}
 			else
 			{
@@ -372,6 +375,7 @@ namespace HEVSuitMod
 			Highlight(ammoGroup);
 		}
 
+		// Overload for Player.FirearmController.GetMagazineSlot().OnAddOrRemoveItem
 		private void SetAmmoCounter(MagazineItemClass magazine)
 		{
 			Weapon weapon = GamePlayerOwner.MyPlayer.HandsController.Item as Weapon;
@@ -397,8 +401,9 @@ namespace HEVSuitMod
 
 			if (digitImages.Length != 3)
 			{
-				log.LogError($"SetNumberDigits() expected 3 digit images but got {digitImages.Length}");
-				throw new InvalidOperationException();
+				string error = $"SetNumberDigits() expected 3 digit images but got {digitImages.Length}";
+				log.LogError(error);
+				throw new InvalidOperationException(error);
 			}
 
 			char[] digits = number.ToString("000").ToCharArray();
@@ -422,79 +427,43 @@ namespace HEVSuitMod
 
 		private void HealthChanged()
 		{
-			// FIXME/TODO: Assumes normal 440 health player, may break if health is modded higher
+			// FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
 			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
 			int normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
-			/*
-			char[] digits = normalizedHealth.ToString("000").ToCharArray();
-			bool foundNonZero = false;
-			for (int i = 0; i < 3; i++)
-			{
-				int digit = digits[i] - '0'; // Neat trick so we don't need a call to int.TryParse
-
-				// Hide leading zeros
-				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
-				{
-					healthVal[i].Image.sprite = numberSprites[10]; // 10 = blank
-				}
-				else
-				{
-					foundNonZero = true;
-					healthVal[i].Image.sprite = numberSprites[digit];
-				}
-			}
-			*/
 			SetNumberDigits(healthVal, normalizedHealth);
 			SetCritical([healthIcon, healthVal[0], healthVal[1], healthVal[2]], normalizedHealth <= 25);
 			Highlight([healthIcon, healthVal[0], healthVal[1], healthVal[2]]);
-
-			// TODO: Temporary, just match suitpower to health until it does its own thing
-			SuitPowerChanged(health);
 		}
 
-		// TODO: This is just temporary to get the display actually doing something
-		private void SuitPowerChanged(float power)
+		private void SuitPowerChanged()
 		{
-			int normalizedHealth = Mathf.CeilToInt(power / 440f * 100f);
-			char[] digits = normalizedHealth.ToString("000").ToCharArray();
-			suitFull.Image.fillAmount = normalizedHealth / 100f;
-
-			bool foundNonZero = false;
-			for (int i = 0; i < 3; i++)
-			{
-				int digit = digits[i] - '0';
-
-				// Hide leading zeros
-				if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
-				{
-					suitVal[i].Image.sprite = numberSprites[10]; // 10 = blank
-				}
-				else
-				{
-					foundNonZero = true;
-					suitVal[i].Image.sprite = numberSprites[digit];
-				}
-			}
-
-			//SetCritical(suitGroup, normalizedHealth <= 25);
+			int temp = 100;
+			char[] digits = temp.ToString("000").ToCharArray();
+			suitFull.Image.fillAmount = temp / 100f;
+			SetNumberDigits(suitVal, temp);
+			//SetCritical(suitGroup, temp);
 			Highlight(suitGroup);
 		}
 
 		/// <summary>
-		/// Display a notification icon, if <paramref name="leftSide"/> is true display on left, else displays on right
+		/// Display a notification icon at the right side of the screen, managed by a VerticalLayoutGroup
 		/// </summary>
 		/// <param name="fileName"></param>
-		/// <param name="leftSide"></param>
 		private void NotifyIcon(string fileName)
 		{
+			// TODO: Cache icon images. Just load on demand for now
 			GameObject iconObj = new("icon");
 			iconObj.transform.parent = hud.transform.Find("RightNotifyArea");
 			Image iconImage = iconObj.AddComponent<Image>();
 			iconImage.sprite = assets.LoadAsset<Sprite>(fileName);
 			iconImage.color = hudColorActive;
-			HudImage hudImage = new(iconImage);
-			hudImage.State = EImageState.Notify;
+			HudImage hudImage = new(iconImage) { State = EImageState.Notification };
 			allHudImages.Add(hudImage);
+			activeNotifications.Add(hudImage);
+
+			// Don't overflow, kill the oldest one.
+			if (activeNotifications.Count > maxNotifications)
+				activeNotifications[0].State = EImageState.DestroyNotificationImmediate;
 		}
 
 		/// <summary>

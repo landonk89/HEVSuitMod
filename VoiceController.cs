@@ -1,47 +1,239 @@
-﻿using BepInEx.Logging;
+﻿using System;
+using BepInEx.Logging;
+using EFT;
+using EFT.InventoryLogic;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using EFT.UI;
+using EFT.Console.Core;
 
 namespace HEVSuitMod
 {
 	public class VoiceController : MonoBehaviour
 	{
+		public static VoiceController Instance { get; private set; }
 		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.VoiceController");
 		private AssetBundle assets;
 		private AudioSource audioSource;
-		private Coroutine sentencePlayer;
-		private readonly List<HEVSentence> allSentences = [];
-		private readonly List<HEVSentence> pendingSentences = [];
+		public Coroutine sentencePlayer;
+		private readonly List<HEVSentence> allSentences = SentenceParser.Instance.allSentences;
+		public readonly List<HEVSentence> pendingSentences = [];
+		private readonly HashSet<string> activeStatusEffects = [];
 
 		private void Awake()
 		{
+			if (Instance != null && Instance != this)
+			{
+				Destroy(this);
+				return;
+			}
+			else
+				Instance = this;
+
 			audioSource = gameObject.AddComponent<AudioSource>();
 			assets = HEVMod.Instance.Assets;
+
+			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStartedEvent;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemovedEvent;
+			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDiedEvent();
+			GamePlayerOwner.MyPlayer.HandsChangedEvent += OnHandsChanged;
+		}
+
+		private void OnDestroy() 
+		{
+			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStartedEvent;
+			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemovedEvent;
+			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDiedEvent();
+			GamePlayerOwner.MyPlayer.HandsChangedEvent -= OnHandsChanged;
+			if (this == Instance) { Instance = null; }
 		}
 
 		// Update just monitors pendingSentences and starts playing if there are any
+		// TODO: Priority sentences? Overlap them like hl1? This is fine now for testing
 		private void Update()
 		{
 			if (pendingSentences.Count > 0 && sentencePlayer == null)
 				sentencePlayer = StartCoroutine(PlaySentences());
 		}
 
-		public void AddSentence(HEVSentence sentence)
+		public void OnHandsChanged(IHandsController handsController)
 		{
-			allSentences.Add(sentence);
+			if (handsController.Item is Weapon weapon)
+			{
+				weapon.OnMalfunctionValidate += OnWeaponMalfunction;
+			}
+			if (handsController is Player.FirearmController faController)
+			{
+				faController.OnShot += () =>
+				{
+					if (faController.Weapon.GetCurrentMagazine().Count + faController.Weapon.ChamberAmmoCount == 0)
+					{
+						PlaySentenceById("OutOfAmmo");
+					}
+				};
+			}
 		}
 
-		// Called before reloading sentences.txt
-		public void PurgeSentences()
-		{
-			if (sentencePlayer != null)
-				StopCoroutine(sentencePlayer);
+		// Super crazy test zone
 
-			pendingSentences.Clear();
-			allSentences.Clear();
+		[ConsoleCommand("hevplaysentence", "", null, "", [])]
+		public static void DebugPlaySentence([ConsoleArgument("NearDeath", "Play a sentence from HEVSuitMod sentences.txt")] string sentence)
+		{
+			Instance.PlaySentenceById(sentence);
 		}
+
+		// End super crazy test zone
+
+		/// <summary>
+		/// Event triggered by player death
+		/// </summary>
+		private void PlayerDiedEvent()
+		{
+			PlaySentenceById("Death");
+		}
+
+		/// <summary>
+		/// Event triggered by a body part being 'blacked'
+		/// </summary>
+		/// <param name="bodyPart"></param>
+		/// <param name="damageType"></param>
+		private void BodyPartDestroyedEvent(EBodyPart bodyPart, EDamageType damageType)
+		{
+			// TODO: HEV should say something like "Major injury, seek medical attention"
+		}
+
+		/// <summary>
+		/// Play a sentence that describes the removed effect where the type is <paramref name="effect.Type.Name"/>
+		/// </summary>
+		/// <param name="effect"></param>
+		private void HealthEffectRemovedEvent(IEffect effect)
+		{
+			// TODO: Auto-heal? and say stuff like "Bleeding has stopped" or "Splint Applied"
+			Type effectType = effect.GetType(); // All effect classes are protected
+			string effectName = effectType.Name;
+			activeStatusEffects.Remove(effectName);
+		}
+
+		/// <summary>
+		/// Play a sentence that describes the started effect where the type is <paramref name="effect.Type.Name"/>
+		/// </summary>
+		/// <param name="effect"></param>
+		private void HealthEffectStartedEvent(IEffect effect)
+		{
+			Type effectType = effect.GetType(); // All effect classes are protected
+			string effectName = effectType.Name;
+			if (activeStatusEffects.Contains(effectName))
+			{
+#if DEBUG
+				log.LogInfo($"HealthEffectStarted: Duplicate effect {effectName}");
+#endif
+				return;
+			}
+
+			AddEffect(effectName); // Prevent duplicates within ignoreDuplicateEffectsTime
+			switch (effectName)
+			{
+				case "Fracture":
+					switch (effect.BodyPart)
+					{
+						case EBodyPart.LeftLeg:
+						case EBodyPart.RightLeg:
+							// "Major Fracture" because we can't run
+							PlaySentenceById("MajorFracture");
+							break;
+
+						case EBodyPart.LeftArm:
+						case EBodyPart.RightArm:
+							// "Minor Fracture" because a broken arm is no big deal
+							PlaySentenceById("MinorFracture");
+							break;
+					}
+					break;
+
+				case "HeavyBleeding":
+					PlaySentenceById("HeavyBleeding");
+					break;
+
+				case "LightBleeding":
+					PlaySentenceById("LightBleeding");
+					break;
+
+				case "LowEdgeHealth":
+					PlaySentenceById("NearDeath");
+					break;
+
+				case "Pain":
+					break;
+
+				case "PainKiller": // Grabbin pills
+					break;
+
+				case "Intoxication":
+					break;
+
+				case "Exhaustion":
+					break;
+
+				case "Dehydration":
+					break;
+
+				case "RadExposure":
+					break;
+
+				case "ZombieInfection":
+					break;
+			}
+		}
+
+		private void AddEffect(string effectName)
+		{
+			activeStatusEffects.Add(effectName);
+			StartCoroutine(BeginExpireEffect(effectName));
+#if DEBUG
+			log.LogInfo($"HealthEffectStarted: {effectName}, ignoring duplicates for {HEVMod.Instance.ignoreDuplicateEffectsTime.Value} secs");
+#endif
+		}
+
+		private IEnumerator BeginExpireEffect(string effectName)
+		{
+			yield return new WaitForSeconds(HEVMod.Instance.ignoreDuplicateEffectsTime.Value);
+
+			activeStatusEffects.Remove(effectName);
+		}
+
+		public void WeaponInspectEvent()
+		{
+			// Play sentence with identifier matching held weapon
+			string templateId = GamePlayerOwner.MyPlayer.HandsController.Item.StringTemplateId;
+			if (templateId == null)
+				return;
+
+			PlaySentenceById(templateId);
+		}
+
+		public void ChamberInspectEvent()
+		{
+			// Play sentence with identifier matching ammo in chamber
+			if (GamePlayerOwner.MyPlayer.HandsController.Item is not Weapon weapon)
+				return;
+
+			if (weapon.ChamberAmmoCount < 1)
+				return;
+
+			string templateId = weapon.Chambers[0].ContainedItem.StringTemplateId;
+			if (templateId == null)
+				return;
+
+			PlaySentenceById(templateId);
+		}
+
+		public bool OnWeaponMalfunction(Weapon.EMalfunctionState state)
+		{
+			return false;
+		}
+
 #if DEBUG
 		public void DebugPlayRandomSentence()
 		{

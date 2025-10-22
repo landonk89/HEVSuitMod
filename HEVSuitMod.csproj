@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
@@ -26,6 +26,10 @@
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>References\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="bsg.console.core">
+      <HintPath>References\bsg.console.core.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Comfort">

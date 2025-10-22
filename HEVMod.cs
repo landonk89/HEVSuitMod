@@ -1,12 +1,8 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Collections;
+using EFT.UI;
 using System.IO;
 using UnityEngine;
-using EFT;
-using EFT.InventoryLogic;
 
 namespace HEVSuitMod
 {
@@ -26,11 +22,6 @@ namespace HEVSuitMod
 		private readonly string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, MOD_DIR, BUNDLE_FILE);
 
 		// Config
-#if DEBUG
-		public ConfigEntry<bool> debugDrawCompass;
-		public ConfigEntry<string> debugSentence;
-		public ConfigEntry<string> debugNumberSentence;
-#endif
 		public ConfigEntry<float> globalVolume;
 		public ConfigEntry<float> ignoreDuplicateEffectsTime;
 		public ConfigEntry<bool> sayMakerOnInspect;
@@ -41,30 +32,24 @@ namespace HEVSuitMod
 		public ConfigEntry<bool> sayExtendedOnChamberCheck;
 		public ConfigEntry<bool> applySettings;
 
-		// Track active effects for ignoreDuplicateEffectsTime
-		private readonly HashSet<string> activeStatusEffects = [];
-
 		// Components
+		private SentenceParser parser;
 		private VoiceController voiceController;
 		private HudController hudController;
 		public Flashlight flashlight;
-		private SentenceParser parser;
 
-		// Debug components
-#if DEBUG
-		DebugUICompass debugCompass;
-#endif
 		private void Awake()
 		{
-			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_NAME} is loaded!");
-
-			if (Instance != null)
+			if (Instance != null && Instance != this)
 			{
-				Logger.LogError($"Attempted to create duplicate instance of {PluginInfo.PLUGIN_NAME}!!");
+				Logger.LogFatal($"Attempted to create duplicate instance of {PluginInfo.PLUGIN_NAME}");
+				Destroy(this);
 				return;
 			}
+			else
+				Instance = this;
 
-			Instance = this;
+			Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_NAME} is loaded!");
 			Assets = AssetBundle.LoadFromFile(bundlePath);
 			if (Assets == null)
 			{
@@ -73,28 +58,6 @@ namespace HEVSuitMod
 			}
 
 			// Config stuff
-#if DEBUG
-			debugDrawCompass = Config.Bind(
-					"Debug",
-					"Draw temporary compass",
-					false,
-					""
-				);
-
-			debugSentence = Config.Bind(
-					"Debug",
-					"Sentence to play on F8 press",
-					"Death",
-					""
-				);
-
-			debugNumberSentence = Config.Bind(
-					"Debug",
-					"Number sentence to play on F10 press",
-					"123",
-					"Min:1 Max:9999"
-				);
-#endif
 			ignoreDuplicateEffectsTime = Config.Bind(
 					"Suit Settings",
 					"Ignore duplicate events time",
@@ -168,235 +131,37 @@ namespace HEVSuitMod
 				}
 			};
 
-			// Add components
-			voiceController = gameObject.AddComponent<VoiceController>();
-			parser = new(voiceController, Assets);
+			// Parse sentences file for the voicecontroller.
+			parser = new(Assets);
 
-			// Add debugging/temporary components
-#if DEBUG
-			debugCompass = gameObject.AddComponent<DebugUICompass>();
-			debugDrawCompass.SettingChanged += (_, _) =>
-			{
-				if (debugDrawCompass.Value)
-					debugCompass.enabled = true;
-				else
-					debugCompass.enabled = false;
-			};
-#endif
 			// Enable patches
 			new OnNewGame().Enable();
 			new OnGameEnded().Enable();
 			new OnInspectWeapon().Enable();
 			new OnInspectChamber().Enable();
+
+			// Register console commands
+			ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
 		}
 
-#if DEBUG
-		private void Update()
-		{
-			// For debugging/testing
-			if (Input.GetKeyDown(KeyCode.F7))
-				DebugCompassTest();
-
-			if (Input.GetKeyDown(KeyCode.F8))
-				DebugPlaySentence(debugSentence.Value);
-
-			if (Input.GetKeyDown(KeyCode.F9))
-				voiceController.DebugPlayRandomSentence();
-
-			if (Input.GetKeyDown(KeyCode.F10))
-				DebugPlayNumberSentence(debugNumberSentence.Value);
-		}
-
-		// TEMP for testing
-		private void DebugPlaySentence(string identifier)
-		{
-			HEVSentence sentence = voiceController.GetSentenceById(identifier);
-			Logger.LogInfo($"Playing Sentence: {sentence.Identifier}");
-			voiceController.PlaySentence(sentence);
-		}
-
-		// TEMP for testing
-		private void DebugPlayNumberSentence(string number)
-		{
-			if (!int.TryParse(number, out int num))
-			{
-				Logger.LogError($"DebugPlayNumberSentence: int.TryParse('{number}', out int num) failed.");
-				return;
-			}
-
-			HEVSentence numberSentence = voiceController.GetNumberSentence(num);
-			Logger.LogInfo($"Playing number: {number}");
-			voiceController.PlaySentence(numberSentence);
-		}
-
-		// TEMP for testing
-		private void DebugCompassTest()
-		{
-			int lookDir = Compass.GetBearing(GamePlayerOwner.MyPlayer.LookDirection);
-			Logger.LogInfo($"CompassTest: {voiceController.GetDirectionClip(lookDir)}");
-			voiceController.PlaySentence(voiceController.GetDirectionSentence(lookDir));
-		}
-#endif
-
+		/// <summary>
+		/// Called by patches when player spawns
+		/// </summary>
 		public void OnGameStarted()
 		{
-			// Detect fractures, bleeds, etc
-			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStartedEvent;
-			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemovedEvent;
-			GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDiedEvent();
-
+			voiceController = gameObject.AddComponent<VoiceController>();
 			flashlight = gameObject.AddComponent<Flashlight>();
 			hudController = gameObject.AddComponent<HudController>();
 		}
 
+		/// <summary>
+		/// Called by patches when player despawns
+		/// </summary>
 		public void OnGameEnded()
 		{
-			GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStartedEvent;
-			GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemovedEvent;
-			GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDiedEvent();
-
+			Destroy(voiceController);
 			Destroy(hudController);
 			Destroy(flashlight);
-		}
-
-		/// <summary>
-		/// Event triggered by player death
-		/// </summary>
-		private void PlayerDiedEvent()
-		{
-			voiceController.PlaySentenceById("Death");
-		}
-
-		/// <summary>
-		/// Event triggered by a body part being 'blacked'
-		/// </summary>
-		/// <param name="bodyPart"></param>
-		/// <param name="damageType"></param>
-		private void BodyPartDestroyedEvent(EBodyPart bodyPart, EDamageType damageType)
-		{
-			// TODO: HEV should say something like "Major injury, seek medical attention"
-		}
-
-		/// <summary>
-		/// Play a sentence that describes the removed effect where the type is <paramref name="effect.Type.Name"/>
-		/// </summary>
-		/// <param name="effect"></param>
-		private void HealthEffectRemovedEvent(IEffect effect)
-		{
-			// TODO: Auto-heal? and say stuff like "Bleeding has stopped" or "Splint Applied"
-		}
-
-		/// <summary>
-		/// Play a sentence that describes the started effect where the type is <paramref name="effect.Type.Name"/>
-		/// </summary>
-		/// <param name="effect"></param>
-		private void HealthEffectStartedEvent(IEffect effect)
-		{
-			Type effectType = effect.GetType(); // All effect classes are protected
-			string effectName = effectType.Name;
-			if (activeStatusEffects.Contains(effectName))
-			{
-#if DEBUG
-				Logger.LogInfo($"HealthEffectStarted: Duplicate effect {effectName}");
-#endif
-				return;
-			}
-
-			AddEffect(effectName); // Prevent duplicates within ignoreDuplicateEffectsTime
-			switch (effectName)
-			{
-				case "Fracture":
-					switch (effect.BodyPart)
-					{
-						case EBodyPart.LeftLeg:
-						case EBodyPart.RightLeg:
-							// "Major Fracture" because we can't run
-							voiceController.PlaySentenceById("MajorFracture");
-							break;
-
-						case EBodyPart.LeftArm:
-						case EBodyPart.RightArm:
-							// "Minor Fracture" because a broken arm is no big deal
-							voiceController.PlaySentenceById("MinorFracture");
-							break;
-					}
-					break;
-
-				case "HeavyBleeding":
-					voiceController.PlaySentenceById("HeavyBleeding");
-					break;
-
-				case "LightBleeding":
-					voiceController.PlaySentenceById("LightBleeding");
-					break;
-
-				case "LowEdgeHealth":
-					voiceController.PlaySentenceById("NearDeath");
-					break;
-
-				case "Pain":
-					break;
-
-				case "PainKiller": // Grabbin pills
-					break;
-
-				case "Intoxication":
-					break;
-
-				case "Exhaustion":
-					break;
-
-				case "Dehydration":
-					break;
-
-				case "RadExposure":
-					break;
-
-				case "ZombieInfection":
-					break;
-			}
-		}
-
-		private void AddEffect(string effectName)
-		{
-			activeStatusEffects.Add(effectName);
-			StartCoroutine(BeginExpireEffect(effectName));
-#if DEBUG
-			Logger.LogInfo($"HealthEffectStarted: {effectName}, ignoring duplicates for {ignoreDuplicateEffectsTime.Value} secs");
-#endif
-		}
-
-		private IEnumerator BeginExpireEffect(string effectName)
-		{
-			yield return new WaitForSeconds(ignoreDuplicateEffectsTime.Value);
-
-			activeStatusEffects.Remove(effectName);
-		}
-		
-		public void WeaponInspectEvent()
-		{
-			// Play sentence with identifier matching held weapon
-			string templateId = GamePlayerOwner.MyPlayer.HandsController.Item.StringTemplateId;
-			if (templateId == null)
-				return;
-
-			voiceController.PlaySentenceById(templateId);
-		}
-
-		public void ChamberInspectEvent()
-		{
-			// Play sentence with identifier matching ammo in chamber
-			if (GamePlayerOwner.MyPlayer.HandsController.Item is not Weapon weapon)
-				return;
-
-			if (weapon.ChamberAmmoCount < 1)
-				return;
-
-			string templateId = weapon.Chambers[0].ContainedItem.StringTemplateId;
-			if (templateId == null)
-				return;
-
-			voiceController.PlaySentenceById(templateId);
 		}
 	}
 }

@@ -3,6 +3,8 @@ using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 
+// TODO: Need to find events for some of these!!!
+
 namespace HEVSuitMod
 {
 	internal class OnNewGame : ModulePatch
@@ -43,7 +45,7 @@ namespace HEVSuitMod
 		[PatchPrefix]
 		private static void OnInspect()
 		{
-			HEVMod.Instance.WeaponInspectEvent();
+			VoiceController.Instance.WeaponInspectEvent();
 		}
 	}
 
@@ -57,7 +59,7 @@ namespace HEVSuitMod
 		[PatchPostfix]
 		private static void OnInspect()
 		{
-			HEVMod.Instance.ChamberInspectEvent();
+			VoiceController.Instance.ChamberInspectEvent();
 		}
 	}
 }

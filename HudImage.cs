@@ -18,9 +18,10 @@ namespace HEVSuitMod
 		FadeHitIndicator,
 		PulseLow,
 		PulseHi,
-		Notify,
-		Destroy,
-		Destroying
+		Notification,
+		ExpireNotification,
+		DestroyNotification,
+		DestroyNotificationImmediate
 	}
 
 	public class HudImage(Image image, EImageState state = EImageState.Inactive, bool isCritical = false, float timer = 0f)
