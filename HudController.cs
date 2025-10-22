@@ -57,7 +57,7 @@ namespace HEVSuitMod
 
 		// Notification icons
 		private int maxNotifications = 7; // The area fits 7 images at 100x100 comfortably
-		private List<HudImage> leftNotifications = [];
+		private List<HudImage> leftNotifications = []; // Not sure what to call this yet
 		private List<HudImage> activeNotifications = [];
 
 		// For state machine
@@ -132,7 +132,7 @@ namespace HEVSuitMod
 				[hitIndicatorLeft, hitIndicatorUp]
 			];
 
-			// For Update()
+			// For state machine
 			allHudImages.Add(healthIcon);
 			allHudImages.Add(healthVal[0]);
 			allHudImages.Add(healthVal[1]);

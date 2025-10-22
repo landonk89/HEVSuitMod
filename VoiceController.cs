@@ -6,8 +6,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using EFT.UI;
-using EFT.Console.Core;
 
 namespace HEVSuitMod
 {
@@ -75,16 +73,6 @@ namespace HEVSuitMod
 				};
 			}
 		}
-
-		// Super crazy test zone
-
-		[ConsoleCommand("hevplaysentence", "", null, "", [])]
-		public static void DebugPlaySentence([ConsoleArgument("NearDeath", "Play a sentence from HEVSuitMod sentences.txt")] string sentence)
-		{
-			Instance.PlaySentenceById(sentence);
-		}
-
-		// End super crazy test zone
 
 		/// <summary>
 		/// Event triggered by player death
