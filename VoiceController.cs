@@ -33,18 +33,18 @@ public class VoiceController : MonoBehaviour
 		audioSource = gameObject.AddComponent<AudioSource>();
 		assets = HEVMod.Instance.Assets;
 
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStartedEvent;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemovedEvent;
-		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDiedEvent();
-		GamePlayerOwner.MyPlayer.HandsChangedEvent += OnHandsChanged;
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
+		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDied();
+		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 	}
 
 	private void OnDestroy() 
 	{
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStartedEvent;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemovedEvent;
-		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDiedEvent();
-		GamePlayerOwner.MyPlayer.HandsChangedEvent -= OnHandsChanged;
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
+		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDied();
+		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		if (this == Instance) { Instance = null; }
 	}
 
@@ -56,7 +56,7 @@ public class VoiceController : MonoBehaviour
 			sentencePlayer = StartCoroutine(PlaySentences());
 	}
 
-	public void OnHandsChanged(IHandsController handsController)
+	public void HandsChanged(IHandsController handsController)
 	{
 		if (handsController is Player.FirearmController faController)
 		{
@@ -74,8 +74,14 @@ public class VoiceController : MonoBehaviour
 	/// <summary>
 	/// Event triggered by player death
 	/// </summary>
-	private void PlayerDiedEvent()
+	private void PlayerDied()
 	{
+		if (sentencePlayer != null)
+		{
+			StopCoroutine(sentencePlayer);
+			pendingSentences.Clear();
+			audioSource.Stop();
+		}
 		PlaySentenceById("Death");
 	}
 
@@ -84,7 +90,7 @@ public class VoiceController : MonoBehaviour
 	/// </summary>
 	/// <param name="bodyPart"></param>
 	/// <param name="damageType"></param>
-	private void BodyPartDestroyedEvent(EBodyPart bodyPart, EDamageType damageType)
+	private void BodyPartDestroyed(EBodyPart bodyPart, EDamageType damageType)
 	{
 		// TODO: HEV should say something like "Major injury, seek medical attention"
 	}
@@ -93,7 +99,7 @@ public class VoiceController : MonoBehaviour
 	/// Play a sentence that describes the removed effect where the type is <paramref name="effect.Type.Name"/>
 	/// </summary>
 	/// <param name="effect"></param>
-	private void HealthEffectRemovedEvent(IEffect effect)
+	private void HealthEffectRemoved(IEffect effect)
 	{
 		// TODO: Auto-heal? and say stuff like "Bleeding has stopped" or "Splint Applied"
 		Type effectType = effect.GetType(); // All effect classes are protected
@@ -105,7 +111,7 @@ public class VoiceController : MonoBehaviour
 	/// Play a sentence that describes the started effect, where the effect type is <paramref name="effect.Type"/>
 	/// </summary>
 	/// <param name="effect"></param>
-	private void HealthEffectStartedEvent(IEffect effect)
+	private void HealthEffectStarted(IEffect effect)
 	{
 		Type effectType = effect.GetType(); // All effect classes are protected
 		string effectName = effectType.Name;

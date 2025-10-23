@@ -17,7 +17,10 @@ public enum EImageState
 	HitIndicator,
 	FadeHitIndicator,
 	PulseLow,
-	PulseHi,
+	DamageNotification,
+	ExpireDamageNotification,
+	DestroyDamageNotification,
+	DestroyDamageNotificationImmediate,
 	Notification,
 	ExpireNotification,
 	DestroyNotification,
@@ -28,7 +31,7 @@ public class HudImage(Image image, EImageState state = EImageState.Inactive, boo
 {
 	public Image Image { get; set; } = image;
 	public EImageState State { get; set; } = state;
-	public EImageState LastState { get; set; } = state;
+	//public EImageState LastState { get; set; } = state;
 	public bool Critical { get; set; } = isCritical;
 	public float Timer { get; set; } = timer;
 	public Color LastColor { get; set; } = image.color;

@@ -35,6 +35,7 @@ public class Flashlight : MonoBehaviour
 		else
 			Instance = this;
 
+		// FIXME: need to move it forward from the player's face a little, it lights up held object
 		GameObject flashlight = new("FlashlightContainer");
 		audioSource = flashlight.AddComponent<AudioSource>();
 		audioSource.clip = HEVMod.Instance.Assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");

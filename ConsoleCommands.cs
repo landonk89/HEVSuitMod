@@ -24,8 +24,8 @@ public class ImpulseCommand(string impulse) : SyncCommand
 				VoiceController.Instance?.PlaySentenceById(SentenceParser.Instance.allSentences.PickRandom().Identifier);
 				break;
 
+			// TODO: super neato stuff will go here
 			case 101:
-				// TODO: super neato stuff will go here
 				ConsoleScreen.Log("Cheater!");
 				break;
 		}
