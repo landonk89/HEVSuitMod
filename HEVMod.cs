@@ -36,7 +36,7 @@ public class HEVMod : BaseUnityPlugin
 	private SentenceParser parser;
 	private VoiceController voiceController;
 	private HudController hudController;
-	public Flashlight flashlight;
+	private Flashlight flashlight;
 
 	private void Awake()
 	{

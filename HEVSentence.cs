@@ -2,7 +2,7 @@
 
 namespace HEVSuitMod;
 
-public enum ESentenceType
+public enum EParseType
 {
 	None,
 	Events,

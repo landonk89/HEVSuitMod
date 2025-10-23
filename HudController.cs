@@ -160,37 +160,27 @@ public class HudController : MonoBehaviour
 		// Subscribe events
 		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => OnTakeDamage(damageInfo);
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
-		HEVMod.Instance.flashlight.Toggled += FlashlightToggled;
-		HEVMod.Instance.flashlight.BatteryUpdate += SetFlashlightBattery;
-		HEVMod.Instance.flashlight.BatteryLow += SetFlashlightBatteryCritical;
-		GamePlayerOwner.MyPlayer.HandsChangedEvent += OnHandsChanged; // subscribe to weapon events
+		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged; // subscribe to weapon events
+		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged();
+		Flashlight.Instance.Toggled += FlashlightToggled;
+		Flashlight.Instance.BatteryUpdate += SetFlashlightBattery;
+		Flashlight.Instance.BatteryLow += SetFlashlightBatteryCritical;
 
 		// Init value sprites
 		HealthChanged();
 		SuitPowerChanged();
 	}
 
-	private void OnHandsChanged(IHandsController handsController)
-	{
-		if (handsController is Player.FirearmController faController)
-		{
-			faController.OnShot += () => SetAmmoCounter(faController);
-			faController.OnReadyToOperate += SetAmmoCounter;
-		}
-		if (handsController.Item is Weapon weapon)
-		{
-			weapon.GetMagazineSlot().OnAddOrRemoveItem += (item) => SetAmmoCounter(item as MagazineItemClass);
-		}
-	}
-
 	private void OnDestroy()
 	{
-		// Maybe not needed if MyPlayer clears by itself
+		// GamePlayerOwner stuff may not be needed if MyPlayer clears by itself, look into that
 		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => OnTakeDamage(damageInfo);
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
-		HEVMod.Instance.flashlight.Toggled -= FlashlightToggled;
-		HEVMod.Instance.flashlight.BatteryUpdate -= SetFlashlightBattery;
-		HEVMod.Instance.flashlight.BatteryLow -= SetFlashlightBatteryCritical;
+		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged; // subscribe to weapon events
+		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => HealthChanged();
+		Flashlight.Instance.Toggled -= FlashlightToggled;
+		Flashlight.Instance.BatteryUpdate -= SetFlashlightBattery;
+		Flashlight.Instance.BatteryLow -= SetFlashlightBatteryCritical;
 	}
 
 	private void Update()
@@ -362,32 +352,14 @@ public class HudController : MonoBehaviour
 			return;
 		}
 
-		// No mag
-		if (weapon.GetCurrentMagazine() == null)
+		int ammoCount = 0;
+		if (handsController is Player.FirearmController faController)
 		{
-			SetNumberDigits(ammoVal, weapon.ChamberAmmoCount);
-		}
-		else
-		{
-			SetNumberDigits(ammoVal, weapon.GetCurrentMagazine().Count + weapon.ChamberAmmoCount);
+			ammoCount += faController.Weapon.ChamberAmmoCount;
+			ammoCount += faController.Weapon.GetCurrentMagazineCount();
 		}
 
-		Highlight(ammoGroup);
-	}
-
-	// Overload for Player.FirearmController.GetMagazineSlot().OnAddOrRemoveItem
-	private void SetAmmoCounter(MagazineItemClass magazine)
-	{
-		Weapon weapon = GamePlayerOwner.MyPlayer.HandsController.Item as Weapon;
-		if (magazine.GetCurrentMagazine() == null)
-		{		
-			SetNumberDigits(ammoVal, 0 + weapon.ChamberAmmoCount);
-		}
-		else
-		{
-			SetNumberDigits(ammoVal, magazine.GetCurrentMagazine().Count + weapon.ChamberAmmoCount);
-		}
-
+		SetNumberDigits(ammoVal, ammoCount);
 		Highlight(ammoGroup);
 	}
 
@@ -422,6 +394,16 @@ public class HudController : MonoBehaviour
 				foundNonZero = true;
 				digitImages[i].Image.sprite = numberSprites[digit];
 			}
+		}
+	}
+
+	private void HandsChanged(IHandsController handsController)
+	{
+		if (handsController is Player.FirearmController faController)
+		{
+			faController.OnShot += () => SetAmmoCounter(faController);
+			faController.OnReadyToOperate += SetAmmoCounter;
+			faController.Weapon.GetMagazineSlot().OnAddOrRemoveItem += (_) => SetAmmoCounter(handsController);
 		}
 	}
 

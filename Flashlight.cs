@@ -10,7 +10,8 @@ namespace HEVSuitMod;
 /// </summary>
 public class Flashlight : MonoBehaviour
 {
-	//private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
+	public static Flashlight Instance { get; private set; }
+	private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio
 	private bool isOn = false;
@@ -26,6 +27,14 @@ public class Flashlight : MonoBehaviour
 
 	private void Awake()
 	{
+		if (Instance != null && Instance != this)
+		{
+			Destroy(this);
+			return;
+		}
+		else
+			Instance = this;
+
 		GameObject flashlight = new("FlashlightContainer");
 		audioSource = flashlight.AddComponent<AudioSource>();
 		audioSource.clip = HEVMod.Instance.Assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");

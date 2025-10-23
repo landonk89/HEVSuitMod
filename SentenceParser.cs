@@ -46,26 +46,17 @@ public class SentenceParser
 		}
 
 		allFiles = [..assets.GetAllAssetNames()];
-#if DEBUG
-		log.LogInfo($"Asset bundle contents:\n{Utils.FileTree(allFiles)}");
-#endif
 		ParseAllSentences();
 	}
 
-	// FIXME: Needed?
-	~SentenceParser()
-	{
-		Instance = null;
-	}
-
-	private string GetDirectory(int index, ESentenceType sentenceType)
+	private string GetDirectory(int index, EParseType parseType)
 	{
 		// Types have every file is in the same place
-		if (sentenceType == ESentenceType.Types)
+		if (parseType == EParseType.Types)
 			return SOUND_BASE_DIR + SOUND_TYPES_DIR;
 
 		// Events have partial paths aready
-		if (sentenceType == ESentenceType.Events)
+		if (parseType == EParseType.Events)
 			return SOUND_BASE_DIR;
 
 		// Must be a weapon, index based directory
@@ -77,7 +68,7 @@ public class SentenceParser
 			
 			// Shouldn't happen ever
 			default:
-				log.LogError($"GetDirectory(index: {index}, sentenceType: {sentenceType}) failed");
+				log.LogError($"GetDirectory(index: {index}, parseType: {parseType}) failed");
 				return null;
 		}
 	}
@@ -85,9 +76,7 @@ public class SentenceParser
 	public void Reparse()
 	{
 		log.LogWarning("Reparsing sentences...");
-		if (VoiceController.Instance.sentencePlayer != null)
-			VoiceController.Instance.StopCoroutine(VoiceController.Instance.sentencePlayer);
-		
+		VoiceController.Instance?.StopCoroutine(VoiceController.Instance.sentencePlayer);
 		missingFiles.Clear();
 		allSentences.Clear();
 		ParseAllSentences();
@@ -102,7 +91,7 @@ public class SentenceParser
 			return;
 		}
 
-		ESentenceType sentenceType = ESentenceType.None;
+		EParseType parseType = EParseType.None;
 		string[] hevSentences = hevSentencesFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 		int sentenceCount = 0;
 		foreach (string hevSentence in hevSentences)
@@ -113,7 +102,7 @@ public class SentenceParser
 			if (hevSentence.StartsWith("$")) // Change parse mode
 			{
 				string sentenceTypeText = hevSentence.Substring(1);
-				if (!Enum.TryParse(sentenceTypeText, out sentenceType))
+				if (!Enum.TryParse(sentenceTypeText, out parseType))
 					log.LogError($"Unknown parse mode {sentenceTypeText}!");
 #if DEBUG
 				log.LogInfo($"Parsing {sentenceTypeText}");
@@ -121,7 +110,7 @@ public class SentenceParser
 				continue;
 			}
 			sentenceCount++;
-			allSentences.Add(ParseSentence(hevSentence, sentenceType));
+			allSentences.Add(ParseSentence(hevSentence, parseType));
 		}
 
 		log.LogInfo($"Parsed {sentenceCount} sentences.");
@@ -141,7 +130,7 @@ public class SentenceParser
 	// $Weapons: These are a fixed length of 3 audio clips so we can selectively disable maker or caliber voicelines.
 	// $Types: These are also a fixed length of 3 so we can selectively disable caliber or extendedName voicelines.
 	// --------------------------------------------------------------
-	private HEVSentence ParseSentence(string sentence, ESentenceType sentenceType)
+	private HEVSentence ParseSentence(string sentence, EParseType parseType)
 	{
 		List<HEVAudioClip> clips = [];
 		string[] tokens = sentence.Split(' ');
@@ -157,10 +146,10 @@ public class SentenceParser
 
 			// Check if it's a weapon or type sentence, we may need to skip some parts
 			bool skip =
-				(sentenceType == ESentenceType.Types && i == typeExtendedNameIndex && !HEVMod.Instance.sayExtendedOnChamberCheck.Value) ||
-				(sentenceType == ESentenceType.Types && i == typeCaliberIndex && !HEVMod.Instance.sayTypeOnChamberCheck.Value) ||
-				(sentenceType == ESentenceType.Weapons && i == weaponCaliberIndex && !HEVMod.Instance.sayTypeOnInspect.Value) ||
-				(sentenceType == ESentenceType.Weapons && i == weaponMakerIndex && !HEVMod.Instance.sayMakerOnInspect.Value);
+				(parseType == EParseType.Types && i == typeExtendedNameIndex && !HEVMod.Instance.sayExtendedOnChamberCheck.Value) ||
+				(parseType == EParseType.Types && i == typeCaliberIndex && !HEVMod.Instance.sayTypeOnChamberCheck.Value) ||
+				(parseType == EParseType.Weapons && i == weaponCaliberIndex && !HEVMod.Instance.sayTypeOnInspect.Value) ||
+				(parseType == EParseType.Weapons && i == weaponMakerIndex && !HEVMod.Instance.sayMakerOnInspect.Value);
 
 			if (skip)
 				continue;
@@ -191,11 +180,11 @@ public class SentenceParser
 						case "delay" when float.TryParse(val, out float dly): delay = dly; break;
 					}
 				}
-				clip = GetDirectory(i, sentenceType) + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
+				clip = GetDirectory(i, parseType) + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
 			}
 			else // Token is just filename, no params
 			{
-				clip = GetDirectory(i, sentenceType) + tokens[i].ToLower() + ".wav";
+				clip = GetDirectory(i, parseType) + tokens[i].ToLower() + ".wav";
 			}
 
 			if (!allFiles.Contains(clip.ToLower()))

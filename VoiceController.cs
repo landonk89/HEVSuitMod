@@ -58,12 +58,9 @@ public class VoiceController : MonoBehaviour
 
 	public void OnHandsChanged(IHandsController handsController)
 	{
-		if (handsController.Item is Weapon weapon)
-		{
-			weapon.OnMalfunctionValidate += OnWeaponMalfunction;
-		}
 		if (handsController is Player.FirearmController faController)
 		{
+			faController.Weapon.OnMalfunctionValidate += OnWeaponMalfunction;
 			faController.OnShot += () =>
 			{
 				if (faController.Weapon.GetCurrentMagazine().Count + faController.Weapon.ChamberAmmoCount == 0)
