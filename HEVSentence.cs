@@ -1,24 +1,23 @@
 ﻿using System.Collections.Generic;
 
-namespace HEVSuitMod
+namespace HEVSuitMod;
+
+public enum ESentenceType
 {
-	public enum ESentenceType
-	{
-		None,
-		Events,
-		Weapons,
-		Types
-	}
+	None,
+	Events,
+	Weapons,
+	Types
+}
 
-	public class HEVSentence
-	{
-		public string Identifier { get; }
-		public List<HEVAudioClip> Clips { get; }
+public class HEVSentence
+{
+	public string Identifier { get; }
+	public List<HEVAudioClip> Clips { get; }
 
-		public HEVSentence(string identifier, List<HEVAudioClip> sentence)
-		{
-			Identifier = identifier;
-			Clips = sentence;
-		}
+	public HEVSentence(string identifier, List<HEVAudioClip> sentence)
+	{
+		Identifier = identifier;
+		Clips = sentence;
 	}
 }

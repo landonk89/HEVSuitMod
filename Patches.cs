@@ -5,61 +5,60 @@ using SPT.Reflection.Patching;
 
 // TODO: Need to find events for some of these!!!
 
-namespace HEVSuitMod
+namespace HEVSuitMod;
+
+internal class OnNewGame : ModulePatch
 {
-	internal class OnNewGame : ModulePatch
+	protected override MethodBase GetTargetMethod()
 	{
-		protected override MethodBase GetTargetMethod()
-		{
-			return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.OnGameStarted));
-		}
-
-		[PatchPostfix]
-		private static void GameStarted()
-		{
-			HEVMod.Instance.OnGameStarted();
-		}
+		return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.OnGameStarted));
 	}
 
-	internal class OnGameEnded : ModulePatch
+	[PatchPostfix]
+	private static void GameStarted()
 	{
-		protected override MethodBase GetTargetMethod()
-		{
-			return AccessTools.Method(typeof(Player), nameof(Player.OnGameSessionEnd));
-		}
+		HEVMod.Instance.OnGameStarted();
+	}
+}
 
-		[PatchPostfix]
-		private static void GameEnded()
-		{
-			HEVMod.Instance.OnGameEnded();
-		}
+internal class OnGameEnded : ModulePatch
+{
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(Player), nameof(Player.OnGameSessionEnd));
 	}
 
-	internal class OnInspectWeapon : ModulePatch
+	[PatchPostfix]
+	private static void GameEnded()
 	{
-		protected override MethodBase GetTargetMethod()
-		{
-			return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.ExamineWeapon));
-		}
+		HEVMod.Instance.OnGameEnded();
+	}
+}
 
-		[PatchPrefix]
-		private static void OnInspect()
-		{
-			VoiceController.Instance.WeaponInspectEvent();
-		}
+internal class OnInspectWeapon : ModulePatch
+{
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.ExamineWeapon));
 	}
 
-	internal class OnInspectChamber : ModulePatch
+	[PatchPrefix]
+	private static void OnInspect()
 	{
-		protected override MethodBase GetTargetMethod()
-		{
-			return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.CheckChamber));
-		}
+		VoiceController.Instance.WeaponInspectEvent();
+	}
+}
 
-		[PatchPostfix]
-		private static void OnInspect()
-		{
-			VoiceController.Instance.ChamberInspectEvent();
-		}
+internal class OnInspectChamber : ModulePatch
+{
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.CheckChamber));
+	}
+
+	[PatchPostfix]
+	private static void OnInspect()
+	{
+		VoiceController.Instance.ChamberInspectEvent();
 	}
 }

@@ -1,32 +1,31 @@
 ﻿using UnityEngine;
 
-namespace HEVSuitMod
+namespace HEVSuitMod;
+
+// Temporary? Tarkov's compass class is really wonky, might just keep this and expand on it..
+public static class Compass
 {
-	// Temporary? Tarkov's compass class is really wonky, might just keep this and expand on it..
-	public static class Compass
+	// TODO: Make sure this works when using something other than MyPlayer.LookDirection
+	public static int GetBearing(Vector3 direction)
 	{
-		// TODO: Make sure this works when using something other than MyPlayer.LookDirection
-		public static int GetBearing(Vector3 direction)
-		{
-			direction = -direction; // FIXME: Player.LookDirection needs to be negated to get the correct direction
-			direction.y = 0f;
-			if (direction == Vector3.zero)
-				return 0;
+		direction = -direction; // FIXME: Player.LookDirection needs to be negated to get the correct direction
+		direction.y = 0f;
+		if (direction == Vector3.zero)
+			return 0;
 
-			float angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-			if (angle < 0f)
-				angle += 360f;
+		float angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+		if (angle < 0f)
+			angle += 360f;
 
-			int bearing = ((int)angle + 270) % 360;
-			return bearing;
-		}
+		int bearing = ((int)angle + 270) % 360;
+		return bearing;
+	}
 
-		public static string GetDirection(Vector3 direction)
-		{
-			string[] directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest" };
-			int bearing = GetBearing(direction);
-			int index = Mathf.FloorToInt((bearing + 22.5f) / 45f) % 8;
-			return directions[index];
-		}
+	public static string GetDirection(Vector3 direction)
+	{
+		string[] directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest" };
+		int bearing = GetBearing(direction);
+		int index = Mathf.FloorToInt((bearing + 22.5f) / 45f) % 8;
+		return directions[index];
 	}
 }

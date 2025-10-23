@@ -5,137 +5,136 @@ using System.Linq;
 using UnityEngine;
 using BepInEx.Logging;
 
-namespace HEVSuitMod
+namespace HEVSuitMod;
+
+// Some useful stuff goes here
+public static class Utils
 {
-	// Some useful stuff goes here
-	public static class Utils
+	private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Utils");
+
+	// Simple tree node
+	private class Node
 	{
-		private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Utils");
+		public string Name { get; }
+		public Dictionary<string, Node> Children { get; }
 
-		// Simple tree node
-		private class Node
+		public Node(string name)
 		{
-			public string Name { get; }
-			public Dictionary<string, Node> Children { get; }
-
-			public Node(string name)
-			{
-				Name = name;
-				Children = new Dictionary<string, Node>(StringComparer.OrdinalIgnoreCase);
-			}
-
-			public bool IsFile => Children.Count == 0;
+			Name = name;
+			Children = new Dictionary<string, Node>(StringComparer.OrdinalIgnoreCase);
 		}
 
-		/// <summary>
-		/// Generate a tree of files similar to Windows TREE /F
-		/// </summary>
-		public static string FileTree(List<string> files)
+		public bool IsFile => Children.Count == 0;
+	}
+
+	/// <summary>
+	/// Generate a tree of files similar to Windows TREE /F
+	/// </summary>
+	public static string FileTree(List<string> files)
+	{
+		var tree = new Node("ROOT");
+		foreach (var file in files)
 		{
-			var tree = new Node("ROOT");
-			foreach (var file in files)
+			var parts = file.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+			Node current = tree;
+
+			foreach (var part in parts)
 			{
-				var parts = file.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-				Node current = tree;
+				if (!current.Children.ContainsKey(part))
+					current.Children[part] = new Node(part);
 
-				foreach (var part in parts)
-				{
-					if (!current.Children.ContainsKey(part))
-						current.Children[part] = new Node(part);
-
-					current = current.Children[part];
-				}
-			}
-
-			var sb = new StringBuilder();
-			var children = tree.Children.Values.ToList();
-
-			for (int i = 0; i < children.Count; i++)
-				BuildTreeRecursive(sb, children[i], "", i == children.Count - 1);
-
-			return sb.ToString();
-
-			void BuildTreeRecursive(StringBuilder sb, Node node, string prefix, bool isLast)
-			{
-				sb.Append(prefix);
-				if (!string.IsNullOrEmpty(prefix))
-					sb.Append(isLast ? "└── " : "├── ");
-				sb.AppendLine(node.Name);
-
-				string childPrefix = prefix + (isLast ? "    " : "│   ");
-
-				// Files first
-				var orderedChildren = node.Children.Values
-					.OrderByDescending(c => c.IsFile)
-					.ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-					.ToList();
-
-				for (int i = 0; i < orderedChildren.Count; i++)
-					BuildTreeRecursive(sb, orderedChildren[i], childPrefix, i == orderedChildren.Count - 1);
+				current = current.Children[part];
 			}
 		}
 
+		var sb = new StringBuilder();
+		var children = tree.Children.Values.ToList();
 
-		/// <summary>
-		/// Log game object hierarchy with components
-		/// </summary>
-		/// <param name="root"></param>
-		public static void LogGameObjectHierarchy(GameObject root)
+		for (int i = 0; i < children.Count; i++)
+			BuildTreeRecursive(sb, children[i], "", i == children.Count - 1);
+
+		return sb.ToString();
+
+		void BuildTreeRecursive(StringBuilder sb, Node node, string prefix, bool isLast)
 		{
-			void LogRecursive(GameObject obj, int indent = 0)
+			sb.Append(prefix);
+			if (!string.IsNullOrEmpty(prefix))
+				sb.Append(isLast ? "└── " : "├── ");
+			sb.AppendLine(node.Name);
+
+			string childPrefix = prefix + (isLast ? "    " : "│   ");
+
+			// Files first
+			var orderedChildren = node.Children.Values
+				.OrderByDescending(c => c.IsFile)
+				.ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+				.ToList();
+
+			for (int i = 0; i < orderedChildren.Count; i++)
+				BuildTreeRecursive(sb, orderedChildren[i], childPrefix, i == orderedChildren.Count - 1);
+		}
+	}
+
+
+	/// <summary>
+	/// Log game object hierarchy with components
+	/// </summary>
+	/// <param name="root"></param>
+	public static void LogGameObjectHierarchy(GameObject root)
+	{
+		void LogRecursive(GameObject obj, int indent = 0)
+		{
+			string prefix = new string(' ', indent * 2);
+			log.LogWarning($"{prefix}- {obj.name}");
+
+			// List components on this GameObject
+			foreach (var comp in obj.GetComponents<Component>())
 			{
-				string prefix = new string(' ', indent * 2);
-				log.LogWarning($"{prefix}- {obj.name}");
+				if (comp == null)
+					continue; // skip missing scripts
 
-				// List components on this GameObject
-				foreach (var comp in obj.GetComponents<Component>())
-				{
-					if (comp == null)
-						continue; // skip missing scripts
-
-					log.LogWarning($"{prefix}  • Component: {comp.GetType().Name}");
-				}
-
-				// Recurse into children
-				foreach (Transform child in obj.transform)
-					LogRecursive(child.gameObject, indent + 1);
+				log.LogWarning($"{prefix}  • Component: {comp.GetType().Name}");
 			}
 
-			log.LogWarning($"=== GameObject Hierarchy for {root.name} ===");
-			LogRecursive(root);
-			log.LogWarning($"=== End of Hierarchy ===");
+			// Recurse into children
+			foreach (Transform child in obj.transform)
+				LogRecursive(child.gameObject, indent + 1);
 		}
 
-		/// <summary>
-		/// Find a component <typeparamref name="T"/> in children of <paramref name="path"/>
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="root"></param>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		public static T FindComponent<T>(GameObject root, string path) where T : Component
-		{
-			T component = root.transform.Find(path)?.GetComponent<T>();
-			if (component == null)
-				log.LogWarning($"FindInChildren: {root.name}/{path}\n\tComponent of type {typeof(T)} not found");
+		log.LogWarning($"=== GameObject Hierarchy for {root.name} ===");
+		LogRecursive(root);
+		log.LogWarning($"=== End of Hierarchy ===");
+	}
 
-			return component;
-		}
+	/// <summary>
+	/// Find a component <typeparamref name="T"/> in children of <paramref name="path"/>
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="root"></param>
+	/// <param name="path"></param>
+	/// <returns></returns>
+	public static T FindComponent<T>(GameObject root, string path) where T : Component
+	{
+		T component = root.transform.Find(path)?.GetComponent<T>();
+		if (component == null)
+			log.LogWarning($"FindInChildren: {root.name}/{path}\n\tComponent of type {typeof(T)} not found");
 
-		/// <summary>
-		/// Find every component of type <typeparamref name="T"/> in children of <paramref name="path"/>
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="root"></param>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		public static T[] FindComponentsInChildren<T>(GameObject root, string path) where T : Component
-		{
-			T[] components = root.transform.Find(path)?.GetComponentsInChildren<T>();
-			if (components == null)
-				log.LogWarning($"FindAllInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
-			
-			return components;
-		}
+		return component;
+	}
+
+	/// <summary>
+	/// Find every component of type <typeparamref name="T"/> in children of <paramref name="path"/>
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="root"></param>
+	/// <param name="path"></param>
+	/// <returns></returns>
+	public static T[] FindComponentsInChildren<T>(GameObject root, string path) where T : Component
+	{
+		T[] components = root.transform.Find(path)?.GetComponentsInChildren<T>();
+		if (components == null)
+			log.LogWarning($"FindAllInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
+		
+		return components;
 	}
 }
