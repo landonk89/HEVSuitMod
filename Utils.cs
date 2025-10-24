@@ -75,7 +75,6 @@ public static class Utils
 		}
 	}
 
-
 	/// <summary>
 	/// Log game object hierarchy with components
 	/// </summary>
@@ -117,7 +116,7 @@ public static class Utils
 	{
 		T component = root.transform.Find(path)?.GetComponent<T>();
 		if (component == null)
-			log.LogWarning($"FindInChildren: {root.name}/{path}\n\tComponent of type {typeof(T)} not found");
+			log.LogWarning($"FindComponent: {root.name}/{path}\n\tComponent of type {typeof(T)} not found");
 
 		return component;
 	}
@@ -133,7 +132,7 @@ public static class Utils
 	{
 		T[] components = root.transform.Find(path)?.GetComponentsInChildren<T>();
 		if (components == null)
-			log.LogWarning($"FindAllInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
+			log.LogWarning($"FindComponentsInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
 		
 		return components;
 	}
