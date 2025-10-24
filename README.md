@@ -23,9 +23,3 @@ as a prompt/training file.
 
 The 'sentences.txt' file in 'scripts' is used to define HEV sentences in a (loosely) similar way to Half-Life's original code.
 See code comments and comments in sentences.txt to understand how it works.
-
-There are some debugging keys: F7, F8, F9, F10
-* F7 will play a random compass direction voiceline
-* F8 will play the sentence name set in configuration manager (ex: HeavyBleeding).
-* F9 will play a randomly selected sentence from all sentences.
-* F10 will play a number sentence set in configuration manager (ex: 24, 250, 300, etc).
