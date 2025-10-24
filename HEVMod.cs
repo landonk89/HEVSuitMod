@@ -139,6 +139,7 @@ public class HEVMod : BaseUnityPlugin
 		new OnGameEnded().Enable();
 		new OnInspectWeapon().Enable();
 		new OnInspectChamber().Enable();
+		new OnLoadSingleAmmo().Enable();
 
 		// Register console commands
 		ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();

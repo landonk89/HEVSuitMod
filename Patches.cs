@@ -3,7 +3,9 @@ using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 
-// TODO: Need to find events for some of these!!!
+// ===================================================================================
+// These are patches for things that don't have events, or do and I haven't found them.
+// ===================================================================================
 
 namespace HEVSuitMod;
 
@@ -60,5 +62,20 @@ internal class OnInspectChamber : ModulePatch
 	private static void OnInspect()
 	{
 		VoiceController.Instance.ChamberInspectEvent();
+	}
+}
+
+// TODO: Test this for guns that can top load (sks, m700, etc)
+internal class OnLoadSingleAmmo : ModulePatch
+{
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.method_38));
+	}
+
+	[PatchPostfix]
+	private static void UpdateHudAmmoCount()
+	{
+		HudController.Instance.AmmoChanged(GamePlayerOwner.MyPlayer.HandsController);
 	}
 }

@@ -11,6 +11,7 @@ namespace HEVSuitMod;
 
 public class HudController : MonoBehaviour
 {
+	private const float AMMO_RATIO_CRITICAL = 0.33f; // One third
 	private const int MAX_NOTIFICATIONS = 7; // The area fits 7 images at 100x100 comfortably
 	private const float NOTIFY_TIME = 1.5f;
 	private const float DMG_NOTIFY_TIME = 4f;
@@ -25,7 +26,7 @@ public class HudController : MonoBehaviour
 
 	// TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
 	private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
-	private Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter yellow
+	private Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter
 	private Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
 	private Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
 
@@ -359,7 +360,6 @@ public class HudController : MonoBehaviour
 		flashBeam.Image.enabled = isOn;
 		foreach (HudImage image in flashGroup)
 			StartTransition(image, isOn ? EImageState.Activating : EImageState.Deactivating);
-		//UNDONE: image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
 	}
 
 	private void SetNumberDigits(HudImage[] digitImages, int number)
@@ -403,10 +403,11 @@ public class HudController : MonoBehaviour
 			faController.OnShot += () => AmmoChanged(faController);
 			faController.OnReadyToOperate += AmmoChanged;
 			faController.Weapon.GetMagazineSlot().OnAddOrRemoveItem += (_) => AmmoChanged(faController);
+			AmmoChanged(faController);
 		}
 	}
 
-	private void AmmoChanged(IHandsController handsController)
+	public void AmmoChanged(IHandsController handsController)
 	{
 		if (handsController == null || handsController.Item is not Weapon weapon)
 		{
@@ -416,9 +417,14 @@ public class HudController : MonoBehaviour
 			return;
 		}
 
+		// TODO/FIXME: This is not working for weapons with internal mags when reloading
+		int maxAmmo = weapon.Chambers.Length + weapon.GetMaxMagazineCount();
 		int ammoCount = weapon.ChamberAmmoCount + weapon.GetCurrentMagazineCount();
+		float ammoRatio = (float)ammoCount / maxAmmo;
+		bool critical = ammoRatio <= AMMO_RATIO_CRITICAL;
+		log.LogDebug($"AmmoChanged: maxAmmo {maxAmmo}, ammoCount {ammoCount}, ammoRatio {ammoRatio}, critical {critical}");
 		SetNumberDigits(ammoVal, ammoCount);
-		SetCritical(ammoGroup, ammoCount == 0); // TODO: Calculate ammo vs total possible with mag, base on percentage
+		SetCritical(ammoGroup, critical);
 		Highlight(ammoGroup);
 	}
 
@@ -434,6 +440,7 @@ public class HudController : MonoBehaviour
 
 	private void SuitPowerChanged()
 	{
+		// TODO: This doesn't actually do anything yet
 		int temp = 100;
 		char[] digits = temp.ToString("000").ToCharArray();
 		suitFull.Image.fillAmount = temp / 100f;
@@ -491,6 +498,18 @@ public class HudController : MonoBehaviour
 
 			case var dt when (dt & EDamageType.RadExposure) != 0:
 				damageIcon = radiationDamage;
+				break;
+
+			case var dt when (dt & EDamageType.Bullet) != 0:
+				damageIcon = bulletDamage;
+				break;
+
+			case var dt when (dt & EDamageType.Exhaustion) != 0:
+				damageIcon = exhaustionDamage;
+				break;
+
+			case var dt when (dt & EDamageType.Dehydration) != 0:
+				damageIcon = dehydrationDamage;
 				break;
 		}
 
