@@ -107,7 +107,7 @@ public static class Utils
 	}
 
 	/// <summary>
-	/// Find a component <typeparamref name="T"/> in children of <paramref name="path"/>
+	/// Find a component <typeparamref name="T"/> in <paramref name="path"/>
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
 	/// <param name="root"></param>

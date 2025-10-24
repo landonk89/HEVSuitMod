@@ -3,28 +3,31 @@ using EFT;
 using EFT.InventoryLogic;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace HEVSuitMod;
 
 public class HudController : MonoBehaviour
-{		
+{
+	private const int MAX_NOTIFICATIONS = 7; // The area fits 7 images at 100x100 comfortably
+	private const float NOTIFY_TIME = 1.5f;
+	private const float DMG_NOTIFY_TIME = 4f;
+	private const float ACTIVATE_TIME = 0.25f;
+	private const float FADE_TIME = 0.5f;
+
 	public static HudController Instance { get; private set; }
 	private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
 	private AssetBundle assets;
 	private GameObject hudPrefab;
 	private GameObject hud;
-	
-	// Colors and times
+
+	// TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
 	private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
-	private Color hudColorActive = new(1f, 0.9f, 0f, 1f); // Brighter yellow
+	private Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter yellow
 	private Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
 	private Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
-	private float fadeTime = 0.5f;
-	private float notifyIconLifetime = 1.5f;
-	private float damageIconLifetime = 4f;
-	private float activationTime = 0.25f;
 
 	// Number sprites
 	private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
@@ -69,7 +72,6 @@ public class HudController : MonoBehaviour
 	// Active notifications
 	private Transform notificationArea;
 	private Transform damageNotificationArea;
-	private int maxNotifications = 7; // The area fits 7 images at 100x100 comfortably
 	private List<HudImage> activeNotifications = [];
 	private List<HudImage> activeDamageNotifications = [];
 
@@ -96,7 +98,7 @@ public class HudController : MonoBehaviour
 		hudPrefab = assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab");
 		hud = Instantiate(hudPrefab);
 
-		// Load number sprites, index 10 is a blank sprite
+		// Cache number sprites, index 10 is a blank sprite
 		for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
 		numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
 
@@ -111,7 +113,7 @@ public class HudController : MonoBehaviour
 		suitFull = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconFull"));
 		suitGroup = [suitFull, suitEmpty, suitVal[0], suitVal[1], suitVal[2]];
 
-		// Ammo counter
+		// Ammo counter and icon
 		for (int i = 0; i < 3; i++)	ammoVal[i] = new(Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}"));
 		ammo = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
 		ammoGroup = [ammo, ammoVal[0], ammoVal[1], ammoVal[2]];
@@ -130,11 +132,11 @@ public class HudController : MonoBehaviour
 		hitIndicatorRight = new(hitIndicatorImg[1]);
 		hitIndicatorDown = new(hitIndicatorImg[2]);
 		hitIndicatorLeft = new(hitIndicatorImg[3]);
-		foreach (Image hit in hitIndicatorImg) hit.color = Color.clear;
+		foreach (Image hit in hitIndicatorImg) hit.color = Color.clear; // Start transparent
 
 		// Notification areas
-		notificationArea = hud.transform.Find("RightNotifyArea");
-		damageNotificationArea = hud.transform.Find("LeftNotifyArea");
+		notificationArea = Utils.FindComponent<Transform>(hud, "RightNotifyArea");
+		damageNotificationArea = Utils.FindComponent<Transform>(hud, "LeftNotifyArea");
 
 		// Damage type sprites
 		coldDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_cold.tga");
@@ -146,7 +148,7 @@ public class HudController : MonoBehaviour
 		dehydrationDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_chem.tga"); // TODO: make unique sprite
 		exhaustionDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_chem.tga"); // TODO: make unique sprite
 
-		// Map the 8 hit directions to our indicators
+		// Map the 8 hit directions to our indicators, like a compass for pain
 		hitIndicatorDirections =
 		[
 			[hitIndicatorUp],
@@ -160,32 +162,16 @@ public class HudController : MonoBehaviour
 		];
 
 		// For state machine
-		allHudImages.Add(healthIcon);
-		allHudImages.Add(healthVal[0]);
-		allHudImages.Add(healthVal[1]);
-		allHudImages.Add(healthVal[2]);
-		allHudImages.Add(suitEmpty);
-		allHudImages.Add(suitFull);
-		allHudImages.Add(suitVal[0]);
-		allHudImages.Add(suitVal[1]);
-		allHudImages.Add(suitVal[2]);
-		allHudImages.Add(flashEmpty);
-		allHudImages.Add(flashFull);
-		allHudImages.Add(flashBeam);
-		allHudImages.Add(ammo);
-		allHudImages.Add(ammoVal[0]);
-		allHudImages.Add(ammoVal[1]);
-		allHudImages.Add(ammoVal[2]);
-		allHudImages.Add(hitIndicatorUp);
-		allHudImages.Add(hitIndicatorRight);
-		allHudImages.Add(hitIndicatorDown);
-		allHudImages.Add(hitIndicatorLeft);
+		allHudImages.AddRange(healthGroup);
+		allHudImages.AddRange(suitGroup);
+		allHudImages.AddRange(flashGroup);
+		allHudImages.AddRange(ammoGroup);
+		allHudImages.AddRange([hitIndicatorUp, hitIndicatorRight, hitIndicatorDown, hitIndicatorLeft]);
 	}
 
 	private void Start()
 	{
-		// Subscribe events
-		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => OnTakeDamage(damageInfo);
+		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => TakeDamage(damageInfo);
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged; // subscribe to weapon events
 		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged();
@@ -201,7 +187,7 @@ public class HudController : MonoBehaviour
 	private void OnDestroy()
 	{
 		// GamePlayerOwner stuff may not be needed if MyPlayer clears by itself, look into that
-		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => OnTakeDamage(damageInfo);
+		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => TakeDamage(damageInfo);
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => HealthChanged();
@@ -220,103 +206,103 @@ public class HudController : MonoBehaviour
 		for (int i = allHudImages.Count -1; i >= 0; i--)
 		{
 			HudImage img = allHudImages[i];
-			Color idleColor = img.Critical ? hudColorCritical : hudColor;
 			Color activeColor = img.Critical ? hudColorCriticalActive : hudColorActive;
+			Color inactiveColor = img.Critical ? hudColorCritical : hudColor;
 
 			switch (img.State)
 			{
 				case EImageState.Active:
-					break;
-
 				case EImageState.Inactive:
 					break;
 
+				// Deactivate 1: Image was marked for deactivation, set up for it
 				case EImageState.Deactivate:
-					img.Image.color = activeColor;
 					StartTransition(img, EImageState.Deactivating);
 					break;
 
+				// 2: Ramp the brightness down to normal and mark as 'inactive'
 				case EImageState.Deactivating:
-					if(UpdateTransition(img, activationTime, idleColor))
+					if(UpdateTransition(img, ACTIVATE_TIME, inactiveColor))
 						img.State = EImageState.Inactive;
 					break;
 
+				// Activate 1: Image was marked for activation, set up for it
 				case EImageState.Activate:
-					img.Image.color = idleColor;
-					//img.LastState = img.State;
 					StartTransition(img, EImageState.Activating);
 					break;
 
+				// 2: Ramp the brightness up to max and mark as 'active'
 				case EImageState.Activating:
-					if(UpdateTransition(img, activationTime, activeColor))
+					if(UpdateTransition(img, ACTIVATE_TIME, activeColor))
 						img.State = EImageState.Active;
 					break;
 
+				// Highlight 1: Make the image brighter for an instant
 				case EImageState.Highlight:
 					img.Image.color = activeColor;
 					StartTransition(img, EImageState.FadeHighlight);
 					break;
 
+				// 2: Fade back to normal
 				case EImageState.FadeHighlight:
-					if(UpdateTransition(img, fadeTime, idleColor))
+					if(UpdateTransition(img, FADE_TIME, inactiveColor))
 						img.State = EImageState.Inactive;
 					break;
 
+				// HitIndicator 1: Set indicator to full opacity
 				case EImageState.HitIndicator:
 					img.Image.color = Color.white;
 					StartTransition(img, EImageState.FadeHitIndicator);
 					break;
 
+				// 2: Fade indicator to zero opacity
 				case EImageState.FadeHitIndicator:
-					if(UpdateTransition(img, fadeTime, Color.clear))
+					if(UpdateTransition(img, FADE_TIME, Color.clear))
 						img.State = EImageState.Inactive;
 					break;
 
-				case EImageState.PulseLow:
-					img.Image.color = Color.Lerp(Color.clear, idleColor, (Mathf.Sin(Time.time * 4f) + 1f) * 0.5f);
-					break;
-
+				// DamageNotification 1: A damage notification has been added, pulse it bright<->clear a few times
 				case EImageState.DamageNotification:
 					img.Timer += Time.deltaTime;
 					img.Image.color = Color.Lerp(Color.clear, activeColor, (Mathf.Sin(img.Timer * 4f) + 1f) * 0.5f);
-					if (img.Timer >= damageIconLifetime)
-						StartTransition(img, EImageState.DestroyDamageNotification);
-					break;
-					/*
-				case EImageState.ExpireDamageNotification:
-					img.Timer += Time.deltaTime;
-					if (img.Timer >= fadeTime)
-						StartTransition(img, EImageState.DestroyDamageNotification);
-					break;
-					*/
-				case EImageState.DestroyDamageNotification:
-					if (UpdateTransition(img, fadeTime, Color.clear))
-						img.State = EImageState.DestroyDamageNotificationImmediate;
+					if (img.Timer >= DMG_NOTIFY_TIME)
+						StartTransition(img, EImageState.ExpireDamageNotification);
 					break;
 
-				case EImageState.DestroyDamageNotificationImmediate:
+				// 2. Stop pulsing and fade away
+				case EImageState.ExpireDamageNotification:
+					if (UpdateTransition(img, FADE_TIME, Color.clear))
+						img.State = EImageState.DestroyDamageNotification;
+					break;
+
+				// 3. Faded fully, destroy it
+				case EImageState.DestroyDamageNotification:
 					Destroy(img.Image.gameObject);
 					allHudImages.RemoveAt(i);
 					activeDamageNotifications.Remove(img);
 					break;
 
+				// Notification 1: A notification has been added, make it bright and fade to normal
 				case EImageState.Notification:
-					if (UpdateTransition(img, fadeTime, idleColor))
+					if (UpdateTransition(img, FADE_TIME, inactiveColor))
+						StartTransition(img, EImageState.IdleNotification);
+					break;
+
+				// 2: Stay idle for a sec
+				case EImageState.IdleNotification:
+					img.Timer += Time.deltaTime;
+					if (img.Timer >= NOTIFY_TIME)
 						StartTransition(img, EImageState.ExpireNotification);
 					break;
 
+				// 3: Fade away
 				case EImageState.ExpireNotification:
-					img.Timer += Time.deltaTime;
-					if (img.Timer >= notifyIconLifetime)
-						StartTransition(img, EImageState.DestroyNotification);
+					if (UpdateTransition(img, FADE_TIME, Color.clear))
+						img.State = EImageState.DestroyNotification;
 					break;
 
+				// 4: Faded fully, destroy it
 				case EImageState.DestroyNotification:
-					if (UpdateTransition(img, fadeTime, Color.clear))
-						img.State = EImageState.DestroyNotificationImmediate;
-					break;
-
-				case EImageState.DestroyNotificationImmediate:
 					Destroy(img.Image.gameObject);
 					allHudImages.RemoveAt(i);
 					activeNotifications.Remove(img);
@@ -329,7 +315,6 @@ public class HudController : MonoBehaviour
 	{
 		img.Timer = 0f;
 		img.LastColor = img.Image.color;
-		//img.LastState = img.State;
 		img.State = nextState;
 	}
 
@@ -438,13 +423,7 @@ public class HudController : MonoBehaviour
 			return;
 		}
 
-		int ammoCount = 0;
-		if (handsController is Player.FirearmController faController)
-		{
-			ammoCount += weapon.ChamberAmmoCount;
-			ammoCount += weapon.GetCurrentMagazineCount();
-		}
-
+		int ammoCount = weapon.ChamberAmmoCount + weapon.GetCurrentMagazineCount();
 		SetNumberDigits(ammoVal, ammoCount);
 		SetCritical(ammoGroup, ammoCount == 0); // TODO: Calculate ammo vs total possible with mag, base on percentage
 		Highlight(ammoGroup);
@@ -466,24 +445,20 @@ public class HudController : MonoBehaviour
 		char[] digits = temp.ToString("000").ToCharArray();
 		suitFull.Image.fillAmount = temp / 100f;
 		SetNumberDigits(suitVal, temp);
-		//SetCritical(suitGroup, temp);
+		//SetCritical(suitGroup, temp); // HL1 doesn't set suit to red, TODO: check hl1 code to confirm
 		Highlight(suitGroup);
 	}
 
-	/// <summary>
-	/// Display a notification icon at the right side of the screen, managed by a VerticalLayoutGroup
-	/// </summary>
-	/// <param name="fileName"></param>
 	private void NotifyIcon(Sprite icon, bool isDamage)
 	{
-		// TODO: Cache icon images. Just load on demand for now
+		EImageState iconState = isDamage ? EImageState.DamageNotification : EImageState.Notification;
+		Transform iconParent = isDamage ? damageNotificationArea : notificationArea;
 		GameObject iconObj = new("icon");
-		iconObj.transform.parent = isDamage ? damageNotificationArea : notificationArea;
+		iconObj.transform.parent = iconParent;
 		Image iconImage = iconObj.AddComponent<Image>();
 		iconImage.sprite = icon;
 		iconImage.color = hudColorActive;
-		EImageState state = isDamage ? EImageState.DamageNotification : EImageState.Notification;
-		HudImage hudImage = new(iconImage) { State = state };
+		HudImage hudImage = new(iconImage) { State = iconState };
 		allHudImages.Add(hudImage);
 		
 		if (isDamage)
@@ -492,40 +467,47 @@ public class HudController : MonoBehaviour
 			activeNotifications.Add(hudImage);
 
 		// Don't overflow, kill the oldest one.
-		// FIXME: separate the two areas
-		if (activeNotifications.Count > maxNotifications)
-			activeNotifications[0].State = EImageState.DestroyNotificationImmediate;
+		if (activeNotifications.Count > MAX_NOTIFICATIONS)
+			activeNotifications[0].State = EImageState.DestroyNotification;
 		
-		if (activeDamageNotifications.Count > maxNotifications)
-			activeDamageNotifications[0].State = EImageState.DestroyDamageNotificationImmediate;
+		if (activeDamageNotifications.Count > MAX_NOTIFICATIONS)
+			activeDamageNotifications[0].State = EImageState.DestroyDamageNotification;
 	}
 
-	/// <summary>
-	/// Event
-	/// </summary>
-	/// <param name="damageInfo"></param>
-	private void OnTakeDamage(DamageInfoStruct damageInfo)
+	private void TakeDamage(DamageInfoStruct damageInfo)
 	{
-		// FIXME: Switch to damageInfo.Direction when you finally make sense of it
-		if (damageInfo.Player == null)
+		// TODO: EDamageType is a flags enum, test all this crap and make sure it works
+		Sprite damageIcon = null;
+		switch (damageInfo.DamageType)
 		{
-			// World damage, show all damage indicators
-			hitIndicatorUp.State = EImageState.HitIndicator;
-			hitIndicatorRight.State = EImageState.HitIndicator;
-			hitIndicatorDown.State = EImageState.HitIndicator;
-			hitIndicatorLeft.State = EImageState.HitIndicator;
-			return;
+			case var dt when (dt & (EDamageType.Landmine | EDamageType.Explosion | EDamageType.ThermobaricExplosion | EDamageType.GrenadeFragment)) != 0:
+				damageIcon = explosionDamage;
+				break;
+
+			case var dt when (dt & (EDamageType.HotGases | EDamageType.Flame)) != 0:
+				damageIcon = fireDamage;
+				break;
+
+			case var dt when (dt & (EDamageType.LethalToxin | EDamageType.Poison)) != 0:
+				damageIcon = toxinDamage;
+				break;
+
+			case var dt when (dt & EDamageType.Barbed) != 0:
+				damageIcon = barbwireDamage;
+				break;
+
+			case var dt when (dt & EDamageType.RadExposure) != 0:
+				damageIcon = radiationDamage;
+				break;
 		}
 
-		Vector3 attackerPos = damageInfo.Player.iPlayer.Position;
-		Vector3 myPos = GamePlayerOwner.MyPlayer.Position;
-		Vector3 myLookDir = GamePlayerOwner.MyPlayer.LookDirection.normalized;
+		// Don't notify for the same damage type twice
+		if (damageIcon != null && !activeDamageNotifications.Any(x => x.Image.sprite == damageIcon))
+			NotifyIcon(damageIcon, true);
 
-		// Get direction to attacker
-		Vector3 toAttacker = (attackerPos - myPos).normalized;
-
-		// Convert world space direction to local space relative to where I'm looking
-		Vector3 localDir = Quaternion.Inverse(Quaternion.LookRotation(myLookDir)) * toAttacker;
+		// FIXME: World damage seems to always come from in front of the player?
+		Vector3 lookDir = GamePlayerOwner.MyPlayer.LookDirection.normalized;
+		Vector3 localDir = Quaternion.Inverse(Quaternion.LookRotation(lookDir)) * -damageInfo.Direction;
 		localDir.y = 0;
 		localDir.Normalize();
 
