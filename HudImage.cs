@@ -7,9 +7,7 @@ public enum EImageState
 {
 	Inactive,
 	Active,
-	Deactivate,
 	Deactivating,
-	Activate,
 	Activating,
 	Highlight,
 	FadeHighlight,

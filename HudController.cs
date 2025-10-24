@@ -60,6 +60,7 @@ public class HudController : MonoBehaviour
 	private HudImage[][] hitIndicatorDirections;
 
 	// Damage type notifications
+	private Sprite bulletDamage;
 	private Sprite coldDamage;
 	private Sprite fireDamage;
 	private Sprite explosionDamage;
@@ -139,10 +140,11 @@ public class HudController : MonoBehaviour
 		damageNotificationArea = Utils.FindComponent<Transform>(hud, "LeftNotifyArea");
 
 		// Damage type sprites
+		bulletDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bullet.tga");
 		coldDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_cold.tga");
 		fireDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_heat.tga");
-		explosionDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_heat.tga"); // TODO: make unique sprite
-		barbwireDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_heat.tga");
+		explosionDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_explosion.tga");
+		barbwireDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_barbed.tga");
 		toxinDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bio.tga");
 		radiationDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_rad.tga");
 		dehydrationDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_chem.tga"); // TODO: make unique sprite
@@ -215,20 +217,10 @@ public class HudController : MonoBehaviour
 				case EImageState.Inactive:
 					break;
 
-				// Deactivate 1: Image was marked for deactivation, set up for it
-				case EImageState.Deactivate:
-					StartTransition(img, EImageState.Deactivating);
-					break;
-
 				// 2: Ramp the brightness down to normal and mark as 'inactive'
 				case EImageState.Deactivating:
 					if(UpdateTransition(img, ACTIVATE_TIME, inactiveColor))
 						img.State = EImageState.Inactive;
-					break;
-
-				// Activate 1: Image was marked for activation, set up for it
-				case EImageState.Activate:
-					StartTransition(img, EImageState.Activating);
 					break;
 
 				// 2: Ramp the brightness up to max and mark as 'active'
@@ -366,7 +358,8 @@ public class HudController : MonoBehaviour
 	{
 		flashBeam.Image.enabled = isOn;
 		foreach (HudImage image in flashGroup)
-			image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
+			StartTransition(image, isOn ? EImageState.Activating : EImageState.Deactivating);
+		//UNDONE: image.State = isOn ? EImageState.Activate : EImageState.Deactivate;
 	}
 
 	private void SetNumberDigits(HudImage[] digitImages, int number)
@@ -468,10 +461,10 @@ public class HudController : MonoBehaviour
 
 		// Don't overflow, kill the oldest one.
 		if (activeNotifications.Count > MAX_NOTIFICATIONS)
-			activeNotifications[0].State = EImageState.DestroyNotification;
-		
+			StartTransition(activeNotifications[0], EImageState.DestroyNotification);
+
 		if (activeDamageNotifications.Count > MAX_NOTIFICATIONS)
-			activeDamageNotifications[0].State = EImageState.DestroyDamageNotification;
+			StartTransition(activeDamageNotifications[0], EImageState.DestroyDamageNotification);
 	}
 
 	private void TakeDamage(DamageInfoStruct damageInfo)
@@ -518,6 +511,6 @@ public class HudController : MonoBehaviour
 		// Decide which hit indicators to show based on angle
 		int dirIndex = Mathf.FloorToInt((angle + 22.5f) % 360f / 45f);
 		foreach (var image in hitIndicatorDirections[dirIndex])
-			image.State = EImageState.HitIndicator;
+			StartTransition(image, EImageState.HitIndicator);
 	}
 }
