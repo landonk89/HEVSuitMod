@@ -10,16 +10,18 @@ namespace HEVSuitMod;
 /// </summary>
 public class Flashlight : MonoBehaviour
 {
+	private const float BATT_LOW_THRESHOLD = 0.25f;
+	private const float BATT_DRAIN_RATE = 0.01f;
+	private const float BATT_CHARGE_RATE = 0.05f;
+
 	public static Flashlight Instance { get; private set; }
+	private AssetBundle assets = HEVMod.Instance.Assets;
 	private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio
 	private bool isOn = false;
 	private bool lowBattery = false;
-	private float lowBatteryThreshold = 0.25f;
 	private float batteryLevel = 1f; // 0..1
-	private float batteryDrainRate = 0.01f;
-	private float batteryChargeRate = 0.05f;
 
 	public event Action<bool> Toggled;
 	public event Action<float> BatteryUpdate;
@@ -35,16 +37,24 @@ public class Flashlight : MonoBehaviour
 		else
 			Instance = this;
 
-		// FIXME: need to move it forward from the player's face a little, it lights up held object
 		GameObject flashlight = new("FlashlightContainer");
 		audioSource = flashlight.AddComponent<AudioSource>();
-		audioSource.clip = HEVMod.Instance.Assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
+		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
 		lightSource = flashlight.AddComponent<Light>();
 		lightSource.type = LightType.Spot;
-		lightSource.spotAngle = 65f;
+		lightSource.spotAngle = 45f;
+		lightSource.range = 50f;
+		lightSource.cookie = assets.LoadAsset<Texture2D>("assets/sprites/hl2flashlightcookie.tga");
 		lightSource.enabled = false;
 		flashlight.transform.SetPositionAndRotation(GamePlayerOwner.MyPlayer.CameraPosition.position, GamePlayerOwner.MyPlayer.CameraPosition.rotation);
 		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition;
+		flashlight.transform.localPosition = new(0f, -0.25f, 0.25f);
+	}
+
+	private void OnDisable()
+	{
+		if (isOn)
+			Toggle();
 	}
 
 	private void OnDestroy()
@@ -55,28 +65,28 @@ public class Flashlight : MonoBehaviour
 
 	private void Update()
 	{
-		if (Input.GetKeyDown(KeyCode.J)) // Temporary key
+		if (Input.GetKeyDown(HEVMod.Instance.flashlightKey.Value.MainKey))
 			Toggle();
 
 		if (isOn)
 		{
-			batteryLevel -= batteryDrainRate * Time.deltaTime;
+			batteryLevel -= BATT_DRAIN_RATE * Time.deltaTime;
 			if (batteryLevel <= 0f)
 				Toggle();
 		}
 		else
 		{
 			if (batteryLevel < 1f)
-				batteryLevel = Mathf.Clamp01(batteryLevel + batteryChargeRate * Time.deltaTime);
+				batteryLevel = Mathf.Clamp01(batteryLevel + BATT_CHARGE_RATE * Time.deltaTime);
 		}
 
 		BatteryUpdate.Invoke(batteryLevel);
 
-		bool lowBatteryThisFrame = batteryLevel < lowBatteryThreshold;
+		bool lowBatteryThisFrame = batteryLevel < BATT_LOW_THRESHOLD;
 		if (lowBatteryThisFrame != lowBattery)
 		{
 			lowBattery = lowBatteryThisFrame;
-			BatteryLow.Invoke(lowBattery);
+			BatteryLow?.Invoke(lowBattery);
 		}
 	}
 
@@ -94,6 +104,6 @@ public class Flashlight : MonoBehaviour
 		}
 
 		audioSource.Play();
-		Toggled.Invoke(isOn);
+		Toggled?.Invoke(isOn);
 	}
 }

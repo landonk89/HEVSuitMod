@@ -11,7 +11,7 @@ namespace HEVSuitMod;
 
 public class HudController : MonoBehaviour
 {
-	private const float AMMO_RATIO_CRITICAL = 0.33f; // One third
+	private const float AMMO_RATIO_CRITICAL = 0.2f; // One third
 	private const int MAX_NOTIFICATIONS = 7; // The area fits 7 images at 100x100 comfortably
 	private const float NOTIFY_TIME = 1.5f;
 	private const float DMG_NOTIFY_TIME = 4f;
@@ -172,24 +172,23 @@ public class HudController : MonoBehaviour
 		allHudImages.AddRange([hitIndicatorUp, hitIndicatorRight, hitIndicatorDown, hitIndicatorLeft]);
 	}
 
-	private void Start()
+	private void OnEnable()
 	{
 		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => TakeDamage(damageInfo);
 		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => SuitPowerChanged(damageInfo);
 		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += (_) => SuitPowerChanged(null);
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
-		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged();
+		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged(true);
 		Flashlight.Instance.Toggled += FlashlightToggled;
 		Flashlight.Instance.BatteryUpdate += SetFlashlightBattery;
 		Flashlight.Instance.BatteryLow += SetFlashlightBatteryCritical;
-
-		// Init value sprites
+		hud.SetActive(true);
 		HealthChanged();
 		SuitPowerChanged(null);
 	}
 
-	private void OnDestroy()
+	private void OnDisable()
 	{
 		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => TakeDamage(damageInfo);
 		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => SuitPowerChanged(damageInfo);
@@ -200,6 +199,11 @@ public class HudController : MonoBehaviour
 		Flashlight.Instance.Toggled -= FlashlightToggled;
 		Flashlight.Instance.BatteryUpdate -= SetFlashlightBattery;
 		Flashlight.Instance.BatteryLow -= SetFlashlightBatteryCritical;
+		hud.SetActive(false);
+	}
+
+	private void OnDestroy()
+	{
 		if (this == Instance)
 			Instance = null;
 	}
@@ -437,17 +441,25 @@ public class HudController : MonoBehaviour
 		int ammoCount = weapon.ChamberAmmoCount + weapon.GetCurrentMagazineCount();
 		float ammoRatio = (float)ammoCount / maxAmmo;
 		bool critical = ammoRatio <= AMMO_RATIO_CRITICAL;
-		log.LogDebug($"AmmoChanged: maxAmmo {maxAmmo}, ammoCount {ammoCount}, ammoRatio {ammoRatio}, critical {critical}");
+		log.LogDebug($"AmmoChanged: maxAmmo {maxAmmo}, ammoCount {ammoCount}, ammoRatio {ammoRatio}");
 		SetNumberDigits(ammoVal, ammoCount);
 		SetCritical(ammoGroup, critical);
 		Highlight(ammoGroup);
 	}
 
-	private void HealthChanged()
+	private void HealthChanged(bool died = false)
 	{
 		// FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
-		float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
-		int normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+		int normalizedHealth = 0;
+		if (died)
+		{
+			normalizedHealth = 0;
+		}
+		else
+		{
+			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
+			normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+		}
 		SetNumberDigits(healthVal, normalizedHealth);
 		SetCritical(healthGroup, normalizedHealth <= /*25*/ 90); // FIXME: just testing, change back to 25 later
 		Highlight(healthGroup);
@@ -465,9 +477,9 @@ public class HudController : MonoBehaviour
 			if (slot.ContainedItem == null)
 				continue;
 
-			ArmoredEquipmentItemClass comp = slot.ContainedItem as ArmoredEquipmentItemClass;
-			current += comp.Repairable.Durability;
-			max += comp.Repairable.MaxDurability;
+			ArmoredEquipmentItemClass component = slot.ContainedItem as ArmoredEquipmentItemClass;
+			current += component.Repairable.Durability;
+			max += component.Repairable.MaxDurability;
 		}
 
 		int normalized = Mathf.CeilToInt(current / max * 100f);
@@ -507,7 +519,6 @@ public class HudController : MonoBehaviour
 
 	private void TakeDamage(DamageInfoStruct damageInfo)
 	{
-		// TODO: EDamageType is a flags enum, test all this crap and make sure it works
 		Sprite damageIcon = null;
 		switch (damageInfo.DamageType)
 		{
@@ -548,13 +559,13 @@ public class HudController : MonoBehaviour
 		if (damageIcon != null && !activeDamageNotifications.Any(x => x.Image.sprite == damageIcon))
 			NotifyIcon(damageIcon, true);
 
-		// FIXME: World damage seems to always come from in front of the player?
+		// FIXME: World damage seems to always come from in front of the player which looks stupid
 		Vector3 lookDir = GamePlayerOwner.MyPlayer.LookDirection.normalized;
 		Vector3 localDir = Quaternion.Inverse(Quaternion.LookRotation(lookDir)) * -damageInfo.Direction;
 		localDir.y = 0;
 		localDir.Normalize();
 
-		// Get horizontal angle in degrees (0 = front, 90 = right, 180 = back, 270 = left)
+		// Get angle in degrees (0 = front, 90 = right, 180 = back, 270 = left)
 		float angle = Mathf.Atan2(localDir.x, localDir.z) * Mathf.Rad2Deg;
 		if (angle < 0) angle += 360f;
 

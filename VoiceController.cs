@@ -32,21 +32,45 @@ public class VoiceController : MonoBehaviour
 
 		audioSource = gameObject.AddComponent<AudioSource>();
 		assets = HEVMod.Instance.Assets;
+	}
 
+	private void OnEnable()
+	{
+		Subscribe();
+	}
+
+	private void OnDisable()
+	{
+		if (sentencePlayer != null)
+		{
+			audioSource.Stop();
+			pendingSentences.Clear();
+			StopAllCoroutines();
+			sentencePlayer = null;
+		}
+		Unsubscribe();
+	}
+
+	private void OnDestroy()
+	{
+		if (this == Instance)
+			Instance = null;
+	}
+
+	private void Subscribe()
+	{
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
 		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDied();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 	}
 
-	private void OnDestroy() 
+	private void Unsubscribe()
 	{
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDied();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
-		if (this == Instance)
-			Instance = null;
 	}
 
 	// Update just monitors pendingSentences and starts playing if there are any
@@ -228,6 +252,7 @@ public class VoiceController : MonoBehaviour
 
 	public void PlaySentence(HEVSentence sentence)
 	{
+		if (!pendingSentences.Contains(sentence)) // Don't play the same one agian
 		pendingSentences.Add(sentence);
 	}
 
@@ -275,9 +300,10 @@ public class VoiceController : MonoBehaviour
 		if (sentence != null)
 			return sentence;
 
-		List<HEVAudioClip> clips = new();
+		List<HEVAudioClip> clips = [];
 		string[] clipNames = GetNumberClips(number);
 
+		// TODO: Caching all of the number related clips might be better?
 		for (int i = 0; i < clipNames.Length; i++)
 		{
 			clipNames[i] = $"assets/sounds/numbers/{clipNames[i]}.wav";

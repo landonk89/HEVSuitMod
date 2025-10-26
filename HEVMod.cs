@@ -13,6 +13,7 @@ public class HEVMod : BaseUnityPlugin
 {
 	// Constants
 	public const float DEFAULT_PLAYBACK_DELAY = 0.25f;
+	private const string SETTINGS_SECTION_GENERAL = "General Settings";
 
 	// Singleton
 	public static HEVMod Instance { get; private set; }
@@ -22,6 +23,7 @@ public class HEVMod : BaseUnityPlugin
 	private readonly string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, PluginInfo.PLUGIN_NAME, "hevsuit.bundle");
 
 	// Config
+	public ConfigEntry<KeyboardShortcut> flashlightKey;
 	public ConfigEntry<float> globalVolume;
 	public ConfigEntry<float> ignoreDuplicateEffectsTime;
 	public ConfigEntry<bool> identifyWeapon;
@@ -52,29 +54,36 @@ public class HEVMod : BaseUnityPlugin
 		}
 
 		// Config stuff
+		flashlightKey = Config.Bind(
+			SETTINGS_SECTION_GENERAL,
+			"Flashlight key",
+			new KeyboardShortcut(KeyCode.J),
+			"What key toggles the HEV flashlight"
+		);
+
 		globalVolume = Config.Bind(
-			"Suit Settings",
+			SETTINGS_SECTION_GENERAL,
 			"Volume",
 			1.0f,
 			new ConfigDescription("Volume", new AcceptableValueRange<float>(0f, 1f))
 		);
 
 		ignoreDuplicateEffectsTime = Config.Bind(
-			"Suit Settings",
+			SETTINGS_SECTION_GENERAL,
 			"Ignore duplicate events time",
 			30.0f,
 			"Don't play the same voiceline more than once within this amount of time (seconds)"
 		);
 
 		identifyWeapon = Config.Bind(
-			"Suit Settings",
+			SETTINGS_SECTION_GENERAL,
 			"Speak weapon name on inspect",
 			false,
 			"HEV will speak the name of your weapon when you inspect it."
 		);
 
 		identifyAmmo = Config.Bind(
-			"Suit Settings",
+			SETTINGS_SECTION_GENERAL,
 			"Speak ammo name on chamber check",
 			false,
 			"HEV will speak the name of the ammo type in your weapon's chamber when you check it."
