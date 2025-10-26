@@ -1,17 +1,19 @@
 ﻿namespace HEVSuitMod;
 
+using UnityEngine;
+
 public class HEVAudioClip
 {
-	public string ClipName { get; set; }
+	public AudioClip Clip { get; set; }
 	public int Loops { get; }
 	public float Interval { get; }
 	public float Pitch { get; }
 	public float Volume { get; }
 	public float Delay { get; }
 
-	public HEVAudioClip(string clip, int loops, float interval, float pitch, float volume, float delay)
+	public HEVAudioClip(AudioClip clip, int loops, float interval, float pitch, float volume, float delay)
 	{
-		ClipName = clip;
+		Clip = clip;
 		Loops = loops;
 		Interval = interval;
 		Pitch = pitch;
@@ -19,9 +21,9 @@ public class HEVAudioClip
 		Delay = delay;
 	}
 
-	public HEVAudioClip(string clip)
+	public HEVAudioClip(AudioClip clip)
 	{
-		ClipName = clip;
+		Clip = clip;
 		Loops = 1;
 		Interval = 0f;
 		Pitch = 1f;

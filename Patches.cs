@@ -47,7 +47,8 @@ internal class OnInspectWeapon : ModulePatch
 	[PatchPrefix]
 	private static void OnInspect()
 	{
-		VoiceController.Instance.WeaponInspectEvent();
+		if (HEVMod.Instance.identifyAmmo.Value)
+			VoiceController.Instance.WeaponInspectEvent();
 	}
 }
 
@@ -61,7 +62,8 @@ internal class OnInspectChamber : ModulePatch
 	[PatchPostfix]
 	private static void OnInspect()
 	{
-		VoiceController.Instance.ChamberInspectEvent();
+		if (HEVMod.Instance.identifyWeapon.Value)
+			VoiceController.Instance.ChamberInspectEvent();
 	}
 }
 

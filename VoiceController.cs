@@ -45,7 +45,8 @@ public class VoiceController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDied();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
-		if (this == Instance) { Instance = null; }
+		if (this == Instance)
+			Instance = null;
 	}
 
 	// Update just monitors pendingSentences and starts playing if there are any
@@ -60,20 +61,14 @@ public class VoiceController : MonoBehaviour
 	{
 		if (handsController is Player.FirearmController faController)
 		{
-			faController.Weapon.OnMalfunctionValidate += OnWeaponMalfunction;
 			faController.OnShot += () =>
 			{
 				if (faController.Weapon.GetCurrentMagazine().Count + faController.Weapon.ChamberAmmoCount == 0)
-				{
 					PlaySentenceById("OutOfAmmo");
-				}
 			};
 		}
 	}
 
-	/// <summary>
-	/// Event triggered by player death
-	/// </summary>
 	private void PlayerDied()
 	{
 		if (sentencePlayer != null)
@@ -85,20 +80,11 @@ public class VoiceController : MonoBehaviour
 		PlaySentenceById("Death");
 	}
 
-	/// <summary>
-	/// Event triggered by a body part being 'blacked'
-	/// </summary>
-	/// <param name="bodyPart"></param>
-	/// <param name="damageType"></param>
 	private void BodyPartDestroyed(EBodyPart bodyPart, EDamageType damageType)
 	{
 		// TODO: HEV should say something like "Major injury, seek medical attention"
 	}
 
-	/// <summary>
-	/// Play a sentence that describes the removed effect where the type is <paramref name="effect.Type.Name"/>
-	/// </summary>
-	/// <param name="effect"></param>
 	private void HealthEffectRemoved(IEffect effect)
 	{
 		// TODO: Auto-heal? and say stuff like "Bleeding has stopped" or "Splint Applied"
@@ -107,10 +93,6 @@ public class VoiceController : MonoBehaviour
 		activeStatusEffects.Remove(effectName);
 	}
 
-	/// <summary>
-	/// Play a sentence that describes the started effect, where the effect type is <paramref name="effect.Type"/>
-	/// </summary>
-	/// <param name="effect"></param>
 	private void HealthEffectStarted(IEffect effect)
 	{
 		Type effectType = effect.GetType(); // All effect classes are protected
@@ -182,9 +164,7 @@ public class VoiceController : MonoBehaviour
 	{
 		activeStatusEffects.Add(effectName);
 		StartCoroutine(BeginExpireEffect(effectName));
-#if DEBUG
-		log.LogInfo($"HealthEffectStarted: {effectName}, ignoring duplicates for {HEVMod.Instance.ignoreDuplicateEffectsTime.Value} secs");
-#endif
+		log.LogDebug($"HealthEffectStarted: {effectName}, ignoring duplicates for {HEVMod.Instance.ignoreDuplicateEffectsTime.Value} secs");
 	}
 
 	private IEnumerator BeginExpireEffect(string effectName)
@@ -220,11 +200,6 @@ public class VoiceController : MonoBehaviour
 		PlaySentenceById(templateId);
 	}
 
-	public bool OnWeaponMalfunction(Weapon.EMalfunctionState state)
-	{
-		return false;
-	}
-
 	// This handles the playback, triggered by Update() when needed
 	private IEnumerator PlaySentences()
 	{
@@ -233,16 +208,9 @@ public class VoiceController : MonoBehaviour
 			HEVSentence sentence = pendingSentences[0];
 			foreach (HEVAudioClip clip in sentence.Clips)
 			{
-				audioSource.clip = assets.LoadAsset<AudioClip>(clip.ClipName);
+				audioSource.clip = clip.Clip;
 				audioSource.pitch = clip.Pitch;
 				audioSource.volume = clip.Volume;
-
-				// Handle missing files
-				if (audioSource.clip == null)
-				{
-					log.LogError($"Missing clip: {clip.ClipName}");
-					continue;
-				}
 
 				yield return new WaitForSeconds(clip.Delay);
 				for (int i = 0; i < clip.Loops; i++)
@@ -268,20 +236,14 @@ public class VoiceController : MonoBehaviour
 		HEVSentence sentence = GetSentenceById(identifier);
 		if (sentence == null)
 		{
-#if DEBUG
 			log.LogError("GetSentenceById is null!");
-#endif
 			return;
 		}
 
 		PlaySentence(sentence);
 	}
 
-	/// <summary>
-	/// Get a parsed sentence. If more than one shares an identifier, picks a random one.
-	/// </summary>
-	/// <param name="identifier"></param>
-	public HEVSentence GetSentenceById(string identifier)
+	private HEVSentence GetSentenceById(string identifier)
 	{
 		if (string.IsNullOrEmpty(identifier))
 		{
@@ -294,7 +256,7 @@ public class VoiceController : MonoBehaviour
 			log.LogWarning("GetSentenceById: allSentences is null or empty.");
 			return null;
 		}
-		
+
 		var matches = allSentences.Where(x => x != null && x.Identifier == identifier).ToList();
 		if (matches.Count == 0)
 		{
@@ -305,53 +267,36 @@ public class VoiceController : MonoBehaviour
 		return matches.PickRandom();
 	}
 
-	/// <summary>
-	/// Get a sentence from an integer, ex: 25
-	/// </summary>
-	/// <param name="number"></param>
-	/// <returns></returns>
-	public HEVSentence GetNumberSentence(int number)
+	// Demand load number clips
+	private HEVSentence GetNumberSentence(int number)
 	{
+		// See if we've already generated this number first
+		HEVSentence sentence = GetSentenceById(number.ToString());
+		if (sentence != null)
+			return sentence;
+
 		List<HEVAudioClip> clips = new();
 		string[] clipNames = GetNumberClips(number);
 
 		for (int i = 0; i < clipNames.Length; i++)
 		{
 			clipNames[i] = $"assets/sounds/numbers/{clipNames[i]}.wav";
-			clips.Add(new HEVAudioClip(clipNames[i], 1, 0f, 1f, HEVMod.Instance.globalVolume.Value, 0f));
+			AudioClip clip = assets.LoadAsset<AudioClip>(clipNames[i]);
+			clips.Add(new HEVAudioClip(clip, 1, 0f, 1f, HEVMod.Instance.globalVolume.Value, 0f));
 		}
 
-		return new HEVSentence(null, clips);
+		sentence = new(number.ToString(), clips);
+		allSentences.Add(sentence);
+		return sentence;
 	}
 
-	/// <summary>
-	/// Get direction as a sentence
-	/// </summary>
-	/// <param name="bearing"></param>
-	/// <returns></returns>
-	public HEVSentence GetDirectionSentence(int bearing)
+	private HEVSentence GetDirectionSentence(int bearing)
 	{
-		// TODO: Add directions to sentences.txt instead of generating them
-		return new HEVSentence(null, [new HEVAudioClip(GetDirectionClip(bearing))]);
-	}
-
-	/// <summary>
-	/// Get direction clip from compass bearing
-	/// </summary>
-	/// <param name="bearing"></param>
-	/// <returns></returns>
-	public string GetDirectionClip(int bearing)
-	{
-		string[] directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest" };
+		string[] directions = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
 		int index = Mathf.FloorToInt((bearing + 22.5f) / 45f) % 8;
-		return $"assets/sounds/compass/{directions[index]}.wav";
+		return GetSentenceById(directions[index]);
 	}
 
-	/// <summary>
-	/// Convert an integer into clip file names for generating a number sentence
-	/// </summary>
-	/// <param name="number"></param>
-	/// <returns>An array of file names for generating the HEVClip</returns>
 	private string[] GetNumberClips(int number)
 	{
 		if (number == 0)

@@ -47,6 +47,12 @@ public class Flashlight : MonoBehaviour
 		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition;
 	}
 
+	private void OnDestroy()
+	{
+		if (this == Instance)
+			Instance = null;
+	}
+
 	private void Update()
 	{
 		if (Input.GetKeyDown(KeyCode.J)) // Temporary key

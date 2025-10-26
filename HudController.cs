@@ -43,7 +43,7 @@ public class HudController : MonoBehaviour
 	private HudImage[] suitGroup = new HudImage[5]; // Group of all suit images
 
 	// Ammo counter
-	private HudImage ammo;
+	private HudImage ammoIcon;
 	private HudImage[] ammoVal = new HudImage[3];
 	private HudImage[] ammoGroup = new HudImage[4]; // Group of all ammo images
 
@@ -53,7 +53,7 @@ public class HudController : MonoBehaviour
 	private HudImage flashBeam;
 	private HudImage[] flashGroup = new HudImage[3];
 
-	// Hit indicators - Order in scene: Up Right Down Left
+	// Hit indicators - Order in prefab: Up Right Down Left
 	private HudImage hitIndicatorUp;
 	private HudImage hitIndicatorRight;
 	private HudImage hitIndicatorDown;
@@ -117,8 +117,8 @@ public class HudController : MonoBehaviour
 
 		// Ammo counter and icon
 		for (int i = 0; i < 3; i++)	ammoVal[i] = new(Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}"));
-		ammo = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
-		ammoGroup = [ammo, ammoVal[0], ammoVal[1], ammoVal[2]];
+		ammoIcon = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
+		ammoGroup = [ammoIcon, ammoVal[0], ammoVal[1], ammoVal[2]];
 
 		// Flashlight indicator
 		flashEmpty = new(Utils.FindComponent<Image>(hud, "Flashlight/IconEmpty"));
@@ -175,8 +175,10 @@ public class HudController : MonoBehaviour
 	private void Start()
 	{
 		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => TakeDamage(damageInfo);
+		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => SuitPowerChanged(damageInfo);
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += (_) => SuitPowerChanged(null);
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
-		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged; // subscribe to weapon events
+		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged();
 		Flashlight.Instance.Toggled += FlashlightToggled;
 		Flashlight.Instance.BatteryUpdate += SetFlashlightBattery;
@@ -184,28 +186,31 @@ public class HudController : MonoBehaviour
 
 		// Init value sprites
 		HealthChanged();
-		SuitPowerChanged();
+		SuitPowerChanged(null);
 	}
 
 	private void OnDestroy()
 	{
-		// GamePlayerOwner stuff may not be needed if MyPlayer clears by itself, look into that
 		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => TakeDamage(damageInfo);
+		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => SuitPowerChanged(damageInfo);
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= (_) => SuitPowerChanged(null);
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => HealthChanged();
 		Flashlight.Instance.Toggled -= FlashlightToggled;
 		Flashlight.Instance.BatteryUpdate -= SetFlashlightBattery;
 		Flashlight.Instance.BatteryLow -= SetFlashlightBatteryCritical;
+		if (this == Instance)
+			Instance = null;
 	}
 
 	private void Update()
 	{
-#if DEBUG
+#if DEBUG // Add a notification to a random side
 		if (Input.GetKeyDown(KeyCode.F6))
 			NotifyIcon(fireDamage, UnityEngine.Random.Range(0f, 1f) > 0.5f);
 #endif
-		// Iterate backward so we can safely RemoveAt() for notification icons
+		// Iterate backward so we can safely RemoveAt(i) for notification icons
 		for (int i = allHudImages.Count -1; i >= 0; i--)
 		{
 			HudImage img = allHudImages[i];
@@ -218,13 +223,13 @@ public class HudController : MonoBehaviour
 				case EImageState.Inactive:
 					break;
 
-				// 2: Ramp the brightness down to normal and mark as 'inactive'
+				// Ramp the brightness down to normal and mark as 'inactive'
 				case EImageState.Deactivating:
 					if(UpdateTransition(img, ACTIVATE_TIME, inactiveColor))
 						img.State = EImageState.Inactive;
 					break;
 
-				// 2: Ramp the brightness up to max and mark as 'active'
+				// Ramp the brightness up to max and mark as 'active'
 				case EImageState.Activating:
 					if(UpdateTransition(img, ACTIVATE_TIME, activeColor))
 						img.State = EImageState.Active;
@@ -254,7 +259,7 @@ public class HudController : MonoBehaviour
 						img.State = EImageState.Inactive;
 					break;
 
-				// DamageNotification 1: A damage notification has been added, pulse it bright<->clear a few times
+				// DamageNotification 1: A damage notification spawned, pulse it bright<->clear a few times
 				case EImageState.DamageNotification:
 					img.Timer += Time.deltaTime;
 					img.Image.color = Color.Lerp(Color.clear, activeColor, (Mathf.Sin(img.Timer * 4f) + 1f) * 0.5f);
@@ -275,7 +280,7 @@ public class HudController : MonoBehaviour
 					activeDamageNotifications.Remove(img);
 					break;
 
-				// Notification 1: A notification has been added, make it bright and fade to normal
+				// Notification 1: A notification spawned, make it bright and fade to normal
 				case EImageState.Notification:
 					if (UpdateTransition(img, FADE_TIME, inactiveColor))
 						StartTransition(img, EImageState.IdleNotification);
@@ -300,6 +305,16 @@ public class HudController : MonoBehaviour
 					allHudImages.RemoveAt(i);
 					activeNotifications.Remove(img);
 					break;
+			}
+
+			// Highlight critical health or ammo once every second
+			if (Time.time % 1f < Time.deltaTime)
+			{
+				if (healthIcon.Critical)
+					Highlight(healthGroup);
+
+				if (ammoIcon.Critical)
+					Highlight(ammoGroup);
 			}
 		}
 	}
@@ -434,18 +449,34 @@ public class HudController : MonoBehaviour
 		float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
 		int normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
 		SetNumberDigits(healthVal, normalizedHealth);
-		SetCritical([healthIcon, healthVal[0], healthVal[1], healthVal[2]], normalizedHealth <= 25);
-		Highlight([healthIcon, healthVal[0], healthVal[1], healthVal[2]]);
+		SetCritical(healthGroup, normalizedHealth <= /*25*/ 90); // FIXME: just testing, change back to 25 later
+		Highlight(healthGroup);
 	}
 
-	private void SuitPowerChanged()
+	private void SuitPowerChanged(DamageInfoStruct? damageInfo)
 	{
-		// TODO: This doesn't actually do anything yet
-		int temp = 100;
-		char[] digits = temp.ToString("000").ToCharArray();
-		suitFull.Image.fillAmount = temp / 100f;
-		SetNumberDigits(suitVal, temp);
-		//SetCritical(suitGroup, temp); // HL1 doesn't set suit to red, TODO: check hl1 code to confirm
+		// TODO: This will eventually be the HEV suit itself, using a Strandhogg for testing right now
+		if (GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem is not VestItemClass vest)
+			return;
+
+		float current = 0, max = 0;
+		foreach (Slot slot in vest.Slots)
+		{
+			if (slot.ContainedItem == null)
+				continue;
+
+			ArmoredEquipmentItemClass comp = slot.ContainedItem as ArmoredEquipmentItemClass;
+			current += comp.Repairable.Durability;
+			max += comp.Repairable.MaxDurability;
+		}
+
+		int normalized = Mathf.CeilToInt(current / max * 100f);
+		suitFull.Image.fillAmount = normalized / 100f;
+		SetNumberDigits(suitVal, normalized);
+		if (damageInfo == null || damageInfo?.DidArmorDamage < 0.01)
+			return; // Don't highlight unless it was noticeable
+
+		// HL1 doesn't set suit to red, TODO: check hl1 code to confirm
 		Highlight(suitGroup);
 	}
 

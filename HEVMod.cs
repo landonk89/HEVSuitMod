@@ -1,5 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
+using EFT.InventoryLogic;
+using EFT;
 using EFT.UI;
 using System.IO;
 using UnityEngine;
@@ -11,29 +13,21 @@ public class HEVMod : BaseUnityPlugin
 {
 	// Constants
 	public const float DEFAULT_PLAYBACK_DELAY = 0.25f;
-	public const string MOD_DIR = PluginInfo.PLUGIN_NAME;
-	public const string BUNDLE_FILE = "hevsuit.bundle";
 
 	// Singleton
 	public static HEVMod Instance { get; private set; }
 
 	// File related stuff
 	public AssetBundle Assets { get; private set; }
-	private readonly string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, MOD_DIR, BUNDLE_FILE);
+	private readonly string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, PluginInfo.PLUGIN_NAME, "hevsuit.bundle");
 
 	// Config
 	public ConfigEntry<float> globalVolume;
 	public ConfigEntry<float> ignoreDuplicateEffectsTime;
-	public ConfigEntry<bool> sayMakerOnInspect;
-	public ConfigEntry<bool> sayModelOnInspect;
-	public ConfigEntry<bool> sayTypeOnInspect;
-	public ConfigEntry<bool> sayTypeOnChamberCheck;
-	public ConfigEntry<bool> sayNameOnChamberCheck;
-	public ConfigEntry<bool> sayExtendedOnChamberCheck;
-	public ConfigEntry<bool> applySettings;
+	public ConfigEntry<bool> identifyWeapon;
+	public ConfigEntry<bool> identifyAmmo;
 
 	// Components
-	private SentenceParser parser;
 	private VoiceController voiceController;
 	private HudController hudController;
 	private Flashlight flashlight;
@@ -58,81 +52,36 @@ public class HEVMod : BaseUnityPlugin
 		}
 
 		// Config stuff
-		ignoreDuplicateEffectsTime = Config.Bind(
-				"Suit Settings",
-				"Ignore duplicate events time",
-				30.0f,
-				"Don't play the same voiceline more than once within this amount of time (seconds)"
-			);
-
 		globalVolume = Config.Bind(
-				"Voicelines",
-				"Volume",
-				1.0f,
-				new ConfigDescription("Volume", new AcceptableValueRange<float>(0f, 1f))
-			);
-
-		sayMakerOnInspect = Config.Bind(
-				"Voicelines",
-				"Say weapon maker when inspecting (ex: Colt)",
-				true,
-				"When inspecting a weapon, the HEV will say the maker name first"
-			);
-
-		sayModelOnInspect = Config.Bind(
-				"Voicelines",
-				"Say weapon model when inspecting (ex: M4A1)",
-				true,
-				"When inspecting a weapon, the HEV will say the model name"
-			);
-
-		sayTypeOnInspect = Config.Bind(
-				"Voicelines",
-				"Say weapon caliber when inspecting (ex: 5.56x45)",
-				false,
-				"When inspecting a weapon, the HEV will say its caliber/type after the name"
-			);
-
-		sayTypeOnChamberCheck = Config.Bind(
-				"Voicelines",
-				"Say ammo caliber when checking chamber (Ex: 5.56x45)",
-				false,
-				"When inspecting a weapon's chamber, the HEV will say its caliber/type first"
-			);
-
-		sayNameOnChamberCheck = Config.Bind(
-				"Voicelines",
-				"Say ammo name when checking chamber (Ex: M855)",
-				false,
-				"When inspecting a weapon's chamber, the HEV will say its name"
-			);
-
-		sayExtendedOnChamberCheck = Config.Bind(
-				"Voicelines",
-				"Say ammo exdended name when checking chamber (Ex: Subsonic, Tracer)",
-				true,
-				"When inspecting a weapon's chamber, the HEV will say its extended name last (ex: Tracer)"
-			);
-
-		applySettings = Config.Bind(
-			"Voicelines",
-			"Apply and reload voice settings",
-			false,
-			"Check this box to reload voicelines after changing settings. It will automatically uncheck after running."
+			"Suit Settings",
+			"Volume",
+			1.0f,
+			new ConfigDescription("Volume", new AcceptableValueRange<float>(0f, 1f))
 		);
 
-		// Reload sentences when we need to
-		applySettings.SettingChanged += (_, _) =>
-		{
-			if (applySettings.Value)
-			{
-				parser.Reparse();
-				applySettings.Value = false;
-			}
-		};
+		ignoreDuplicateEffectsTime = Config.Bind(
+			"Suit Settings",
+			"Ignore duplicate events time",
+			30.0f,
+			"Don't play the same voiceline more than once within this amount of time (seconds)"
+		);
+
+		identifyWeapon = Config.Bind(
+			"Suit Settings",
+			"Speak weapon name on inspect",
+			false,
+			"HEV will speak the name of your weapon when you inspect it."
+		);
+
+		identifyAmmo = Config.Bind(
+			"Suit Settings",
+			"Speak ammo name on chamber check",
+			false,
+			"HEV will speak the name of the ammo type in your weapon's chamber when you check it."
+		);
 
 		// Parse sentences file for the voicecontroller.
-		parser = new(Assets);
+		new SentenceParser(Assets);
 
 		// Enable patches
 		new OnNewGame().Enable();
@@ -145,21 +94,34 @@ public class HEVMod : BaseUnityPlugin
 		ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
 	}
 
-	/// <summary>
-	/// Called by patches when player spawns
-	/// </summary>
+	private void CheckForSuit(Item item)
+	{
+		if (item == null)
+		{
+			voiceController.enabled = false;
+			hudController.enabled = false;
+			flashlight.enabled = false;
+		}
+		else //if (item.Name == "item_equipment_rig_strandhogg") // TODO: Replace with HEV when it's asset is created
+		{
+			voiceController.enabled = true;
+			hudController.enabled = true;
+			flashlight.enabled = true;
+		}
+	}
+
 	public void OnGameStarted()
 	{
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
 		voiceController = gameObject.AddComponent<VoiceController>();
 		flashlight = gameObject.AddComponent<Flashlight>();
 		hudController = gameObject.AddComponent<HudController>();
+		CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
 	}
 
-	/// <summary>
-	/// Called by patches when player despawns
-	/// </summary>
 	public void OnGameEnded()
 	{
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= CheckForSuit;
 		Destroy(voiceController);
 		Destroy(hudController);
 		Destroy(flashlight);

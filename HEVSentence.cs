@@ -2,22 +2,8 @@
 
 namespace HEVSuitMod;
 
-public enum EParseType
+public class HEVSentence(string identifier, List<HEVAudioClip> clips)
 {
-	None,
-	Events,
-	Weapons,
-	Types
-}
-
-public class HEVSentence
-{
-	public string Identifier { get; }
-	public List<HEVAudioClip> Clips { get; }
-
-	public HEVSentence(string identifier, List<HEVAudioClip> sentence)
-	{
-		Identifier = identifier;
-		Clips = sentence;
-	}
+	public string Identifier { get; } = identifier;
+	public List<HEVAudioClip> Clips { get; } = clips;
 }
