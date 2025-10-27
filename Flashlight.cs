@@ -16,7 +16,7 @@ public class Flashlight : MonoBehaviour
 
 	public static Flashlight Instance { get; private set; }
 	private AssetBundle assets = HEVMod.Instance.Assets;
-	private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
+	//private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio
 	private bool isOn = false;
@@ -46,7 +46,7 @@ public class Flashlight : MonoBehaviour
 		lightSource.range = 50f;
 		lightSource.cookie = assets.LoadAsset<Texture2D>("assets/sprites/hl2flashlightcookie.tga");
 		lightSource.enabled = false;
-		flashlight.transform.SetPositionAndRotation(GamePlayerOwner.MyPlayer.CameraPosition.position, GamePlayerOwner.MyPlayer.CameraPosition.rotation);
+		//flashlight.transform.SetPositionAndRotation(GamePlayerOwner.MyPlayer.CameraPosition.position, GamePlayerOwner.MyPlayer.CameraPosition.rotation);
 		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition;
 		flashlight.transform.localPosition = new(0f, -0.25f, 0.25f);
 	}
@@ -80,7 +80,7 @@ public class Flashlight : MonoBehaviour
 				batteryLevel = Mathf.Clamp01(batteryLevel + BATT_CHARGE_RATE * Time.deltaTime);
 		}
 
-		BatteryUpdate.Invoke(batteryLevel);
+		BatteryUpdate?.Invoke(batteryLevel);
 
 		bool lowBatteryThisFrame = batteryLevel < BATT_LOW_THRESHOLD;
 		if (lowBatteryThisFrame != lowBattery)

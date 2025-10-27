@@ -11,7 +11,7 @@ namespace HEVSuitMod;
 
 public class HudController : MonoBehaviour
 {
-	private const float AMMO_RATIO_CRITICAL = 0.2f; // One third
+	private const float AMMO_RATIO_CRITICAL = 0.2f; // 20% left in mag+chamber
 	private const int MAX_NOTIFICATIONS = 7; // The area fits 7 images at 100x100 comfortably
 	private const float NOTIFY_TIME = 1.5f;
 	private const float DMG_NOTIFY_TIME = 4f;
@@ -91,12 +91,6 @@ public class HudController : MonoBehaviour
 			Instance = this;
 
 		assets = HEVMod.Instance.Assets;
-		if (assets == null) // Can't happen, but you can bet it will somehow...
-		{
-			log.LogFatal("Couldn't get assetbundle!");
-			return;
-		}
-
 		hudPrefab = assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab");
 		hud = Instantiate(hudPrefab);
 
@@ -447,15 +441,11 @@ public class HudController : MonoBehaviour
 		Highlight(ammoGroup);
 	}
 
-	private void HealthChanged(bool died = false)
+	private void HealthChanged(bool alive = true)
 	{
 		// FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
 		int normalizedHealth = 0;
-		if (died)
-		{
-			normalizedHealth = 0;
-		}
-		else
+		if (alive)
 		{
 			float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
 			normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
@@ -552,6 +542,10 @@ public class HudController : MonoBehaviour
 
 			case var dt when (dt & EDamageType.Dehydration) != 0:
 				damageIcon = dehydrationDamage;
+				break;
+
+			case var dt when (dt & EDamageType.Environment) != 0: // TODO: Verify this is freezing in winter
+				damageIcon = coldDamage;
 				break;
 		}
 

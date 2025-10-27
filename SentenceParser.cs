@@ -28,12 +28,6 @@ public class SentenceParser
 			Instance = this;
 
 		assets = assetBundle;
-		if (assets == null)
-		{
-				log.LogError("Couldn't get assetbundle!");
-				return;
-		}
-
 		allFiles = [..assets.GetAllAssetNames()];
 		ParseAllSentences();
 	}
