@@ -74,6 +74,7 @@ public class HudController : MonoBehaviour
 	// Active notifications
 	private Transform notificationArea;
 	private Transform damageNotificationArea;
+	private Transform textNotificationArea;
 	private List<HudImage> activeNotifications = [];
 	private List<HudImage> activeDamageNotifications = [];
 
@@ -131,8 +132,9 @@ public class HudController : MonoBehaviour
 		foreach (Image hit in hitIndicatorImg) hit.color = Color.clear; // Start transparent
 
 		// Notification areas
-		notificationArea = Utils.FindComponent<Transform>(hud, "RightNotifyArea");
-		damageNotificationArea = Utils.FindComponent<Transform>(hud, "LeftNotifyArea");
+		notificationArea = hud.transform.Find("RightNotifyArea");
+		damageNotificationArea = hud.transform.Find("LeftNotifyArea");
+		textNotificationArea = hud.transform.Find("TextNotifyArea");
 
 		// Damage type sprites
 		bulletDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bullet.tga");
@@ -142,8 +144,8 @@ public class HudController : MonoBehaviour
 		barbwireDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_barbed.tga");
 		toxinDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bio.tga");
 		radiationDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_rad.tga");
-		dehydrationDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_chem.tga"); // TODO: make unique sprite
-		exhaustionDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_chem.tga"); // TODO: make unique sprite
+		dehydrationDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_dehydrated.tga");
+		exhaustionDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_exhausted.tga");
 
 		// Map the 8 hit directions to our indicators, like a compass for pain
 		hitIndicatorDirections =
@@ -176,7 +178,7 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged(true);
 		Flashlight.Instance.Toggled += FlashlightToggled;
 		Flashlight.Instance.BatteryUpdate += SetFlashlightBattery;
-		Flashlight.Instance.BatteryLow += SetFlashlightBatteryCritical;
+		Flashlight.Instance.BatteryStateChanged += SetFlashlightBatteryCritical;
 		hud.SetActive(true);
 		HealthChanged();
 		SuitPowerChanged(null);
@@ -192,7 +194,7 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => HealthChanged();
 		Flashlight.Instance.Toggled -= FlashlightToggled;
 		Flashlight.Instance.BatteryUpdate -= SetFlashlightBattery;
-		Flashlight.Instance.BatteryLow -= SetFlashlightBatteryCritical;
+		Flashlight.Instance.BatteryStateChanged -= SetFlashlightBatteryCritical;
 		hud.SetActive(false);
 	}
 
@@ -458,10 +460,14 @@ public class HudController : MonoBehaviour
 	private void SuitPowerChanged(DamageInfoStruct? damageInfo)
 	{
 		// TODO: This will eventually be the HEV suit itself, using a Strandhogg for testing right now
-		if (GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem is not VestItemClass vest)
-			return;
-
 		float current = 0, max = 0;
+		if (GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem is not VestItemClass vest)
+		{
+			suitFull.Image.fillAmount = 0f;
+			SetNumberDigits(suitVal, 0);
+			return;
+		}
+
 		foreach (Slot slot in vest.Slots)
 		{
 			if (slot.ContainedItem == null)

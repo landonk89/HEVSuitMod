@@ -67,7 +67,7 @@ internal class OnInspectChamber : ModulePatch
 	}
 }
 
-// TODO: Test this for guns that can top load (sks, m700, etc)
+// TODO: This isn't working as expected, revisit
 internal class OnLoadSingleAmmo : ModulePatch
 {
 	protected override MethodBase GetTargetMethod()

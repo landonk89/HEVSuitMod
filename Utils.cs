@@ -4,6 +4,7 @@ using System.Text;
 using System.Linq;
 using UnityEngine;
 using BepInEx.Logging;
+using System.Reflection;
 
 namespace HEVSuitMod;
 
@@ -135,5 +136,24 @@ public static class Utils
 			log.LogWarning($"FindComponentsInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
 		
 		return components;
+	}
+
+	/// <summary>
+	/// Adds a component of type T to the GameObject and calls its Initialize() method if it exists.
+	/// </summary>
+	public static T AddComponent<T>(this GameObject obj, params object[] args) where T : MonoBehaviour
+	{
+		T component = obj.AddComponent<T>();
+		MethodInfo initMethod = typeof(T).GetMethod(
+			"Initialize",
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+		);
+
+		if (initMethod != null)
+			initMethod.Invoke(component, args);
+		else if (args.Length > 0)
+			log.LogWarning($"AddComponent - {typeof(T).Name} has no Initialize() method but arguments were provided.");
+
+		return component;
 	}
 }
