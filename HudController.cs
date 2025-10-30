@@ -163,6 +163,9 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged(true);
+		HEVMod.Instance.Flashlight.Toggled += FlashlightToggled;
+		HEVMod.Instance.Flashlight.BatteryUpdate += SetFlashlightBattery;
+		HEVMod.Instance.Flashlight.BatteryStateChanged += SetFlashlightBatteryCritical;
 		hud?.SetActive(true);
 		HealthChanged();
 		SuitPowerChanged(null);
@@ -176,23 +179,10 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => HealthChanged();
+		HEVMod.Instance.Flashlight.Toggled -= FlashlightToggled;
+		HEVMod.Instance.Flashlight.BatteryUpdate -= SetFlashlightBattery;
+		HEVMod.Instance.Flashlight.BatteryStateChanged -= SetFlashlightBatteryCritical;
 		hud?.SetActive(false);
-	}
-
-	public void SubscribeFlashlight(Flashlight flashlight, bool enabled)
-	{
-		if (enabled)
-		{
-			flashlight.Toggled += FlashlightToggled;
-			flashlight.BatteryUpdate += SetFlashlightBattery;
-			flashlight.BatteryStateChanged += SetFlashlightBatteryCritical;
-		}
-		else
-		{
-			flashlight.Toggled -= FlashlightToggled;
-			flashlight.BatteryUpdate -= SetFlashlightBattery;
-			flashlight.BatteryStateChanged -= SetFlashlightBatteryCritical;
-		}
 	}
 
 	private void Update()

@@ -104,14 +104,14 @@ public class HEVMod : BaseUnityPlugin
 		if (item == null)
 		{
 			VoiceController.enabled = false;
-			HudController.enabled = false;
 			Flashlight.enabled = false;
+			HudController.enabled = false;
 		}
 		else //if (item.Name == "item_equipment_rig_strandhogg") // TODO: Replace with HEV when it's asset is created
 		{
 			VoiceController.enabled = true;
-			HudController.enabled = true;
 			Flashlight.enabled = true;
+			HudController.enabled = true;
 		}
 	}
 
@@ -119,8 +119,8 @@ public class HEVMod : BaseUnityPlugin
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
 		VoiceController = gameObject.AddComponent<VoiceController>();
-		HudController = gameObject.AddComponent<HudController>();
 		Flashlight = gameObject.AddComponent<Flashlight>();
+		HudController = gameObject.AddComponent<HudController>();
 		//CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
 	}
 
@@ -128,7 +128,7 @@ public class HEVMod : BaseUnityPlugin
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= CheckForSuit;
 		Destroy(VoiceController);
-		Destroy(HudController);
 		Destroy(Flashlight);
+		Destroy(HudController);
 	}
 }

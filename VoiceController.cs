@@ -109,9 +109,7 @@ public class VoiceController : MonoBehaviour
 		string effectName = effectType.Name;
 		if (activeStatusEffects.Contains(effectName))
 		{
-#if DEBUG
-			log.LogInfo($"HealthEffectStarted: Duplicate effect {effectName}");
-#endif
+			log.LogDebug($"HealthEffectStarted: Duplicate effect {effectName}");
 			return;
 		}
 
@@ -180,7 +178,6 @@ public class VoiceController : MonoBehaviour
 	private IEnumerator BeginExpireEffect(string effectName)
 	{
 		yield return new WaitForSeconds(HEVMod.Instance.ignoreDuplicateEffectsTime.Value);
-
 		activeStatusEffects.Remove(effectName);
 	}
 

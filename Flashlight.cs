@@ -18,15 +18,16 @@ public class Flashlight : MonoBehaviour
 	private const float BATT_LOW_THRESHOLD = 0.25f;
 	private const float BATT_DRAIN_RATE = 0.01f;
 	private const float BATT_CHARGE_RATE = 0.05f;
-	private const float TRANSITION_TIME = 0.1f;
+	private const float TRANSITION_TIME = 0.1f; // Thermal inertia time (on->off)
 
-	private AssetBundle assets;// = HEVMod.Instance.Assets;
+	private AssetBundle assets;
 	private HudController hud;
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio
 	private bool batteryCritical = false;
 	private float batteryLevel = 1f; // 0..1
 	private EState state = EState.OffCharged;
+	GameObject flashlight = new("FlashlightContainer");
 
 	public event Action<bool> Toggled;
 	public event Action<float> BatteryUpdate;
@@ -36,7 +37,6 @@ public class Flashlight : MonoBehaviour
 	{
 		assets = HEVMod.Instance.Assets;
 		hud = HEVMod.Instance.HudController;
-		GameObject flashlight = new("FlashlightContainer");
 		audioSource = flashlight.AddComponent<AudioSource>();
 		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
 		lightSource = flashlight.AddComponent<Light>();
@@ -45,14 +45,14 @@ public class Flashlight : MonoBehaviour
 		lightSource.range = 50f;
 		lightSource.cookie = assets.LoadAsset<Texture2D>("assets/sprites/hl2flashlightcookie.tga");
 		lightSource.enabled = false;
-		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition;
+		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition; // Attasch to our face and reposition
 		flashlight.transform.localPosition = new(0f, -0.25f, 0.25f);
 		flashlight.transform.localRotation = Quaternion.identity;
 	}
 
-	private void OnEnable()
+	private void OnDestroy()
 	{
-		hud?.SubscribeFlashlight(this, true);
+		Destroy(flashlight);
 	}
 
 	private void OnDisable()
@@ -61,7 +61,6 @@ public class Flashlight : MonoBehaviour
 		lightSource.intensity = 0f;
 		batteryLevel = 1f;
 		state = EState.OffCharged;
-		hud?.SubscribeFlashlight(this, false);
 	}
 
 	private void Update()
@@ -79,7 +78,7 @@ public class Flashlight : MonoBehaviour
 					batteryLevel = Mathf.Clamp01(batteryLevel + BATT_CHARGE_RATE * Time.deltaTime);
 				
 				BatteryUpdate?.Invoke(batteryLevel);
-				if (batteryLevel >= 0.99f)
+				if (batteryLevel > 0.99f)
 					state = EState.OffCharged;
 				break;
 
