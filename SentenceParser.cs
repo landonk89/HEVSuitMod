@@ -12,7 +12,6 @@ public class SentenceParser
 {
 	private const string SENTENCES_FILE = "assets/scripts/sentences.txt";
 
-	public static SentenceParser Instance { get; private set; }
 	private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
 	private readonly AssetBundle assets;
 	private readonly List<string> allFiles = [];
@@ -22,11 +21,6 @@ public class SentenceParser
 
 	public SentenceParser(AssetBundle assetBundle)
 	{
-		if (Instance != null && Instance != this)
-			return;
-		else
-			Instance = this;
-
 		assets = assetBundle;
 		allFiles = [..assets.GetAllAssetNames()];
 		ParseAllSentences();

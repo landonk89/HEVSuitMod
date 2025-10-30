@@ -18,10 +18,8 @@ public class HudController : MonoBehaviour
 	private const float ACTIVATE_TIME = 0.25f;
 	private const float FADE_TIME = 0.5f;
 
-	public static HudController Instance { get; private set; }
+	//public static HudController Instance { get; private set; }
 	private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
-	private AssetBundle assets;
-	private GameObject hudPrefab;
 	private GameObject hud;
 
 	// TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
@@ -74,26 +72,16 @@ public class HudController : MonoBehaviour
 	// Active notifications
 	private Transform notificationArea;
 	private Transform damageNotificationArea;
-	private Transform textNotificationArea;
-	private List<HudImage> activeNotifications = [];
-	private List<HudImage> activeDamageNotifications = [];
+	private readonly List<HudImage> activeNotifications = [];
+	private readonly List<HudImage> activeDamageNotifications = [];
 
 	// For state machine
-	private List<HudImage> allHudImages = [];
+	private readonly List<HudImage> allHudImages = [];
 
 	private void Awake()
 	{
-		if (Instance != null && Instance != this)
-		{
-			Destroy(this);
-			return;
-		}
-		else
-			Instance = this;
-
-		assets = HEVMod.Instance.Assets;
-		hudPrefab = assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab");
-		hud = Instantiate(hudPrefab);
+		AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
+		hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
 
 		// Cache number sprites, index 10 is a blank sprite
 		for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
@@ -102,7 +90,7 @@ public class HudController : MonoBehaviour
 		// Health digits and icon
 		for (int i = 0; i < 3; i++) healthVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/HealthValue/Digit{i}"));
 		healthIcon = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/HealthIcon"));
-		healthGroup = [ healthIcon, healthVal[0], healthVal[1], healthVal[2] ];
+		healthGroup = [healthIcon, healthVal[0], healthVal[1], healthVal[2]];
 
 		// SuitPower digits and icon
 		for (int i = 0; i < 3; i++) suitVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}"));
@@ -111,7 +99,7 @@ public class HudController : MonoBehaviour
 		suitGroup = [suitFull, suitEmpty, suitVal[0], suitVal[1], suitVal[2]];
 
 		// Ammo counter and icon
-		for (int i = 0; i < 3; i++)	ammoVal[i] = new(Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}"));
+		for (int i = 0; i < 3; i++) ammoVal[i] = new(Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}"));
 		ammoIcon = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
 		ammoGroup = [ammoIcon, ammoVal[0], ammoVal[1], ammoVal[2]];
 
@@ -134,7 +122,6 @@ public class HudController : MonoBehaviour
 		// Notification areas
 		notificationArea = hud.transform.Find("RightNotifyArea");
 		damageNotificationArea = hud.transform.Find("LeftNotifyArea");
-		textNotificationArea = hud.transform.Find("TextNotifyArea");
 
 		// Damage type sprites
 		bulletDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bullet.tga");
@@ -176,10 +163,7 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged(true);
-		Flashlight.Instance.Toggled += FlashlightToggled;
-		Flashlight.Instance.BatteryUpdate += SetFlashlightBattery;
-		Flashlight.Instance.BatteryStateChanged += SetFlashlightBatteryCritical;
-		hud.SetActive(true);
+		hud?.SetActive(true);
 		HealthChanged();
 		SuitPowerChanged(null);
 	}
@@ -192,16 +176,23 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => HealthChanged();
-		Flashlight.Instance.Toggled -= FlashlightToggled;
-		Flashlight.Instance.BatteryUpdate -= SetFlashlightBattery;
-		Flashlight.Instance.BatteryStateChanged -= SetFlashlightBatteryCritical;
-		hud.SetActive(false);
+		hud?.SetActive(false);
 	}
 
-	private void OnDestroy()
+	public void SubscribeFlashlight(Flashlight flashlight, bool enabled)
 	{
-		if (this == Instance)
-			Instance = null;
+		if (enabled)
+		{
+			flashlight.Toggled += FlashlightToggled;
+			flashlight.BatteryUpdate += SetFlashlightBattery;
+			flashlight.BatteryStateChanged += SetFlashlightBatteryCritical;
+		}
+		else
+		{
+			flashlight.Toggled -= FlashlightToggled;
+			flashlight.BatteryUpdate -= SetFlashlightBattery;
+			flashlight.BatteryStateChanged -= SetFlashlightBatteryCritical;
+		}
 	}
 
 	private void Update()

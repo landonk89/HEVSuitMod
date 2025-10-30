@@ -1,13 +1,9 @@
-﻿using BepInEx.Logging;
-using System;
+﻿using System;
 using EFT;
 using UnityEngine;
 
 namespace HEVSuitMod;
 
-/// <summary>
-/// Simple HL1 style flashlight
-/// </summary>
 public class Flashlight : MonoBehaviour
 {
 	private enum EState
@@ -22,11 +18,10 @@ public class Flashlight : MonoBehaviour
 	private const float BATT_LOW_THRESHOLD = 0.25f;
 	private const float BATT_DRAIN_RATE = 0.01f;
 	private const float BATT_CHARGE_RATE = 0.05f;
-	private const float TRANSITION_TIME = 0.2f;
+	private const float TRANSITION_TIME = 0.1f;
 
-	public static Flashlight Instance { get; private set; }
-	private AssetBundle assets = HEVMod.Instance.Assets;
-	//private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Flashlight");
+	private AssetBundle assets;// = HEVMod.Instance.Assets;
+	private HudController hud;
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio
 	private bool batteryCritical = false;
@@ -39,14 +34,8 @@ public class Flashlight : MonoBehaviour
 
 	private void Awake()
 	{
-		if (Instance != null && Instance != this)
-		{
-			Destroy(this);
-			return;
-		}
-		else
-			Instance = this;
-
+		assets = HEVMod.Instance.Assets;
+		hud = HEVMod.Instance.HudController;
 		GameObject flashlight = new("FlashlightContainer");
 		audioSource = flashlight.AddComponent<AudioSource>();
 		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
@@ -61,18 +50,18 @@ public class Flashlight : MonoBehaviour
 		flashlight.transform.localRotation = Quaternion.identity;
 	}
 
+	private void OnEnable()
+	{
+		hud?.SubscribeFlashlight(this, true);
+	}
+
 	private void OnDisable()
 	{
 		lightSource.enabled = false;
 		lightSource.intensity = 0f;
 		batteryLevel = 1f;
-		state = EState.OffCharged;			
-	}
-
-	private void OnDestroy()
-	{
-		if (this == Instance)
-			Instance = null;
+		state = EState.OffCharged;
+		hud?.SubscribeFlashlight(this, false);
 	}
 
 	private void Update()

@@ -11,28 +11,23 @@ namespace HEVSuitMod;
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
 public class HEVMod : BaseUnityPlugin
 {
-	// Constants
 	public const float DEFAULT_PLAYBACK_DELAY = 0.25f;
 	private const string SETTINGS_SECTION_GENERAL = "General Settings";
-
-	// Singleton
-	public static HEVMod Instance { get; private set; }
-
-	// File related stuff
-	public AssetBundle Assets { get; private set; }
 	private readonly string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, PluginInfo.PLUGIN_NAME, "hevsuit.bundle");
 
-	// Config
+	public static HEVMod Instance { get; private set; }
+
+	public AssetBundle Assets { get; private set; }
+	public SentenceParser SentenceParser { get; private set; }
+	public VoiceController VoiceController { get; private set; }
+	public HudController HudController { get; private set; }
+	public Flashlight Flashlight { get; private set; }
+
 	public ConfigEntry<KeyboardShortcut> flashlightKey;
 	public ConfigEntry<float> globalVolume;
 	public ConfigEntry<float> ignoreDuplicateEffectsTime;
 	public ConfigEntry<bool> identifyWeapon;
 	public ConfigEntry<bool> identifyAmmo;
-
-	// Components
-	private VoiceController voiceController;
-	private HudController hudController;
-	private Flashlight flashlight;
 
 	private void Awake()
 	{
@@ -90,49 +85,50 @@ public class HEVMod : BaseUnityPlugin
 		);
 
 		// Parse sentences file for the voicecontroller.
-		new SentenceParser(Assets);
+		SentenceParser = new SentenceParser(Assets);
 
 		// Enable patches
 		new OnNewGame().Enable();
 		new OnGameEnded().Enable();
 		new OnInspectWeapon().Enable();
 		new OnInspectChamber().Enable();
-		new OnLoadSingleAmmo().Enable();
+		//new OnLoadSingleAmmo().Enable();
 
 		// Register console commands
 		ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
 	}
 
+	// FIXME: Not working, I assume item isn't null when no rig equipped? need to check
 	private void CheckForSuit(Item item)
 	{
 		if (item == null)
 		{
-			voiceController.enabled = false;
-			hudController.enabled = false;
-			flashlight.enabled = false;
+			VoiceController.enabled = false;
+			HudController.enabled = false;
+			Flashlight.enabled = false;
 		}
 		else //if (item.Name == "item_equipment_rig_strandhogg") // TODO: Replace with HEV when it's asset is created
 		{
-			voiceController.enabled = true;
-			hudController.enabled = true;
-			flashlight.enabled = true;
+			VoiceController.enabled = true;
+			HudController.enabled = true;
+			Flashlight.enabled = true;
 		}
 	}
 
 	public void OnGameStarted()
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
-		voiceController = gameObject.AddComponent<VoiceController>();
-		flashlight = gameObject.AddComponent<Flashlight>();
-		hudController = gameObject.AddComponent<HudController>();
+		VoiceController = gameObject.AddComponent<VoiceController>();
+		HudController = gameObject.AddComponent<HudController>();
+		Flashlight = gameObject.AddComponent<Flashlight>();
 		//CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
 	}
 
 	public void OnGameEnded()
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= CheckForSuit;
-		Destroy(voiceController);
-		Destroy(hudController);
-		Destroy(flashlight);
+		Destroy(VoiceController);
+		Destroy(HudController);
+		Destroy(Flashlight);
 	}
 }

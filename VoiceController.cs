@@ -11,27 +11,19 @@ namespace HEVSuitMod;
 
 public class VoiceController : MonoBehaviour
 {
-	public static VoiceController Instance { get; private set; }
 	private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.VoiceController");
 	private AssetBundle assets;
 	private AudioSource audioSource;
 	public Coroutine sentencePlayer;
-	private readonly List<HEVSentence> allSentences = SentenceParser.Instance.allSentences;
+	private List<HEVSentence> allSentences;
 	public readonly List<HEVSentence> pendingSentences = [];
 	private readonly HashSet<string> activeStatusEffects = [];
 
 	private void Awake()
 	{
-		if (Instance != null && Instance != this)
-		{
-			Destroy(this);
-			return;
-		}
-		else
-			Instance = this;
-
 		audioSource = gameObject.AddComponent<AudioSource>();
 		assets = HEVMod.Instance.Assets;
+		allSentences = HEVMod.Instance.SentenceParser.allSentences;
 	}
 
 	private void OnEnable()
@@ -49,12 +41,6 @@ public class VoiceController : MonoBehaviour
 			sentencePlayer = null;
 		}
 		Unsubscribe();
-	}
-
-	private void OnDestroy()
-	{
-		if (this == Instance)
-			Instance = null;
 	}
 
 	private void Subscribe()

@@ -77,36 +77,6 @@ public static class Utils
 	}
 
 	/// <summary>
-	/// Log game object hierarchy with components
-	/// </summary>
-	/// <param name="root"></param>
-	public static void LogGameObjectHierarchy(GameObject root)
-	{
-		void LogRecursive(GameObject obj, int indent = 0)
-		{
-			string prefix = new string(' ', indent * 2);
-			log.LogWarning($"{prefix}- {obj.name}");
-
-			// List components on this GameObject
-			foreach (var comp in obj.GetComponents<Component>())
-			{
-				if (comp == null)
-					continue; // skip missing scripts
-
-				log.LogWarning($"{prefix}  • Component: {comp.GetType().Name}");
-			}
-
-			// Recurse into children
-			foreach (Transform child in obj.transform)
-				LogRecursive(child.gameObject, indent + 1);
-		}
-
-		log.LogWarning($"=== GameObject Hierarchy for {root.name} ===");
-		LogRecursive(root);
-		log.LogWarning($"=== End of Hierarchy ===");
-	}
-
-	/// <summary>
 	/// Find a component <typeparamref name="T"/> in <paramref name="path"/>
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
@@ -136,24 +106,5 @@ public static class Utils
 			log.LogWarning($"FindComponentsInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
 		
 		return components;
-	}
-
-	/// <summary>
-	/// Adds a component of type T to the GameObject and calls its Initialize() method if it exists.
-	/// </summary>
-	public static T AddComponent<T>(this GameObject obj, params object[] args) where T : MonoBehaviour
-	{
-		T component = obj.AddComponent<T>();
-		MethodInfo initMethod = typeof(T).GetMethod(
-			"Initialize",
-			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
-		);
-
-		if (initMethod != null)
-			initMethod.Invoke(component, args);
-		else if (args.Length > 0)
-			log.LogWarning($"AddComponent - {typeof(T).Name} has no Initialize() method but arguments were provided.");
-
-		return component;
 	}
 }

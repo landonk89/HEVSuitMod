@@ -48,7 +48,7 @@ internal class OnInspectWeapon : ModulePatch
 	private static void OnInspect()
 	{
 		if (HEVMod.Instance.identifyAmmo.Value)
-			VoiceController.Instance.WeaponInspectEvent();
+			HEVMod.Instance.VoiceController?.WeaponInspectEvent();
 	}
 }
 
@@ -63,11 +63,12 @@ internal class OnInspectChamber : ModulePatch
 	private static void OnInspect()
 	{
 		if (HEVMod.Instance.identifyWeapon.Value)
-			VoiceController.Instance.ChamberInspectEvent();
+			HEVMod.Instance.VoiceController?.ChamberInspectEvent();
 	}
 }
 
-// TODO: This isn't working as expected, revisit
+// FIXME: This isn't working as expected, revisit
+#if FALSE
 internal class OnLoadSingleAmmo : ModulePatch
 {
 	protected override MethodBase GetTargetMethod()
@@ -78,6 +79,7 @@ internal class OnLoadSingleAmmo : ModulePatch
 	[PatchPostfix]
 	private static void UpdateHudAmmoCount()
 	{
-		HudController.Instance.AmmoChanged(GamePlayerOwner.MyPlayer.HandsController);
+		HEVMod.Instance.HudController?.AmmoChanged(GamePlayerOwner.MyPlayer.HandsController);
 	}
 }
+#endif

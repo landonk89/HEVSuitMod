@@ -1,4 +1,6 @@
-﻿using EFT.Console.Core;
+﻿using Comfort.Common;
+using EFT;
+using EFT.Console.Core;
 using EFT.UI;
 
 namespace HEVSuitMod;
@@ -11,6 +13,12 @@ public class ImpulseCommand(string impulse) : SyncCommand
 
 	public override void Execute()
 	{
+		if (!Singleton<GameWorld>.Instantiated)
+		{
+			ConsoleScreen.LogError("Impulse commands only work in-raid.");
+			return;
+		}
+
 		if (!int.TryParse(impulse, out var impulseValue))
 		{
 			ConsoleScreen.LogError($"Couldn't parse int value {impulse}");
@@ -21,7 +29,7 @@ public class ImpulseCommand(string impulse) : SyncCommand
 		{
 			// Play a random sentence
 			case 1:
-				VoiceController.Instance?.PlaySentenceById(SentenceParser.Instance.allSentences.PickRandom().Identifier);
+				HEVMod.Instance.VoiceController?.PlaySentenceById(HEVMod.Instance.SentenceParser?.allSentences.PickRandom().Identifier);
 				break;
 
 			// TODO: super neato stuff will go here
