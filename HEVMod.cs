@@ -1,7 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using EFT.InventoryLogic;
-using EFT;
 using EFT.UI;
 using System.IO;
 using UnityEngine;
@@ -17,6 +16,7 @@ public class HEVMod : BaseUnityPlugin
 
 	public static HEVMod Instance { get; private set; }
 
+	public GameObject modStuff;
 	public AssetBundle Assets { get; private set; }
 	public SentenceParser SentenceParser { get; private set; }
 	public VoiceController VoiceController { get; private set; }
@@ -118,9 +118,10 @@ public class HEVMod : BaseUnityPlugin
 	public void OnGameStarted()
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
-		VoiceController = gameObject.AddComponent<VoiceController>();
-		Flashlight = gameObject.AddComponent<Flashlight>();
-		HudController = gameObject.AddComponent<HudController>();
+		modStuff = new("HEVSuitMod");
+		VoiceController = modStuff.AddComponent<VoiceController>();
+		Flashlight = modStuff.AddComponent<Flashlight>();
+		HudController = modStuff.AddComponent<HudController>();
 		//CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
 	}
 
@@ -130,5 +131,6 @@ public class HEVMod : BaseUnityPlugin
 		Destroy(VoiceController);
 		Destroy(Flashlight);
 		Destroy(HudController);
+		Destroy(modStuff);
 	}
 }

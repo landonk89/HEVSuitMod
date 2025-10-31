@@ -27,7 +27,7 @@ public class Flashlight : MonoBehaviour
 	private bool batteryCritical = false;
 	private float batteryLevel = 1f; // 0..1
 	private EState state = EState.OffCharged;
-	GameObject flashlight = new("FlashlightContainer");
+	GameObject flashlight;
 
 	public event Action<bool> Toggled;
 	public event Action<float> BatteryUpdate;
@@ -35,6 +35,7 @@ public class Flashlight : MonoBehaviour
 
 	private void Awake()
 	{
+		flashlight = new("FlashlightContainer");
 		assets = HEVMod.Instance.Assets;
 		hud = HEVMod.Instance.HudController;
 		audioSource = flashlight.AddComponent<AudioSource>();
