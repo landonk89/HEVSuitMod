@@ -21,7 +21,6 @@ public class Flashlight : MonoBehaviour
 	private const float TRANSITION_TIME = 0.1f; // Thermal inertia time (on->off)
 
 	private AssetBundle assets;
-	private HudController hud;
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio
 	private bool batteryCritical = false;
@@ -37,7 +36,6 @@ public class Flashlight : MonoBehaviour
 	{
 		flashlight = new("FlashlightContainer");
 		assets = HEVMod.Instance.Assets;
-		hud = HEVMod.Instance.HudController;
 		audioSource = flashlight.AddComponent<AudioSource>();
 		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
 		lightSource = flashlight.AddComponent<Light>();

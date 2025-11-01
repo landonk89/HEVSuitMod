@@ -40,6 +40,8 @@ public class ImpulseCommand(string impulse) : SyncCommand
 				// FIXME: Exception: Trying to get parent of an item that doesn't have a parent: Morphine
 				// at ActiveHealthController.MedEffect.Residue()
 				var stim = itemFactory.GetPresetItem("544fb3f34bdc2d03748b456a");
+				var fakeStash = itemFactory.CreateFakeStash();
+				fakeStash.Slots[0].Add(stim, false);
 				GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
 				ConsoleScreen.Log("Cheater!");
 				break;
