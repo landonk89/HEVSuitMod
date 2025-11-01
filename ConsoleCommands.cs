@@ -15,8 +15,8 @@ public class ImpulseCommand(string impulse) : SyncCommand
 	{
 		if (!Singleton<GameWorld>.Instantiated)
 		{
-			ConsoleScreen.LogError("Impulse commands only work in-raid.");
-			return;
+			//ConsoleScreen.LogError("Impulse commands only work in-raid.");
+			//return;
 		}
 
 		if (!int.TryParse(impulse, out var impulseValue))
@@ -34,6 +34,13 @@ public class ImpulseCommand(string impulse) : SyncCommand
 
 			// TODO: super neato stuff will go here
 			case 101:
+				//GamePlayerOwner.MyPlayer.ActiveHealthController.Heal(EBodyPart.Common, 440f);
+				//GamePlayerOwner.MyPlayer.ActiveHealthController.TryDoExternalBuff("BuffseTGchange");
+				var itemFactory = Singleton<ItemFactoryClass>.Instance;
+				// FIXME: Exception: Trying to get parent of an item that doesn't have a parent: Morphine
+				// at ActiveHealthController.MedEffect.Residue()
+				var stim = itemFactory.GetPresetItem("544fb3f34bdc2d03748b456a");
+				GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
 				ConsoleScreen.Log("Cheater!");
 				break;
 		}
