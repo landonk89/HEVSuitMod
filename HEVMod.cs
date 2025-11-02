@@ -16,7 +16,7 @@ public class HEVMod : BaseUnityPlugin
 
 	public static HEVMod Instance { get; private set; }
 
-	public GameObject modStuff;
+	public GameObject componentContainer;
 	public AssetBundle Assets { get; private set; }
 	public SentenceParser SentenceParser { get; private set; }
 	public VoiceController VoiceController { get; private set; }
@@ -118,10 +118,10 @@ public class HEVMod : BaseUnityPlugin
 	public void OnGameStarted()
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
-		modStuff = new("HEVSuitMod");
-		VoiceController = modStuff.AddComponent<VoiceController>();
-		Flashlight = modStuff.AddComponent<Flashlight>();
-		HudController = modStuff.AddComponent<HudController>();
+		componentContainer = new("HEVSuitMod");
+		VoiceController = componentContainer.AddComponent<VoiceController>();
+		Flashlight = componentContainer.AddComponent<Flashlight>();
+		HudController = componentContainer.AddComponent<HudController>();
 		//CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
 	}
 
@@ -131,6 +131,6 @@ public class HEVMod : BaseUnityPlugin
 		Destroy(VoiceController);
 		Destroy(Flashlight);
 		Destroy(HudController);
-		Destroy(modStuff);
+		Destroy(componentContainer);
 	}
 }

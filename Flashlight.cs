@@ -39,10 +39,15 @@ public class Flashlight : MonoBehaviour
 		audioSource = flashlight.AddComponent<AudioSource>();
 		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
 		lightSource = flashlight.AddComponent<Light>();
+	}
+
+	private void Start()
+	{
 		lightSource.type = LightType.Spot;
 		lightSource.spotAngle = 40f;
 		lightSource.range = 50f;
 		lightSource.cookie = assets.LoadAsset<Texture2D>("assets/sprites/hl2flashlightcookie.tga");
+		lightSource.intensity = 0f;
 		lightSource.enabled = false;
 		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition; // Attasch to our face and reposition
 		flashlight.transform.localPosition = new(0f, -0.25f, 0.25f);
@@ -76,13 +81,12 @@ public class Flashlight : MonoBehaviour
 				if (batteryLevel < 1f)
 					batteryLevel = Mathf.Clamp01(batteryLevel + BATT_CHARGE_RATE * Time.deltaTime);
 				
-				BatteryUpdate?.Invoke(batteryLevel);
 				if (batteryLevel > 0.99f)
 					state = EState.OffCharged;
 				break;
 
 			case EState.TurningOff:
-				lightSource.intensity -= Time.deltaTime / TRANSITION_TIME;
+				lightSource.intensity = Mathf.Clamp01(lightSource.intensity - Time.deltaTime / TRANSITION_TIME);
 				if (lightSource.intensity <= 0f)
 				{
 					lightSource.enabled = false;
@@ -91,13 +95,13 @@ public class Flashlight : MonoBehaviour
 				break;
 
 			case EState.TurningOn:
-				lightSource.intensity += Time.deltaTime / TRANSITION_TIME;
+				lightSource.intensity = Mathf.Clamp01(lightSource.intensity + Time.deltaTime / TRANSITION_TIME);
 				if (lightSource.intensity >= 1f)
 					state = EState.On;
 				break;
 
 			case EState.On:
-				batteryLevel -= BATT_DRAIN_RATE * Time.deltaTime;
+				batteryLevel = Mathf.Clamp01(batteryLevel - BATT_DRAIN_RATE * Time.deltaTime);
 				if (batteryLevel <= 0f)
 					Toggle();
 				break;

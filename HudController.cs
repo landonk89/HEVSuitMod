@@ -78,9 +78,16 @@ public class HudController : MonoBehaviour
 	// For state machine
 	private readonly List<HudImage> allHudImages = [];
 
-	private void Awake()
+	// Delegates
+	private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
+	private GDelegate70 PlayerDeadAction;
+
+    private void Awake()
 	{
-		AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
+        HealthChangedAction = (_, _, _) => HealthChanged();
+		PlayerDeadAction = (_, _, _, _) => HealthChanged();
+
+        AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
 		hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
 
 		// Cache number sprites, index 10 is a blank sprite
@@ -157,39 +164,45 @@ public class HudController : MonoBehaviour
 
 	private void OnEnable()
 	{
-		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => TakeDamage(damageInfo);
-		GamePlayerOwner.MyPlayer.BeingHitAction += (damageInfo, _, _) => SuitPowerChanged(damageInfo);
-		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += (_) => SuitPowerChanged(null);
-		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += (_, _, _) => HealthChanged();
+		GamePlayerOwner.MyPlayer.BeingHitAction += TakeDamage;
+		GamePlayerOwner.MyPlayer.BeingHitAction += SuitPowerChanged;
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += SuitChanged;
+		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += HealthChangedAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
-		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => HealthChanged(true);
-		HEVMod.Instance.Flashlight.Toggled += FlashlightToggled;
+		GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
+        HEVMod.Instance.Flashlight.Toggled += FlashlightToggled;
 		HEVMod.Instance.Flashlight.BatteryUpdate += SetFlashlightBattery;
 		HEVMod.Instance.Flashlight.BatteryStateChanged += SetFlashlightBatteryCritical;
 		hud?.SetActive(true);
 		HealthChanged();
-		SuitPowerChanged(null);
-	}
+		SuitPowerChanged(new(EDamageType.Existence, null), EBodyPart.Common, 0f);
+    }
 
 	private void OnDisable()
 	{
-		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => TakeDamage(damageInfo);
-		GamePlayerOwner.MyPlayer.BeingHitAction -= (damageInfo, _, _) => SuitPowerChanged(damageInfo);
-		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= (_) => SuitPowerChanged(null);
-		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= (_, _, _) => HealthChanged();
+		GamePlayerOwner.MyPlayer.BeingHitAction -= TakeDamage;
+		GamePlayerOwner.MyPlayer.BeingHitAction -= SuitPowerChanged;
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= SuitChanged;
+		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= HealthChangedAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
-		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => HealthChanged();
+		GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
 		HEVMod.Instance.Flashlight.Toggled -= FlashlightToggled;
 		HEVMod.Instance.Flashlight.BatteryUpdate -= SetFlashlightBattery;
 		HEVMod.Instance.Flashlight.BatteryStateChanged -= SetFlashlightBatteryCritical;
 		hud?.SetActive(false);
 	}
 
-	private void Update()
+    private void SuitChanged(Item item)
+    {
+        // TODO: More?
+		SuitPowerChanged(new(EDamageType.Existence, null), EBodyPart.Common, 0f);
+    }
+
+    private void Update()
 	{
-#if DEBUG // Add a notification to a random side
+#if DEBUG // Add a notification test
 		if (Input.GetKeyDown(KeyCode.F6))
-			NotifyIcon(fireDamage, UnityEngine.Random.Range(0f, 1f) > 0.5f);
+			NotifyIcon(fireDamage, false);
 #endif
 		// Iterate backward so we can safely RemoveAt(i) for notification icons
 		for (int i = allHudImages.Count -1; i >= 0; i--)
@@ -438,7 +451,7 @@ public class HudController : MonoBehaviour
 		Highlight(healthGroup);
 	}
 
-	private void SuitPowerChanged(DamageInfoStruct? damageInfo)
+	private void SuitPowerChanged(DamageInfoStruct damageInfo, EBodyPart part, float amount)
 	{
 		// TODO: This will eventually be the HEV suit itself, using a Strandhogg for testing right now
 		float current = 0, max = 0;
@@ -462,7 +475,7 @@ public class HudController : MonoBehaviour
 		int normalized = Mathf.CeilToInt(current / max * 100f);
 		suitFull.Image.fillAmount = normalized / 100f;
 		SetNumberDigits(suitVal, normalized);
-		if (damageInfo == null || damageInfo?.DidArmorDamage < 0.01)
+		if (damageInfo.DidArmorDamage < 0.01)
 			return; // Don't highlight unless it was noticeable
 
 		// HL1 doesn't set suit to red, TODO: check hl1 code to confirm
@@ -494,7 +507,7 @@ public class HudController : MonoBehaviour
 			StartTransition(activeDamageNotifications[0], EImageState.DestroyDamageNotification);
 	}
 
-	private void TakeDamage(DamageInfoStruct damageInfo)
+	private void TakeDamage(DamageInfoStruct damageInfo, EBodyPart part, float amount)
 	{
 		Sprite damageIcon = null;
 		switch (damageInfo.DamageType)

@@ -19,9 +19,12 @@ public class VoiceController : MonoBehaviour
 	public readonly List<HEVSentence> pendingSentences = [];
 	private readonly HashSet<string> activeStatusEffects = [];
 
-	private void Awake()
+    private GDelegate70 PlayerDeadAction;
+
+    private void Awake()
 	{
-		audioSource = gameObject.AddComponent<AudioSource>();
+        PlayerDeadAction = (_, _, _, _) => PlayerDied();
+        audioSource = gameObject.AddComponent<AudioSource>();
 		assets = HEVMod.Instance.Assets;
 		allSentences = HEVMod.Instance.SentenceParser.allSentences;
 	}
@@ -47,15 +50,15 @@ public class VoiceController : MonoBehaviour
 	{
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
-		GamePlayerOwner.MyPlayer.OnPlayerDead += (_, _, _, _) => PlayerDied();
-		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
+		GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
+        GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 	}
 
 	private void Unsubscribe()
 	{
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
-		GamePlayerOwner.MyPlayer.OnPlayerDead -= (_, _, _, _) => PlayerDied();
+		GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 	}
 
