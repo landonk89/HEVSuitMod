@@ -1,6 +1,9 @@
 ﻿using BepInEx.Logging;
+using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
+using EFT.UI.DragAndDrop;
+using EFT.Visual;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,16 +23,17 @@ public class HudController : MonoBehaviour
 
 	//public static HudController Instance { get; private set; }
 	private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
-	private GameObject hud;
+	public GameObject Hud { get; private set; }
 
 	// TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
 	private Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
 	private Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter
 	private Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
 	private Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
+	private Color hitIndicatorColor = new(1f, 1f, 1f, 0.75f); // Slightly transparent
 
-	// Number sprites
-	private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
+    // Number sprites
+    private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
 
 	// Health/SuitPower
 	private HudImage healthIcon;
@@ -78,48 +82,56 @@ public class HudController : MonoBehaviour
 	// For state machine
 	private readonly List<HudImage> allHudImages = [];
 
-	// Delegates
-	private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
+    // Separated weapon selection into its own component
+    WeaponSelectionController weaponSelectionController;
+
+    // Delegates
+    private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
+	private Action<DamageInfoStruct, EBodyPart, float> SuitPowerChangedAction;
+    private Action<Item> SuitChangedAction;
 	private GDelegate70 PlayerDeadAction;
 
     private void Awake()
 	{
         HealthChangedAction = (_, _, _) => HealthChanged();
+        SuitPowerChangedAction = (damageInfo, _, _) => SuitPowerChanged(damageInfo);
+        SuitChangedAction = (_) => SuitPowerChanged(null);
 		PlayerDeadAction = (_, _, _, _) => HealthChanged();
 
         AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
-		hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
+		Hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
+        weaponSelectionController = Hud.AddComponent<WeaponSelectionController>();
 
 		// Cache number sprites, index 10 is a blank sprite
 		for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
 		numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
 
 		// Health digits and icon
-		for (int i = 0; i < 3; i++) healthVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/HealthValue/Digit{i}"));
-		healthIcon = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/HealthIcon"));
+		for (int i = 0; i < 3; i++) healthVal[i] = new(Utils.FindComponent<Image>(Hud, $"HealthAndSuitPower/HealthValue/Digit{i}"));
+		healthIcon = new(Utils.FindComponent<Image>(Hud, "HealthAndSuitPower/HealthIcon"));
 		healthGroup = [healthIcon, healthVal[0], healthVal[1], healthVal[2]];
 
 		// SuitPower digits and icon
-		for (int i = 0; i < 3; i++) suitVal[i] = new(Utils.FindComponent<Image>(hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}"));
-		suitEmpty = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconEmpty"));
-		suitFull = new(Utils.FindComponent<Image>(hud, "HealthAndSuitPower/SuitIconFull"));
+		for (int i = 0; i < 3; i++) suitVal[i] = new(Utils.FindComponent<Image>(Hud, $"HealthAndSuitPower/SuitPowerValue/Digit{i}"));
+		suitEmpty = new(Utils.FindComponent<Image>(Hud, "HealthAndSuitPower/SuitIconEmpty"));
+		suitFull = new(Utils.FindComponent<Image>(Hud, "HealthAndSuitPower/SuitIconFull"));
 		suitGroup = [suitFull, suitEmpty, suitVal[0], suitVal[1], suitVal[2]];
 
 		// Ammo counter and icon
-		for (int i = 0; i < 3; i++) ammoVal[i] = new(Utils.FindComponent<Image>(hud, $"AmmoCounter/Value/Digit{i}"));
-		ammoIcon = new(Utils.FindComponent<Image>(hud, "AmmoCounter/Icon"));
+		for (int i = 0; i < 3; i++) ammoVal[i] = new(Utils.FindComponent<Image>(Hud, $"AmmoCounter/Value/Digit{i}"));
+		ammoIcon = new(Utils.FindComponent<Image>(Hud, "AmmoCounter/Icon"));
 		ammoGroup = [ammoIcon, ammoVal[0], ammoVal[1], ammoVal[2]];
 
 		// Flashlight indicator
-		flashEmpty = new(Utils.FindComponent<Image>(hud, "Flashlight/IconEmpty"));
-		flashFull = new(Utils.FindComponent<Image>(hud, "Flashlight/IconFull"));
-		flashBeam = new(Utils.FindComponent<Image>(hud, "Flashlight/Beam"));
+		flashEmpty = new(Utils.FindComponent<Image>(Hud, "Flashlight/IconEmpty"));
+		flashFull = new(Utils.FindComponent<Image>(Hud, "Flashlight/IconFull"));
+		flashBeam = new(Utils.FindComponent<Image>(Hud, "Flashlight/Beam"));
 		flashBeam.Image.enabled = false; // start off and full battery
 		flashFull.Image.fillAmount = 1f;
 		flashGroup = [flashEmpty, flashFull, flashBeam];
 
 		// Hit indicator child objects are in order: Up Right Down Left
-		Image[] hitIndicatorImg = Utils.FindComponentsInChildren<Image>(hud, "HitIndicators");
+		Image[] hitIndicatorImg = Utils.FindComponentsInChildren<Image>(Hud, "HitIndicators");
 		hitIndicatorUp = new(hitIndicatorImg[0]);
 		hitIndicatorRight = new(hitIndicatorImg[1]);
 		hitIndicatorDown = new(hitIndicatorImg[2]);
@@ -127,8 +139,8 @@ public class HudController : MonoBehaviour
 		foreach (Image hit in hitIndicatorImg) hit.color = Color.clear; // Start transparent
 
 		// Notification areas
-		notificationArea = hud.transform.Find("RightNotifyArea");
-		damageNotificationArea = hud.transform.Find("LeftNotifyArea");
+		notificationArea = Hud.transform.Find("RightNotifyArea");
+		damageNotificationArea = Hud.transform.Find("LeftNotifyArea");
 
 		// Damage type sprites
 		bulletDamage = assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bullet.tga");
@@ -165,37 +177,36 @@ public class HudController : MonoBehaviour
 	private void OnEnable()
 	{
 		GamePlayerOwner.MyPlayer.BeingHitAction += TakeDamage;
-		GamePlayerOwner.MyPlayer.BeingHitAction += SuitPowerChanged;
-		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += SuitChanged;
+		GamePlayerOwner.MyPlayer.BeingHitAction += SuitPowerChangedAction;
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += SuitChangedAction;
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += HealthChangedAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
         HEVMod.Instance.Flashlight.Toggled += FlashlightToggled;
-		HEVMod.Instance.Flashlight.BatteryUpdate += SetFlashlightBattery;
-		HEVMod.Instance.Flashlight.BatteryStateChanged += SetFlashlightBatteryCritical;
-		hud?.SetActive(true);
+		HEVMod.Instance.Flashlight.BatteryUpdate += FlashlightBatteryChanged;
+		HEVMod.Instance.Flashlight.BatteryStateChanged += FlashlightBatteryCritical;
+		Hud?.SetActive(true);
 		HealthChanged();
-		SuitPowerChanged(new(EDamageType.Existence, null), EBodyPart.Common, 0f);
+		SuitPowerChanged(null);
     }
 
 	private void OnDisable()
 	{
 		GamePlayerOwner.MyPlayer.BeingHitAction -= TakeDamage;
-		GamePlayerOwner.MyPlayer.BeingHitAction -= SuitPowerChanged;
-		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= SuitChanged;
+		GamePlayerOwner.MyPlayer.BeingHitAction -= SuitPowerChangedAction;
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= SuitChangedAction;
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= HealthChangedAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
 		HEVMod.Instance.Flashlight.Toggled -= FlashlightToggled;
-		HEVMod.Instance.Flashlight.BatteryUpdate -= SetFlashlightBattery;
-		HEVMod.Instance.Flashlight.BatteryStateChanged -= SetFlashlightBatteryCritical;
-		hud?.SetActive(false);
+		HEVMod.Instance.Flashlight.BatteryUpdate -= FlashlightBatteryChanged;
+		HEVMod.Instance.Flashlight.BatteryStateChanged -= FlashlightBatteryCritical;
+		Hud?.SetActive(false);
 	}
 
-    private void SuitChanged(Item item)
-    {
-        // TODO: More?
-		SuitPowerChanged(new(EDamageType.Existence, null), EBodyPart.Common, 0f);
+	private void OnDestroy()
+	{
+		Destroy(weaponSelectionController);
     }
 
     private void Update()
@@ -243,7 +254,7 @@ public class HudController : MonoBehaviour
 
 				// HitIndicator 1: Set indicator to full opacity
 				case EImageState.HitIndicator:
-					img.Image.color = Color.white;
+					img.Image.color = hitIndicatorColor;
 					StartTransition(img, EImageState.FadeHitIndicator);
 					break;
 
@@ -354,12 +365,12 @@ public class HudController : MonoBehaviour
 			image.State = EImageState.Highlight;
 	}
 
-	private void SetFlashlightBattery(float battery)
+	private void FlashlightBatteryChanged(float battery)
 	{
 		flashFull.Image.fillAmount = battery;
 	}
 
-	private void SetFlashlightBatteryCritical(bool isLow)
+	private void FlashlightBatteryCritical(bool isLow)
 	{
 		SetCritical(flashGroup, isLow);
 	}
@@ -451,7 +462,7 @@ public class HudController : MonoBehaviour
 		Highlight(healthGroup);
 	}
 
-	private void SuitPowerChanged(DamageInfoStruct damageInfo, EBodyPart part, float amount)
+	private void SuitPowerChanged(DamageInfoStruct? damageInfo)
 	{
 		// TODO: This will eventually be the HEV suit itself, using a Strandhogg for testing right now
 		float current = 0, max = 0;
@@ -475,7 +486,7 @@ public class HudController : MonoBehaviour
 		int normalized = Mathf.CeilToInt(current / max * 100f);
 		suitFull.Image.fillAmount = normalized / 100f;
 		SetNumberDigits(suitVal, normalized);
-		if (damageInfo.DidArmorDamage < 0.01)
+		if (damageInfo?.DidArmorDamage < 0.01)
 			return; // Don't highlight unless it was noticeable
 
 		// HL1 doesn't set suit to red, TODO: check hl1 code to confirm

@@ -84,7 +84,7 @@ public class SentenceParser
 			// For each token there may be parameters formatted like [param:value,param2:value]
 			if (tokens[i].StartsWith("["))
 			{
-				string[] parameters = tokens[i].Substring(1, tokens[i].IndexOf(']') - 1).Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				string[] parameters = tokens[i].Substring(1, tokens[i].IndexOf(']') - 1).Split([','], StringSplitOptions.RemoveEmptyEntries);
 				for (int j = 0; j < parameters.Length; j++)
 				{
 					string[] paramValuePair = parameters[j].Split(':');

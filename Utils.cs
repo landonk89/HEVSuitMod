@@ -1,10 +1,13 @@
-﻿using System;
+﻿using BepInEx.Logging;
+using Comfort.Common;
+using EFT;
+using EFT.InventoryLogic;
+using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
-using UnityEngine;
-using BepInEx.Logging;
 using System.Reflection;
+using System.Text;
+using UnityEngine;
 
 namespace HEVSuitMod;
 
@@ -107,4 +110,30 @@ public static class Utils
 		
 		return components;
 	}
+
+    public static Sprite LoadWeaponIcon(Item item)
+    {
+        ResourceKey prefab = item.Prefab;
+        if (!(prefab == null) && !string.IsNullOrEmpty(prefab.path))
+        {
+            GClass926 iconGenerator = Singleton<GClass926>.Instance;
+            return iconGenerator.GetItemIcon(item, new XYCellSizeStruct(5, 2)).Sprite;
+        }
+
+        return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+    }
+
+    public static string GetRelativePath(this Transform t, Transform root)
+    {
+        if (t == root)
+            return string.Empty;
+        string path = t.name;
+        Transform current = t.parent;
+        while (current != null && current != root)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+        return path;
+    }
 }

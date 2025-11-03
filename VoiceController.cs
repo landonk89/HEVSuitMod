@@ -121,9 +121,9 @@ public class VoiceController : MonoBehaviour
 		{
 			case "Fracture":
 				// FIXME: Lasts forever? Need to figure out how to create a stimulator item and 'use' it
-				StimulatorTemplateClass template = new();
-				StimulatorItemClass stim = new("544fb3f34bdc2d03748b456a", template);
-				GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
+				//StimulatorTemplateClass template = new();
+				//StimulatorItemClass stim = new("544fb3f34bdc2d03748b456a", template);
+				//GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
 				
 				//GamePlayerOwner.MyPlayer.ActiveHealthController.DoPainKiller();
 				switch (effect.BodyPart)

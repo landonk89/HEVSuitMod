@@ -2,6 +2,7 @@
 using EFT;
 using EFT.Console.Core;
 using EFT.UI;
+using System.Linq;
 
 namespace HEVSuitMod;
 
@@ -34,15 +35,12 @@ public class ImpulseCommand(string impulse) : SyncCommand
 
 			// TODO: super neato stuff will go here
 			case 101:
-				//GamePlayerOwner.MyPlayer.ActiveHealthController.Heal(EBodyPart.Common, 440f);
 				//GamePlayerOwner.MyPlayer.ActiveHealthController.TryDoExternalBuff("BuffseTGchange");
+				// TODO: Test tomorrow, sleepy now...
 				var itemFactory = Singleton<ItemFactoryClass>.Instance;
-				// FIXME: Exception: Trying to get parent of an item that doesn't have a parent: Morphine
-				// at ActiveHealthController.MedEffect.Residue()
 				var stim = itemFactory.GetPresetItem("544fb3f34bdc2d03748b456a");
-				var fakeStash = itemFactory.CreateFakeStash();
-				fakeStash.Slots[0].Add(stim, false);
-				GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
+				GamePlayerOwner.MyPlayer.Inventory.Stash.Class2312_0.AddAnywhere(stim, EFT.InventoryLogic.EErrorHandlingType.Log);
+                GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
 				ConsoleScreen.Log("Cheater!");
 				break;
 		}
