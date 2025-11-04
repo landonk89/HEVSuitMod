@@ -1,9 +1,6 @@
 ﻿using BepInEx.Logging;
-using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
-using EFT.UI.DragAndDrop;
-using EFT.Visual;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,8 +29,8 @@ public class HudController : MonoBehaviour
 	private Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
 	private Color hitIndicatorColor = new(1f, 1f, 1f, 0.75f); // Slightly transparent
 
-    // Number sprites
-    private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
+	// Number sprites
+	private Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
 
 	// Health/SuitPower
 	private HudImage healthIcon;
@@ -82,25 +79,28 @@ public class HudController : MonoBehaviour
 	// For state machine
 	private readonly List<HudImage> allHudImages = [];
 
-    // Separated weapon selection into its own component
-    WeaponSelectionController weaponSelectionController;
+	// Separated weapon selection into its own component
+	WeaponSelectionController weaponSelectionController;
 
-    // Delegates
-    private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
+	// Delegates
+	private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
 	private Action<DamageInfoStruct, EBodyPart, float> SuitPowerChangedAction;
-    private Action<Item> SuitChangedAction;
+	private Action<Item> SuitChangedAction;
 	private GDelegate70 PlayerDeadAction;
 
-    private void Awake()
+	private void Awake()
 	{
-        HealthChangedAction = (_, _, _) => HealthChanged();
-        SuitPowerChangedAction = (damageInfo, _, _) => SuitPowerChanged(damageInfo);
-        SuitChangedAction = (_) => SuitPowerChanged(null);
+		AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
+		
+		// Event stuff
+		HealthChangedAction = (_, _, _) => HealthChanged();
+		SuitPowerChangedAction = (damageInfo, _, _) => SuitPowerChanged(damageInfo);
+		SuitChangedAction = (_) => SuitPowerChanged(null);
 		PlayerDeadAction = (_, _, _, _) => HealthChanged();
 
-        AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
+		// Instantiate HUD prefab and weapon selection controller
 		Hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
-        weaponSelectionController = Hud.AddComponent<WeaponSelectionController>();
+		weaponSelectionController = Hud.AddComponent<WeaponSelectionController>();
 
 		// Cache number sprites, index 10 is a blank sprite
 		for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
@@ -182,13 +182,13 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += HealthChangedAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
-        HEVMod.Instance.Flashlight.Toggled += FlashlightToggled;
+		HEVMod.Instance.Flashlight.Toggled += FlashlightToggled;
 		HEVMod.Instance.Flashlight.BatteryUpdate += FlashlightBatteryChanged;
 		HEVMod.Instance.Flashlight.BatteryStateChanged += FlashlightBatteryCritical;
 		Hud?.SetActive(true);
 		HealthChanged();
 		SuitPowerChanged(null);
-    }
+	}
 
 	private void OnDisable()
 	{
@@ -207,9 +207,9 @@ public class HudController : MonoBehaviour
 	private void OnDestroy()
 	{
 		Destroy(weaponSelectionController);
-    }
+	}
 
-    private void Update()
+	private void Update()
 	{
 #if DEBUG // Add a notification test
 		if (Input.GetKeyDown(KeyCode.F6))

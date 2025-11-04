@@ -124,13 +124,13 @@ public class HEVMod : BaseUnityPlugin
 
 		HudController.enabled = !closing;
 		HudController.Hud.SetActive(!closing);
-    }
+	}
 
-    public void OnGameStarted()
+	public void OnGameStarted()
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
 		GamePlayerOwner.MyPlayer.OnInventoryOpened += OnInventoryOpened;
-        componentContainer = new("HEVSuitMod");
+		componentContainer = new("HEVSuitMod");
 		VoiceController = componentContainer.AddComponent<VoiceController>();
 		Flashlight = componentContainer.AddComponent<Flashlight>();
 		HudController = componentContainer.AddComponent<HudController>();
@@ -139,9 +139,9 @@ public class HEVMod : BaseUnityPlugin
 
 	public void OnGameEnded()
 	{
-        //GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= CheckForSuit;
-        GamePlayerOwner.MyPlayer.OnInventoryOpened -= OnInventoryOpened;
-        Destroy(VoiceController);
+		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= CheckForSuit;
+		GamePlayerOwner.MyPlayer.OnInventoryOpened -= OnInventoryOpened;
+		Destroy(VoiceController);
 		Destroy(Flashlight);
 		Destroy(HudController);
 		Destroy(componentContainer);

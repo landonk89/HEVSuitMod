@@ -111,29 +111,29 @@ public static class Utils
 		return components;
 	}
 
-    public static Sprite LoadWeaponIcon(Item item)
-    {
-        ResourceKey prefab = item.Prefab;
-        if (!(prefab == null) && !string.IsNullOrEmpty(prefab.path))
-        {
-            GClass926 iconGenerator = Singleton<GClass926>.Instance;
-            return iconGenerator.GetItemIcon(item, new XYCellSizeStruct(5, 2)).Sprite;
-        }
+	public static Sprite LoadWeaponIcon(Item item)
+	{
+		ResourceKey prefab = item.Prefab;
+		if (!(prefab == null) && !string.IsNullOrEmpty(prefab.path))
+		{
+			GClass926 iconGenerator = Singleton<GClass926>.Instance;
+			return iconGenerator.GetItemIcon(item, new XYCellSizeStruct(5, 2)).Sprite;
+		}
 
-        return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
-    }
+		return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+	}
 
-    public static string GetRelativePath(this Transform t, Transform root)
-    {
-        if (t == root)
-            return string.Empty;
-        string path = t.name;
-        Transform current = t.parent;
-        while (current != null && current != root)
-        {
-            path = current.name + "/" + path;
-            current = current.parent;
-        }
-        return path;
-    }
+	public static string GetRelativePath(this Transform t, Transform root)
+	{
+		if (t == root)
+			return string.Empty;
+		string path = t.name;
+		Transform current = t.parent;
+		while (current != null && current != root)
+		{
+			path = current.name + "/" + path;
+			current = current.parent;
+		}
+		return path;
+	}
 }
