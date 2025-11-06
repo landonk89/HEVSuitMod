@@ -94,10 +94,11 @@ public class HEVMod : BaseUnityPlugin
 		new OnGameEnded().Enable();
 		new OnInspectWeapon().Enable();
 		new OnInspectChamber().Enable();
-		//new OnLoadSingleAmmo().Enable();
+		new SelectWeaponPatch().Enable();
+        //new OnLoadSingleAmmo().Enable();
 
-		// Register console commands
-		ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
+        // Register console commands
+        ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
 	}
 
 	// FIXME: Not working, I assume item isn't null when no rig equipped? need to check

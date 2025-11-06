@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
+﻿using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
-using Comfort.Common;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace HEVSuitMod;
 
@@ -22,15 +22,16 @@ public class WeaponSelectionController : MonoBehaviour
 		public Image ammoLevel;
 	}
 
-	private enum ESlot
-	{
-		Holster,
-		Primary,
-		Secondary,
-		Scabbard
-	}
+    public enum ESlot
+    {
+        Holster,
+        Primary,
+        Secondary,
+        Scabbard,
+		None = -1
+    }
 
-	private const int NUM_WEAPONS = 3;
+    private const int NUM_WEAPONS = 3;
 	private GameObject weaponSelectionUI;
 	private AudioSource audioSource;
 	private AssetBundle assets = HEVMod.Instance.Assets;
@@ -42,7 +43,7 @@ public class WeaponSelectionController : MonoBehaviour
 	private Action<Item> SecondaryWeaponChanged;
 	//private Action<Item> MeleeWeaponChanged; // Not implemented on HUD prefab yet
 
-	private Slot Holster => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Holster);
+    private Slot Holster => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Holster);
 	private Slot Primary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon);
 	private Slot Secondary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon);
 	private Slot Scabbard => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Scabbard);
@@ -55,6 +56,8 @@ public class WeaponSelectionController : MonoBehaviour
 		{ ESlot.Scabbard, Scabbard }
 	};
 
+	private Dictionary<Item, Sprite> weaponIconCache = [];
+
 	private void Awake()
 	{
 		HolsterWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Holster]);
@@ -62,9 +65,10 @@ public class WeaponSelectionController : MonoBehaviour
 		SecondaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Secondary]);
 		//MeleeWeaponChanged = (item) => OnWeaponChanged(item, weapons[3]);
 
-		audioSource = GetComponent<AudioSource>();
+        audioSource = GetComponent<AudioSource>();
 		audioSource.volume = 0.5f;
-		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/fx/wpn_moveselect.wav");
+		audioSource.playOnAwake = false;
+        audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/fx/wpn_moveselect.wav");
 		weaponSelectionUI = transform.Find("WeaponSelection").gameObject;
 		var allTransforms = weaponSelectionUI.GetComponentsInChildren<Transform>(true).ToDictionary(t => t.GetRelativePath(weaponSelectionUI.transform), t => t);
 		for (int i = 0; i < NUM_WEAPONS; i++)
@@ -83,7 +87,8 @@ public class WeaponSelectionController : MonoBehaviour
 
 	private void OnEnable()
 	{
-		weaponSelectionUI.SetActive(false); // Start hidden
+        weaponSelectionUI.SetActive(false); // Start hidden
+        SelectWeaponPatch.SelectionEvent += SelectWeapon;
 		Holster.OnAddOrRemoveItem += HolsterWeaponChanged;
 		Primary.OnAddOrRemoveItem += PrimaryWeaponChanged;
 		Secondary.OnAddOrRemoveItem += SecondaryWeaponChanged;
@@ -94,42 +99,26 @@ public class WeaponSelectionController : MonoBehaviour
 
 	private void OnDisable()
 	{
-		weaponSelectionUI.SetActive(false); // Hide on disable
-		Holster.OnAddOrRemoveItem -= HolsterWeaponChanged;
+        weaponSelectionUI.SetActive(false); // Hide on disable
+		SelectWeaponPatch.SelectionEvent -= SelectWeapon;
+        Holster.OnAddOrRemoveItem -= HolsterWeaponChanged;
 		Primary.OnAddOrRemoveItem -= PrimaryWeaponChanged;
 		Secondary.OnAddOrRemoveItem -= SecondaryWeaponChanged;
 	}
 
 	private void OnWeaponChanged(Item weapon, WeaponSelection selection)
 	{
-		// FIXME: Not having a weapon should hide the slot instead of showing "Unidentified Weapon"
-		selection.name.text = weapon != null ? weapon.ShortName.Localized() : "Unidentified Weapon";
-		selection.icon.sprite = weapon != null ? CreateWeaponIcon(weapon) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+		selection.name.text = weapon != null ? weapon.ShortName.Localized() : "Error";
+		selection.icon.sprite = weapon != null ? GetWeaponSprite(weapon) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
 	}
 
 	void Update()
 	{
-		// TODO: This is just for testing, change to number keys later
-		if (Input.GetKeyDown(KeyCode.F1))
-		{
-			SelectWeapon(ESlot.Holster);
-		}
-		else if (Input.GetKeyDown(KeyCode.F2))
-		{
-			SelectWeapon(ESlot.Primary);
-		}
-		else if (Input.GetKeyDown(KeyCode.F3))
-		{
-			SelectWeapon(ESlot.Secondary);
-		}
-
 		if (activeTimer > 0f)
 		{
 			activeTimer -= Time.deltaTime;
 			if (activeTimer <= 0f)
-			{
 				weaponSelectionUI.SetActive(false);
-			}
 		}
 	}
 
@@ -137,10 +126,11 @@ public class WeaponSelectionController : MonoBehaviour
 	{
 		weaponSelectionUI.SetActive(true);
 		audioSource.Play();
-		activeTimer = 3f;
+		activeTimer = 2f;
 		for (int i = 0; i < NUM_WEAPONS; i++)
 		{
-			if (i != (int)index) // Not selected
+            Item item = slotMap[(ESlot)i].ContainedItem;
+            if (i != (int)index || item == null) // Not selected
 			{
 				weapons[i].expander.SetActive(false);
 				weapons[i].inactiveImg.SetActive(true);
@@ -151,33 +141,44 @@ public class WeaponSelectionController : MonoBehaviour
 				weapons[i].expander.SetActive(true);
 				weapons[i].inactiveImg.SetActive(false);
 				weapons[i].selectedImg.SetActive(true);
-				weapons[i].ammoLevel.fillAmount = 
-					slotMap[(ESlot)i].ContainedItem is Weapon weapon ? (float)weapon.GetCurrentMagazineCount() / weapon.GetMaxMagazineCount() : 0f;
+				weapons[i].ammoLevel.fillAmount = item is Weapon weapon ? (float)weapon.GetCurrentMagazineCount() / weapon.GetMaxMagazineCount() : 0f;
 			}
 		}
 	}
 
-	// Generates a white silhouette icon for the weapon that can be colorized.
-	private Sprite CreateWeaponIcon(Item item)
+    // Generates a white silhouette icon for the weapon that can be colorized.
+    // BUGBUG: This gave me a null reference exception exactly one time, no idea what happened.
+    private Sprite GetWeaponSprite(Item item)
 	{
-		Sprite original;
-		ResourceKey prefab = item.Prefab;
-		if (!(prefab == null) && !string.IsNullOrEmpty(prefab.path))
-			original = Singleton<GClass926>.Instance.GetItemIcon(item, new XYCellSizeStruct(5, 2)).Sprite;
-		else
-			return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+		if (item == null)
+            return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
 
-		Rect rect = original.textureRect;
-		Color[] pixels = original.texture.GetPixels((int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height);
-		Texture2D silhouetteTex = new((int)rect.width, (int)rect.height, TextureFormat.RGBA32, false);
-		for (int i = 0; i < pixels.Length; i++)
-		{
-			float alpha = pixels[i].a;
-			pixels[i] = new Color(1f, 1f, 1f, alpha); // White color, preserve alpha
-		}
+        if (weaponIconCache.TryGetValue(item, out Sprite cachedSprite))
+            return cachedSprite;
 
-		silhouetteTex.SetPixels(pixels);
-		silhouetteTex.Apply();
-		return Sprite.Create(silhouetteTex, new Rect(0, 0, silhouetteTex.width, silhouetteTex.height), original.rect.size, original.pixelsPerUnit);
+        GClass929 generatedImage = Singleton<GClass926>.Instance.GetItemIcon(item, new XYCellSizeStruct(5, 2));
+        if (generatedImage == null || generatedImage.Sprite == null)
+            return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+
+        Sprite originalSprite = generatedImage.Sprite;
+        if (originalSprite.texture == null)
+            return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+
+        Rect texRect = originalSprite.textureRect;
+        Color[] pixels = originalSprite.texture.GetPixels((int)texRect.x, (int)texRect.y, (int)texRect.width, (int)texRect.height); ;
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            float alpha = pixels[i].a;
+            pixels[i] = new Color(1f, 1f, 1f, alpha);
+        }
+
+        Texture2D silhouetteTex = new((int)texRect.width, (int)texRect.height, TextureFormat.RGBA32, false);
+        silhouetteTex.SetPixels(pixels);
+        silhouetteTex.Apply();
+
+		Vector2 pivot = new(originalSprite.pivot.x / originalSprite.rect.width, originalSprite.pivot.y / originalSprite.rect.height);
+        Sprite output = Sprite.Create(silhouetteTex, new Rect(0, 0, silhouetteTex.width, silhouetteTex.height), pivot, originalSprite.pixelsPerUnit);
+        weaponIconCache[item] = output;
+        return output;
 	}
 }

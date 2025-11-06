@@ -49,7 +49,7 @@ public class Flashlight : MonoBehaviour
 		lightSource.cookie = assets.LoadAsset<Texture2D>("assets/sprites/hl2flashlightcookie.tga");
 		lightSource.intensity = 0f;
 		lightSource.enabled = false;
-		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition; // Attasch to our face and reposition
+		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition; // Attach to our face and reposition
 		flashlight.transform.localPosition = new(0f, -0.25f, 0.25f);
 		flashlight.transform.localRotation = Quaternion.identity;
 	}
