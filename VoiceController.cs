@@ -21,21 +21,21 @@ public class VoiceController : MonoBehaviour
 
     private GDelegate70 PlayerDeadAction;
 
-	private MedicalSystem medicalSystem;
-
     private void Awake()
 	{
         PlayerDeadAction = (_, _, _, _) => PlayerDied();
         audioSource = gameObject.AddComponent<AudioSource>();
 		assets = HEVMod.Instance.Assets;
 		allSentences = HEVMod.Instance.SentenceParser.allSentences;
-		medicalSystem = HEVMod.Instance.MedicalSystem;
     }
 
 	private void OnEnable()
 	{
-		Subscribe();
-	}
+        GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
+        GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
+        GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
+        GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
+    }
 
 	private void OnDisable()
 	{
@@ -46,24 +46,12 @@ public class VoiceController : MonoBehaviour
 			StopAllCoroutines();
 			sentencePlayer = null;
 		}
-		Unsubscribe();
-	}
 
-	private void Subscribe()
-	{
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
-		GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
-        GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
-	}
-
-	private void Unsubscribe()
-	{
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
-		GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
-		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
-	}
+        GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
+        GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
+        GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
+        GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
+    }
 
 	// Update just monitors pendingSentences and starts playing if there are any
 	// TODO: Priority sentences? Overlap them like hl1? This is fine now for testing

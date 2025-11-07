@@ -42,7 +42,7 @@ public class HudWeaponSelection : MonoBehaviour
 	private Action<Item> HolsterWeaponChanged;
 	private Action<Item> PrimaryWeaponChanged;
 	private Action<Item> SecondaryWeaponChanged;
-	private Action<Item> ScabbardWeaponChanged; // Not implemented on HUD prefab yet
+	private Action<Item> ScabbardWeaponChanged;
 
     private Slot Holster => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Holster);
 	private Slot Primary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon);
@@ -91,8 +91,9 @@ public class HudWeaponSelection : MonoBehaviour
 		Holster.OnAddOrRemoveItem += HolsterWeaponChanged;
 		Primary.OnAddOrRemoveItem += PrimaryWeaponChanged;
 		Secondary.OnAddOrRemoveItem += SecondaryWeaponChanged;
+		Scabbard.OnAddOrRemoveItem += ScabbardWeaponChanged;
 
-		for (int i = 0; i < NUM_WEAPONS; i++)
+        for (int i = 0; i < NUM_WEAPONS; i++)
 			OnWeaponChanged(slotMap[(ESlot)i].ContainedItem, weapons[i]);
 	}
 

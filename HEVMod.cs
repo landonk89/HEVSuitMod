@@ -137,16 +137,19 @@ public class HEVMod : BaseUnityPlugin
 			VoiceController.enabled = false;
 			Flashlight.enabled = false;
 			HudController.enabled = false;
+			MedicalSystem.enabled = false;
 		}
 		else //if (item.Name == "item_equipment_rig_strandhogg") // TODO: Replace with HEV when it's asset is created
 		{
 			VoiceController.enabled = true;
 			Flashlight.enabled = true;
 			HudController.enabled = true;
-		}
+            MedicalSystem.enabled = true;
+        }
 	}
 
-	private void OnInventoryOpened(Player player, bool closing)
+    //Hide hud when inventory is open
+    private void OnInventoryOpened(Player player, bool closing)
 	{
 		if (player != GamePlayerOwner.MyPlayer)
 			return;
