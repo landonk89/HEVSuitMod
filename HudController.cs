@@ -80,7 +80,7 @@ public class HudController : MonoBehaviour
 	private readonly List<HudImage> allHudImages = [];
 
 	// Separated weapon selection into its own component
-	WeaponSelectionController weaponSelectionController;
+	HudWeaponSelection weaponSelectionController;
 
 	// Delegates
 	private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
@@ -100,7 +100,7 @@ public class HudController : MonoBehaviour
 
 		// Instantiate HUD prefab and weapon selection controller
 		Hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
-		weaponSelectionController = Hud.AddComponent<WeaponSelectionController>();
+		weaponSelectionController = Hud.AddComponent<HudWeaponSelection>();
 
 		// Cache number sprites, index 10 is a blank sprite
 		for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");

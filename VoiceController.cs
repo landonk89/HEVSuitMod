@@ -21,13 +21,16 @@ public class VoiceController : MonoBehaviour
 
     private GDelegate70 PlayerDeadAction;
 
+	private MedicalSystem medicalSystem;
+
     private void Awake()
 	{
         PlayerDeadAction = (_, _, _, _) => PlayerDied();
         audioSource = gameObject.AddComponent<AudioSource>();
 		assets = HEVMod.Instance.Assets;
 		allSentences = HEVMod.Instance.SentenceParser.allSentences;
-	}
+		medicalSystem = HEVMod.Instance.MedicalSystem;
+    }
 
 	private void OnEnable()
 	{
@@ -120,19 +123,14 @@ public class VoiceController : MonoBehaviour
 		switch (effectName)
 		{
 			case "Fracture":
-				// FIXME: Lasts forever? Need to figure out how to create a stimulator item and 'use' it
-				//StimulatorTemplateClass template = new();
-				//StimulatorItemClass stim = new("544fb3f34bdc2d03748b456a", template);
-				//GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
-				
-				//GamePlayerOwner.MyPlayer.ActiveHealthController.DoPainKiller();
 				switch (effect.BodyPart)
 				{
 					case EBodyPart.LeftLeg:
 					case EBodyPart.RightLeg:
 						// "Major Fracture" because we can't run
 						PlaySentenceById("MajorFracture");
-						break;
+                        PlaySentenceById("GiveMorphine");
+                        break;
 
 					case EBodyPart.LeftArm:
 					case EBodyPart.RightArm:
@@ -144,15 +142,17 @@ public class VoiceController : MonoBehaviour
 
 			case "HeavyBleeding":
 				PlaySentenceById("HeavyBleeding");
-				break;
+				PlaySentenceById("GiveTourniquet");
+                break;
 
 			case "LightBleeding":
 				PlaySentenceById("LightBleeding");
-				break;
+                PlaySentenceById("GiveBandage");
+                break;
 
 			case "LowEdgeHealth":
-				PlaySentenceById("NearDeath");
-				break;
+				PlaySentenceById("NearDeath"); // TODO: Better voice line?
+                break;
 
 			case "Pain":
 				break;

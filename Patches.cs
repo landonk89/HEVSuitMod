@@ -4,7 +4,7 @@ using EFT;
 using EFT.InputSystem;
 using HarmonyLib;
 using SPT.Reflection.Patching;
-using ESlot = HEVSuitMod.WeaponSelectionController.ESlot;
+using ESlot = HEVSuitMod.HudWeaponSelection.ESlot;
 
 // ===================================================================================
 // These are patches for things that don't have events, or do and I haven't found them.

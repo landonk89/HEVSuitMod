@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace HEVSuitMod;
 
-public class WeaponSelectionController : MonoBehaviour
+public class HudWeaponSelection : MonoBehaviour
 {
 	private class WeaponSelection
 	{
@@ -31,17 +31,18 @@ public class WeaponSelectionController : MonoBehaviour
 		None = -1
     }
 
-    private const int NUM_WEAPONS = 3;
-	private GameObject weaponSelectionUI;
+    private const int NUM_WEAPONS = 4; // NOTENOTE: Update if more slots are added (like quickslots)
+    private GameObject weaponSelectionUI;
 	private AudioSource audioSource;
 	private AssetBundle assets = HEVMod.Instance.Assets;
 	private WeaponSelection[] weapons = new WeaponSelection[NUM_WEAPONS];
 	private float activeTimer = 0f;
+	private Dictionary<Item, Sprite> weaponIconCache = [];
 
 	private Action<Item> HolsterWeaponChanged;
 	private Action<Item> PrimaryWeaponChanged;
 	private Action<Item> SecondaryWeaponChanged;
-	//private Action<Item> MeleeWeaponChanged; // Not implemented on HUD prefab yet
+	private Action<Item> ScabbardWeaponChanged; // Not implemented on HUD prefab yet
 
     private Slot Holster => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Holster);
 	private Slot Primary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon);
@@ -56,14 +57,12 @@ public class WeaponSelectionController : MonoBehaviour
 		{ ESlot.Scabbard, Scabbard }
 	};
 
-	private Dictionary<Item, Sprite> weaponIconCache = [];
-
 	private void Awake()
 	{
 		HolsterWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Holster]);
 		PrimaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Primary]);
 		SecondaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Secondary]);
-		//MeleeWeaponChanged = (item) => OnWeaponChanged(item, weapons[3]);
+		ScabbardWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Scabbard]);
 
         audioSource = GetComponent<AudioSource>();
 		audioSource.volume = 0.5f;
@@ -146,9 +145,43 @@ public class WeaponSelectionController : MonoBehaviour
 		}
 	}
 
-    // Generates a white silhouette icon for the weapon that can be colorized.
-    // BUGBUG: This gave me a null reference exception exactly one time, no idea what happened.
-    private Sprite GetWeaponSprite(Item item)
+	// New version testing
+	private Sprite GetWeaponSprite(Item item)
+	{
+        if (item == null)
+            return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+
+        if (weaponIconCache.TryGetValue(item, out Sprite cachedSprite))
+            return cachedSprite;
+
+        GClass929 generatedImage = Singleton<GClass926>.Instance.GetItemIcon(item, new XYCellSizeStruct(5, 2));
+        if (generatedImage == null || generatedImage.Sprite == null)
+            return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+
+        Texture2D tex = Instantiate(generatedImage.Sprite.texture);
+		Color[] pixels = tex.GetPixels();
+		for (int i = 0; i < pixels.Length; i++)
+		{
+			// Convert to grayscale and adjust exposure
+			Color c = pixels[i];
+			float gray = c.r * 0.299f + c.g * 0.587f + c.b * 0.114f;
+			gray = Mathf.Lerp(gray, 1f, 0.5f);
+			gray *= 1.5f;
+			pixels[i] = new Color(gray, gray, gray, c.a);
+		}
+
+		tex.SetPixels(pixels);
+		tex.Apply();
+
+		Sprite output = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+		weaponIconCache[item] = output;
+		return output;
+    }
+
+	// Generates a white silhouette icon for the weapon that can be colorized.
+	// BUGBUG: This gave me a null reference exception exactly one time, no idea what happened.
+#if FALSE
+	private Sprite GetWeaponSprite(Item item)
 	{
 		if (item == null)
             return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
@@ -181,4 +214,5 @@ public class WeaponSelectionController : MonoBehaviour
         weaponIconCache[item] = output;
         return output;
 	}
+#endif
 }

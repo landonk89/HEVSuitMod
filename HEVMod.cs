@@ -18,14 +18,15 @@ public class HEVMod : BaseUnityPlugin
 
 	public static HEVMod Instance { get; private set; }
 
-	public GameObject componentContainer;
 	public AssetBundle Assets { get; private set; }
+	public GameObject ComponentContainer { get; private set; }
 	public SentenceParser SentenceParser { get; private set; }
 	public VoiceController VoiceController { get; private set; }
 	public HudController HudController { get; private set; }
 	public Flashlight Flashlight { get; private set; }
+	public MedicalSystem MedicalSystem { get; private set; }
 
-	public ConfigEntry<KeyboardShortcut> flashlightKey;
+    public ConfigEntry<KeyboardShortcut> flashlightKey;
 	public ConfigEntry<float> globalVolume;
 	public ConfigEntry<float> ignoreDuplicateEffectsTime;
 	public ConfigEntry<bool> identifyWeapon;
@@ -101,8 +102,35 @@ public class HEVMod : BaseUnityPlugin
         ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
 	}
 
-	// FIXME: Not working, I assume item isn't null when no rig equipped? need to check
-	private void CheckForSuit(Item item)
+#if DEBUG
+	// We're just using this to test stuff right now
+	private void Update()
+	{ 	
+		if (Input.GetKeyDown(KeyCode.F1))
+			MedicalSystem?.UseInjector("etgchange");
+
+        if (Input.GetKeyDown(KeyCode.F2))
+            MedicalSystem?.UseInjector("morphine");
+
+        if (Input.GetKeyDown(KeyCode.F3))
+            MedicalSystem?.UseInjector("zagustin");
+
+        if (Input.GetKeyDown(KeyCode.F4))
+		{
+            VoiceController?.PlaySentenceById("MajorFracture");
+            VoiceController?.PlaySentenceById("GiveMorphine");
+        }
+
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            VoiceController?.PlaySentenceById("HeavyBleeding");
+            VoiceController?.PlaySentenceById("GiveTourniquet");
+        }
+    }
+#endif
+
+    // FIXME: Not working, I assume item isn't null when no rig equipped? need to check
+    private void CheckForSuit(Item item)
 	{
 		if (item == null)
 		{
@@ -131,12 +159,13 @@ public class HEVMod : BaseUnityPlugin
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
 		GamePlayerOwner.MyPlayer.OnInventoryOpened += OnInventoryOpened;
-		componentContainer = new("HEVSuitMod");
-		VoiceController = componentContainer.AddComponent<VoiceController>();
-		Flashlight = componentContainer.AddComponent<Flashlight>();
-		HudController = componentContainer.AddComponent<HudController>();
-		//CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
-	}
+		ComponentContainer = new("HEVSuitMod");
+		VoiceController = ComponentContainer.AddComponent<VoiceController>();
+		Flashlight = ComponentContainer.AddComponent<Flashlight>();
+		HudController = ComponentContainer.AddComponent<HudController>();
+		MedicalSystem = ComponentContainer.AddComponent<MedicalSystem>();
+        //CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
+    }
 
 	public void OnGameEnded()
 	{
@@ -145,6 +174,7 @@ public class HEVMod : BaseUnityPlugin
 		Destroy(VoiceController);
 		Destroy(Flashlight);
 		Destroy(HudController);
-		Destroy(componentContainer);
+		Destroy(MedicalSystem);
+        Destroy(ComponentContainer);
 	}
 }

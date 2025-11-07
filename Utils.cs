@@ -1,7 +1,4 @@
 ﻿using BepInEx.Logging;
-using Comfort.Common;
-using EFT;
-using EFT.InventoryLogic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -108,18 +105,6 @@ public static class Utils
 			log.LogWarning($"FindComponentsInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
 		
 		return components;
-	}
-
-	public static Sprite LoadWeaponIcon(Item item)
-	{
-		ResourceKey prefab = item.Prefab;
-		if (!(prefab == null) && !string.IsNullOrEmpty(prefab.path))
-		{
-			GClass926 iconGenerator = Singleton<GClass926>.Instance;
-			return iconGenerator.GetItemIcon(item, new XYCellSizeStruct(5, 2)).Sprite;
-		}
-
-		return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
 	}
 
 	public static string GetRelativePath(this Transform t, Transform root)

@@ -35,7 +35,7 @@ public class SentenceParser
 			return;
 		}
 
-		string[] hevSentences = hevSentencesFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+		string[] hevSentences = hevSentencesFile.text.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
 		int sentenceCount = 0;
 		foreach (string hevSentence in hevSentences)
 		{
@@ -93,11 +93,11 @@ public class SentenceParser
 
 					switch (key)
 					{
-						case "loops" when int.TryParse(val, out int lps): loops = lps; break;
-						case "interval" when float.TryParse(val, out float intvl): interval = intvl; break;
-						case "pitch" when float.TryParse(val, out float pch): pitch = pch; break;
-						case "volume" when float.TryParse(val, out float vol): volume *= vol; break;
-						case "delay" when float.TryParse(val, out float dly): delay = dly; break;
+						case "l" when int.TryParse(val, out int lps): loops = lps; break;
+						case "i" when float.TryParse(val, out float intvl): interval = intvl; break;
+						case "p" when float.TryParse(val, out float pch): pitch = pch; break;
+						case "v" when float.TryParse(val, out float vol): volume *= vol; break;
+						case "d" when float.TryParse(val, out float dly): delay = dly; break;
 					}
 				}
 				path = workingDirectory + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";
