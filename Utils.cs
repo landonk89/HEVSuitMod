@@ -10,7 +10,7 @@ namespace HEVSuitMod;
 // Some useful stuff goes here
 public static class Utils
 {
-	private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.Utils");
+	private static readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(Utils).FullName}");
 
 	// Simple tree node
 	private class Node

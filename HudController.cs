@@ -19,7 +19,7 @@ public class HudController : MonoBehaviour
 	private const float FADE_TIME = 0.5f;
 
 	//public static HudController Instance { get; private set; }
-	private ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.HudController");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudController).FullName}");
 	public GameObject Hud { get; private set; }
 
 	// TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
@@ -174,7 +174,7 @@ public class HudController : MonoBehaviour
 		allHudImages.AddRange([hitIndicatorUp, hitIndicatorRight, hitIndicatorDown, hitIndicatorLeft]);
 	}
 
-	private void OnEnable()
+	private void Start()
 	{
 		GamePlayerOwner.MyPlayer.BeingHitAction += TakeDamage;
 		GamePlayerOwner.MyPlayer.BeingHitAction += SuitPowerChangedAction;
@@ -182,6 +182,7 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += HealthChangedAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
+		GamePlayerOwner.MyPlayer.OnInventoryOpened += OnInventoryOpened;
 		HEVMod.Instance.Flashlight.Toggled += FlashlightToggled;
 		HEVMod.Instance.Flashlight.BatteryUpdate += FlashlightBatteryChanged;
 		HEVMod.Instance.Flashlight.BatteryStateChanged += FlashlightBatteryCritical;
@@ -190,7 +191,7 @@ public class HudController : MonoBehaviour
 		SuitPowerChanged(null);
 	}
 
-	private void OnDisable()
+	private void OnDestroy()
 	{
 		GamePlayerOwner.MyPlayer.BeingHitAction -= TakeDamage;
 		GamePlayerOwner.MyPlayer.BeingHitAction -= SuitPowerChangedAction;
@@ -198,14 +199,10 @@ public class HudController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= HealthChangedAction;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
+		GamePlayerOwner.MyPlayer.OnInventoryOpened -= OnInventoryOpened;
 		HEVMod.Instance.Flashlight.Toggled -= FlashlightToggled;
 		HEVMod.Instance.Flashlight.BatteryUpdate -= FlashlightBatteryChanged;
 		HEVMod.Instance.Flashlight.BatteryStateChanged -= FlashlightBatteryCritical;
-		Hud?.SetActive(false);
-	}
-
-	private void OnDestroy()
-	{
 		Destroy(weaponSelectionController);
 	}
 
@@ -324,6 +321,15 @@ public class HudController : MonoBehaviour
 		}
 	}
 
+	private void OnInventoryOpened(Player player, bool closing)
+	{
+		// Shouldn't happen but just be safe
+		if (player != GamePlayerOwner.MyPlayer)
+			return;
+
+		enabled = !closing;
+		Hud.SetActive(!closing);
+	}
 	private void StartTransition(HudImage img, EImageState nextState)
 	{
 		img.Timer = 0f;
@@ -458,7 +464,7 @@ public class HudController : MonoBehaviour
 			normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
 		}
 		SetNumberDigits(healthVal, normalizedHealth);
-		SetCritical(healthGroup, normalizedHealth <= /*25*/ 90); // FIXME: just testing, change back to 25 later
+		SetCritical(healthGroup, normalizedHealth <= 20);
 		Highlight(healthGroup);
 	}
 

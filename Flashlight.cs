@@ -1,5 +1,6 @@
-﻿using System;
+﻿using BepInEx.Logging;
 using EFT;
+using System;
 using UnityEngine;
 
 namespace HEVSuitMod;
@@ -20,6 +21,7 @@ public class Flashlight : MonoBehaviour
 	private const float BATT_CHARGE_RATE = 0.05f;
 	private const float TRANSITION_TIME = 0.1f; // Thermal inertia time (on->off)
 
+	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(Flashlight).FullName}");
 	private AssetBundle assets;
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio

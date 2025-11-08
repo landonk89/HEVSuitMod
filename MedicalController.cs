@@ -5,27 +5,31 @@ using EFT.HealthSystem;
 using EFT.InventoryLogic;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace HEVSuitMod;
 
-public class MedicalSystem : MonoBehaviour
+public class MedicalController : MonoBehaviour
 {
-	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.MedicalSystem");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(MedicalController).FullName}");
 	private readonly Dictionary<string, float> activeStatusEffects = [];
+	private readonly Queue<KeyValuePair<string, float>> pendingStatusEffects = [];
 	private readonly List<string> effectsToRemove = [];
 
-    private readonly Dictionary<string, string> medInjectors = new()
-    {
-            { "morphine", "544fb3f34bdc2d03748b456a" },
-            { "adrenaline", "5c10c8fd86f7743d7d706df3" },
-            { "propital", "5c0e530286f7747fa1419862" },
-            { "etgchange", "5c0e534186f7747fa1419867" },
-            { "antidote", "5fca138c2a7b221b2852a5c6" },
-            { "zagustin", "5c0e533786f7747fa23f4d47" }
-    };
+	// TODO: In an ideal world, I would search the template id from the server
+	// but I don't know shit about how that works yet... Revisit this later
+	private readonly Dictionary<string, string> medInjectors = new()
+	{
+			{ "morphine", "544fb3f34bdc2d03748b456a" },
+			{ "adrenaline", "5c10c8fd86f7743d7d706df3" },
+			{ "propital", "5c0e530286f7747fa1419862" },
+			{ "etgchange", "5c0e534186f7747fa1419867" },
+			{ "antidote", "5fca138c2a7b221b2852a5c6" },
+			{ "zagustin", "5c0e533786f7747fa23f4d47" }
+	};
 
-    private void OnEnable()
+	private void OnEnable()
 	{
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStartedHandler;
 	}
@@ -37,19 +41,32 @@ public class MedicalSystem : MonoBehaviour
 
 	private void Update()
 	{
-		effectsToRemove.Clear();
-		foreach (var effect in activeStatusEffects)
+		if (activeStatusEffects.Count == 0)
+			return;
+
+		while (pendingStatusEffects.Count > 0)
 		{
-			activeStatusEffects[effect.Key] -= Time.deltaTime;
-			if (activeStatusEffects[effect.Key] <= 0f)
-			{
-				effectsToRemove.Add(effect.Key);
-			}
+			var kv = pendingStatusEffects.Dequeue();
+			activeStatusEffects[kv.Key] = kv.Value;
 		}
+
+		if (activeStatusEffects.Count == 0)
+			return;
+
+		effectsToRemove.Clear();
+		foreach (var kv in activeStatusEffects.ToList())
+		{
+			float remaining = kv.Value - Time.deltaTime;
+			if (remaining <= 0f)
+				effectsToRemove.Add(kv.Key);
+			else
+				activeStatusEffects[kv.Key] = remaining;
+		}
+
 		foreach (var effectName in effectsToRemove)
 		{
-			activeStatusEffects.Remove(effectName);
-			log.LogDebug($"Effect {effectName} expired");
+			if (activeStatusEffects.Remove(effectName))
+				log.LogDebug($"Effect {effectName} expired");
 		}
 	}
 
@@ -57,24 +74,20 @@ public class MedicalSystem : MonoBehaviour
 	{
 		Type effectType = effect.GetType(); // All effect classes are protected
 		string effectName = effectType.Name;
-		if (activeStatusEffects.ContainsKey(effectName))
+		var effectKvp = new KeyValuePair<string, float>(effectName, HEVMod.Instance.ignoreDuplicateEffectsTime.Value);
+		if (activeStatusEffects.ContainsKey(effectName) || pendingStatusEffects.Contains(effectKvp))
 		{
 			log.LogDebug($"Duplicate effect {effectName}");
 			return;
 		}
 
-		activeStatusEffects[effectName] = HEVMod.Instance.ignoreDuplicateEffectsTime.Value;
+		pendingStatusEffects.Enqueue(effectKvp);
+		log.LogDebug($"Effect {effectName} added");
 		switch (effectName)
 		{
-			case "Fracture":
-				switch (effect.BodyPart)
-				{
-					case EBodyPart.LeftLeg:
-					case EBodyPart.RightLeg:
-						// Only stim if a leg is fractured, arm doesn't need it
-						UseInjector("morphine");
-						break;
-				}
+			case "Fracture":	// Only stim if a leg is fractured, arm doesn't need it
+				if (effect.BodyPart == EBodyPart.LeftLeg || effect.BodyPart == EBodyPart.RightLeg)
+					UseInjector("morphine");
 				break;
 
 			case "HeavyBleeding":
@@ -82,13 +95,13 @@ public class MedicalSystem : MonoBehaviour
 				UseInjector("zagustin");
 				break;
 
-            // TODO: Make this configurable? The user may or may not want this level of assistance
-            case "LowEdgeHealth":
+			// TODO: Make this configurable? The user may or may not want this level of assistance
+			case "LowEdgeHealth":
 				UseInjector("etgchange");
 				break;
 
-            // TODO: Need to verify this is the effect for being stabbed by cultist knife
-            case "LethalIntoxication":
+			// TODO: Need to verify this is the effect for being stabbed by cultist knife
+			case "LethalIntoxication":
 			case "Intoxication":
 				UseInjector("antidote");
 				break;
@@ -127,6 +140,7 @@ public class MedicalSystem : MonoBehaviour
 			return;
 		}
 
+		// We need to create a stim item and add it to some stashgrid before we can call DoMedEffect
 		ItemFactoryClass itemFactory = Singleton<ItemFactoryClass>.Instance;
 		Item stim = itemFactory.GetPresetItem(injectorId);
 		GStruct154<GClass3415> addAnywhereResult = player.Inventory.SortingTable.Grid.AddAnywhere(stim, EErrorHandlingType.Log);

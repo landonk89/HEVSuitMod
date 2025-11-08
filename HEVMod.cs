@@ -3,7 +3,6 @@ using BepInEx.Configuration;
 using EFT;
 using EFT.InventoryLogic;
 using EFT.UI;
-using UnityEngine.UI;
 using System.IO;
 using UnityEngine;
 
@@ -24,9 +23,9 @@ public class HEVMod : BaseUnityPlugin
 	public VoiceController VoiceController { get; private set; }
 	public HudController HudController { get; private set; }
 	public Flashlight Flashlight { get; private set; }
-	public MedicalSystem MedicalSystem { get; private set; }
+	public MedicalController MedicalController { get; private set; }
 
-    public ConfigEntry<KeyboardShortcut> flashlightKey;
+	public ConfigEntry<KeyboardShortcut> flashlightKey;
 	public ConfigEntry<float> globalVolume;
 	public ConfigEntry<float> ignoreDuplicateEffectsTime;
 	public ConfigEntry<bool> identifyWeapon;
@@ -96,10 +95,10 @@ public class HEVMod : BaseUnityPlugin
 		new OnInspectWeapon().Enable();
 		new OnInspectChamber().Enable();
 		new SelectWeaponPatch().Enable();
-        //new OnLoadSingleAmmo().Enable();
+		//new OnLoadSingleAmmo().Enable();
 
-        // Register console commands
-        ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
+		// Register console commands
+		ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();
 	}
 
 #if DEBUG
@@ -107,77 +106,65 @@ public class HEVMod : BaseUnityPlugin
 	private void Update()
 	{ 	
 		if (Input.GetKeyDown(KeyCode.F1))
-			MedicalSystem?.UseInjector("etgchange");
+			MedicalController?.UseInjector("etgchange");
 
-        if (Input.GetKeyDown(KeyCode.F2))
-            MedicalSystem?.UseInjector("morphine");
+		if (Input.GetKeyDown(KeyCode.F2))
+			MedicalController?.UseInjector("morphine");
 
-        if (Input.GetKeyDown(KeyCode.F3))
-            MedicalSystem?.UseInjector("zagustin");
+		if (Input.GetKeyDown(KeyCode.F3))
+			MedicalController?.UseInjector("zagustin");
 
-        if (Input.GetKeyDown(KeyCode.F4))
+		if (Input.GetKeyDown(KeyCode.F4))
 		{
-            VoiceController?.PlaySentenceById("MajorFracture");
-            VoiceController?.PlaySentenceById("GiveMorphine");
-        }
+			VoiceController?.PlaySentenceById("MajorFracture");
+			VoiceController?.PlaySentenceById("GiveMorphine");
+		}
 
-        if (Input.GetKeyDown(KeyCode.F5))
-        {
-            VoiceController?.PlaySentenceById("HeavyBleeding");
-            VoiceController?.PlaySentenceById("GiveTourniquet");
-        }
-    }
+		if (Input.GetKeyDown(KeyCode.F5))
+		{
+			VoiceController?.PlaySentenceById("HeavyBleeding");
+			VoiceController?.PlaySentenceById("GiveTourniquet");
+		}
+	}
 #endif
 
-    // FIXME: Not working, I assume item isn't null when no rig equipped? need to check
-    private void CheckForSuit(Item item)
+	// FIXME: Not working, I assume item isn't null when no rig equipped? need to check
+	private void CheckForSuit(Item item)
 	{
 		if (item == null)
 		{
 			VoiceController.enabled = false;
 			Flashlight.enabled = false;
 			HudController.enabled = false;
-			MedicalSystem.enabled = false;
+			MedicalController.enabled = false;
 		}
 		else //if (item.Name == "item_equipment_rig_strandhogg") // TODO: Replace with HEV when it's asset is created
 		{
 			VoiceController.enabled = true;
 			Flashlight.enabled = true;
 			HudController.enabled = true;
-            MedicalSystem.enabled = true;
-        }
-	}
-
-    //Hide hud when inventory is open
-    private void OnInventoryOpened(Player player, bool closing)
-	{
-		if (player != GamePlayerOwner.MyPlayer)
-			return;
-
-		HudController.enabled = !closing;
-		HudController.Hud.SetActive(!closing);
+			MedicalController.enabled = true;
+		}
 	}
 
 	public void OnGameStarted()
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
-		GamePlayerOwner.MyPlayer.OnInventoryOpened += OnInventoryOpened;
-		ComponentContainer = new("HEVSuitMod");
+		ComponentContainer = new(PluginInfo.PLUGIN_NAME);
 		VoiceController = ComponentContainer.AddComponent<VoiceController>();
 		Flashlight = ComponentContainer.AddComponent<Flashlight>();
 		HudController = ComponentContainer.AddComponent<HudController>();
-		MedicalSystem = ComponentContainer.AddComponent<MedicalSystem>();
-        //CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
-    }
+		MedicalController = ComponentContainer.AddComponent<MedicalController>();
+		//CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
+	}
 
 	public void OnGameEnded()
 	{
 		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= CheckForSuit;
-		GamePlayerOwner.MyPlayer.OnInventoryOpened -= OnInventoryOpened;
 		Destroy(VoiceController);
 		Destroy(Flashlight);
 		Destroy(HudController);
-		Destroy(MedicalSystem);
-        Destroy(ComponentContainer);
+		Destroy(MedicalController);
+		Destroy(ComponentContainer);
 	}
 }

@@ -11,33 +11,64 @@ namespace HEVSuitMod;
 
 public class VoiceController : MonoBehaviour
 {
-	private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.VoiceController");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(VoiceController).FullName}");
 	private AssetBundle assets;
 	private AudioSource audioSource;
 	public Coroutine sentencePlayer;
 	private List<HEVSentence> allSentences;
 	public readonly List<HEVSentence> pendingSentences = [];
-	private readonly HashSet<string> activeStatusEffects = [];
+	private readonly Dictionary<string, float> activeStatusEffects = [];
+	private readonly Queue<KeyValuePair<string, float>> pendingStatusEffects = [];
+	private readonly List<string> effectsToRemove = [];
+	private IHandsController currentHandsController;
 
-    private GDelegate70 PlayerDeadAction;
+	private Action onShotHandler;
+	private GDelegate71 PlayerDeadHandler; // TODO: Test this, was GDelegate70/OnPlayerDead before
 
-    private void Awake()
+	private void Awake()
 	{
-        PlayerDeadAction = (_, _, _, _) => PlayerDied();
-        audioSource = gameObject.AddComponent<AudioSource>();
+		PlayerDeadHandler = (_) => PlayerDied();
+		audioSource = gameObject.AddComponent<AudioSource>();
 		assets = HEVMod.Instance.Assets;
 		allSentences = HEVMod.Instance.SentenceParser.allSentences;
-    }
+		currentHandsController = GamePlayerOwner.MyPlayer.HandsController;
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
+		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
+		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
+	}
 
-	private void OnEnable()
+	private void Update()
 	{
-        GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
-        GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += HealthEffectRemoved;
-        GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
-        GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
-    }
+		if (pendingSentences.Count > 0 && sentencePlayer == null)
+			sentencePlayer = StartCoroutine(PlaySentences());
 
-	private void OnDisable()
+		while (pendingStatusEffects.Count > 0)
+		{
+			var kv = pendingStatusEffects.Dequeue();
+			activeStatusEffects[kv.Key] = kv.Value;
+		}
+
+		if (activeStatusEffects.Count == 0)
+			return;
+
+		effectsToRemove.Clear();
+		foreach (var kv in activeStatusEffects.ToList())
+		{
+			float remaining = kv.Value - Time.deltaTime;
+			if (remaining <= 0f)
+				effectsToRemove.Add(kv.Key);
+			else
+				activeStatusEffects[kv.Key] = remaining;
+		}
+
+		foreach (var effectName in effectsToRemove)
+		{
+			if (activeStatusEffects.Remove(effectName))
+				log.LogDebug($"Effect {effectName} expired");
+		}
+	}
+
+	private void OnDestroy()
 	{
 		if (sentencePlayer != null)
 		{
@@ -47,29 +78,24 @@ public class VoiceController : MonoBehaviour
 			sentencePlayer = null;
 		}
 
-        GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
-        GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= HealthEffectRemoved;
-        GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
-        GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
-    }
-
-	// Update just monitors pendingSentences and starts playing if there are any
-	// TODO: Priority sentences? Overlap them like hl1? This is fine now for testing
-	private void Update()
-	{
-		if (pendingSentences.Count > 0 && sentencePlayer == null)
-			sentencePlayer = StartCoroutine(PlaySentences());
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
+		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
+		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 	}
 
 	public void HandsChanged(IHandsController handsController)
 	{
 		if (handsController is Player.FirearmController faController)
 		{
-			faController.OnShot += () =>
+			Player.FirearmController current = currentHandsController as Player.FirearmController;
+			current.OnShot -= onShotHandler;
+			onShotHandler = () =>
 			{
 				if (faController.Weapon.GetCurrentMagazine().Count + faController.Weapon.ChamberAmmoCount == 0)
 					PlaySentenceById("OutOfAmmo");
 			};
+			currentHandsController = faController;
+			faController.OnShot += onShotHandler;
 		}
 	}
 
@@ -84,30 +110,18 @@ public class VoiceController : MonoBehaviour
 		PlaySentenceById("Death");
 	}
 
-	private void BodyPartDestroyed(EBodyPart bodyPart, EDamageType damageType)
-	{
-		// TODO: HEV should say something like "Major injury, seek medical attention"
-	}
-
-	private void HealthEffectRemoved(IEffect effect)
-	{
-		// TODO: Auto-heal? and say stuff like "Bleeding has stopped" or "Splint Applied"
-		Type effectType = effect.GetType(); // All effect classes are protected
-		string effectName = effectType.Name;
-		activeStatusEffects.Remove(effectName);
-	}
-
 	private void HealthEffectStarted(IEffect effect)
 	{
 		Type effectType = effect.GetType(); // All effect classes are protected
 		string effectName = effectType.Name;
-		if (activeStatusEffects.Contains(effectName))
+		var effectKvp = new KeyValuePair<string, float>(effectName, HEVMod.Instance.ignoreDuplicateEffectsTime.Value);
+		if (activeStatusEffects.ContainsKey(effectName) || pendingStatusEffects.Contains(effectKvp))
 		{
-			log.LogDebug($"HealthEffectStarted: Duplicate effect {effectName}");
+			log.LogDebug($"Duplicate effect {effectName}");
 			return;
 		}
 
-		AddEffect(effectName); // Prevent duplicates within ignoreDuplicateEffectsTime
+		pendingStatusEffects.Enqueue(effectKvp);
 		switch (effectName)
 		{
 			case "Fracture":
@@ -117,8 +131,8 @@ public class VoiceController : MonoBehaviour
 					case EBodyPart.RightLeg:
 						// "Major Fracture" because we can't run
 						PlaySentenceById("MajorFracture");
-                        PlaySentenceById("GiveMorphine");
-                        break;
+						PlaySentenceById("GiveMorphine");
+						break;
 
 					case EBodyPart.LeftArm:
 					case EBodyPart.RightArm:
@@ -131,16 +145,16 @@ public class VoiceController : MonoBehaviour
 			case "HeavyBleeding":
 				PlaySentenceById("HeavyBleeding");
 				PlaySentenceById("GiveTourniquet");
-                break;
+				break;
 
 			case "LightBleeding":
 				PlaySentenceById("LightBleeding");
-                PlaySentenceById("GiveBandage");
-                break;
+				PlaySentenceById("GiveBandage"); // FIXME: Doesn't exist yet
+				break;
 
 			case "LowEdgeHealth":
 				PlaySentenceById("NearDeath"); // TODO: Better voice line?
-                break;
+				break;
 
 			case "Pain":
 				break;
@@ -163,19 +177,6 @@ public class VoiceController : MonoBehaviour
 			case "ZombieInfection":
 				break;
 		}
-	}
-
-	private void AddEffect(string effectName)
-	{
-		activeStatusEffects.Add(effectName);
-		StartCoroutine(BeginExpireEffect(effectName));
-		log.LogDebug($"HealthEffectStarted: {effectName}, ignoring duplicates for {HEVMod.Instance.ignoreDuplicateEffectsTime.Value} secs");
-	}
-
-	private IEnumerator BeginExpireEffect(string effectName)
-	{
-		yield return new WaitForSeconds(HEVMod.Instance.ignoreDuplicateEffectsTime.Value);
-		activeStatusEffects.Remove(effectName);
 	}
 
 	public void WeaponInspectEvent()
@@ -241,7 +242,7 @@ public class VoiceController : MonoBehaviour
 		HEVSentence sentence = GetSentenceById(identifier);
 		if (sentence == null)
 		{
-			log.LogError("GetSentenceById is null!");
+			log.LogError("PlaySentenceById identifier is null!");
 			return;
 		}
 
@@ -250,18 +251,6 @@ public class VoiceController : MonoBehaviour
 
 	private HEVSentence GetSentenceById(string identifier)
 	{
-		if (string.IsNullOrEmpty(identifier))
-		{
-			log.LogError("GetSentenceById was called with a null or empty identifier.");
-			return null;
-		}
-
-		if (allSentences == null || allSentences.Count == 0)
-		{
-			log.LogWarning("GetSentenceById: allSentences is null or empty.");
-			return null;
-		}
-
 		var matches = allSentences.Where(x => x != null && x.Identifier == identifier).ToList();
 		if (matches.Count == 0)
 		{
