@@ -17,9 +17,7 @@ public class VoiceController : MonoBehaviour
 	public Coroutine sentencePlayer;
 	private List<HEVSentence> allSentences;
 	public readonly List<HEVSentence> pendingSentences = [];
-	private readonly Dictionary<string, float> activeStatusEffects = [];
-	private readonly Queue<KeyValuePair<string, float>> pendingStatusEffects = [];
-	private readonly List<string> effectsToRemove = [];
+	private HashSet<IEffect> activeEffects = [];
 	private IHandsController currentHandsController;
 
 	private Action onShotHandler;
@@ -32,7 +30,7 @@ public class VoiceController : MonoBehaviour
 		assets = HEVMod.Instance.Assets;
 		allSentences = HEVMod.Instance.SentenceParser.allSentences;
 		currentHandsController = GamePlayerOwner.MyPlayer.HandsController;
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += HealthEffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStarted;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 	}
@@ -41,31 +39,6 @@ public class VoiceController : MonoBehaviour
 	{
 		if (pendingSentences.Count > 0 && sentencePlayer == null)
 			sentencePlayer = StartCoroutine(PlaySentences());
-
-		while (pendingStatusEffects.Count > 0)
-		{
-			var kv = pendingStatusEffects.Dequeue();
-			activeStatusEffects[kv.Key] = kv.Value;
-		}
-
-		if (activeStatusEffects.Count == 0)
-			return;
-
-		effectsToRemove.Clear();
-		foreach (var kv in activeStatusEffects.ToList())
-		{
-			float remaining = kv.Value - Time.deltaTime;
-			if (remaining <= 0f)
-				effectsToRemove.Add(kv.Key);
-			else
-				activeStatusEffects[kv.Key] = remaining;
-		}
-
-		foreach (var effectName in effectsToRemove)
-		{
-			if (activeStatusEffects.Remove(effectName))
-				log.LogDebug($"Effect {effectName} expired");
-		}
 	}
 
 	private void OnDestroy()
@@ -78,7 +51,7 @@ public class VoiceController : MonoBehaviour
 			sentencePlayer = null;
 		}
 
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= HealthEffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStarted;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 	}
@@ -110,18 +83,17 @@ public class VoiceController : MonoBehaviour
 		PlaySentenceById("Death");
 	}
 
-	private void HealthEffectStarted(IEffect effect)
+	private void EffectStarted(IEffect effect)
 	{
 		Type effectType = effect.GetType(); // All effect classes are protected
 		string effectName = effectType.Name;
-		var effectKvp = new KeyValuePair<string, float>(effectName, HEVMod.Instance.ignoreDuplicateEffectsTime.Value);
-		if (activeStatusEffects.ContainsKey(effectName) || pendingStatusEffects.Contains(effectKvp))
+		if (activeEffects.Contains(effect))
 		{
 			log.LogDebug($"Duplicate effect {effectName}");
 			return;
 		}
 
-		pendingStatusEffects.Enqueue(effectKvp);
+		bool handled = false;
 		switch (effectName)
 		{
 			case "Fracture":
@@ -140,20 +112,24 @@ public class VoiceController : MonoBehaviour
 						PlaySentenceById("MinorFracture");
 						break;
 				}
+				handled = true;
 				break;
 
 			case "HeavyBleeding":
 				PlaySentenceById("HeavyBleeding");
 				PlaySentenceById("GiveTourniquet");
+				handled = true;
 				break;
 
 			case "LightBleeding":
 				PlaySentenceById("LightBleeding");
 				PlaySentenceById("GiveBandage"); // FIXME: Doesn't exist yet
+				handled = true;
 				break;
 
 			case "LowEdgeHealth":
 				PlaySentenceById("NearDeath"); // TODO: Better voice line?
+				handled = true;
 				break;
 
 			case "Pain":
@@ -177,6 +153,17 @@ public class VoiceController : MonoBehaviour
 			case "ZombieInfection":
 				break;
 		}
+
+		if (handled)
+		{
+			activeEffects.Add(effect);
+			log.LogDebug($"Effect {effectName} added");
+		}
+	}
+
+	private void EffectRemoved(IEffect effect)
+	{
+		activeEffects.Remove(effect);
 	}
 
 	public void WeaponInspectEvent()

@@ -1,6 +1,4 @@
-﻿using BepInEx.Logging;
-using Comfort.Common;
-using EFT;
+﻿using EFT;
 using EFT.InventoryLogic;
 using System;
 using System.Collections.Generic;
@@ -38,16 +36,17 @@ public class HudWeaponSelection : MonoBehaviour
 	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudWeaponSelection).FullName}");
 	private GameObject weaponSelectionUI;
 	private AudioSource audioSource;
-	private AssetBundle assets = HEVMod.Instance.Assets;
 	private WeaponSelection[] weapons = new WeaponSelection[NUM_WEAPONS];
 	private float activeTimer = 0f;
-	private Dictionary<Item, Sprite> weaponIconCache = [];
+	//private Dictionary<Item, Sprite> weaponIconCache = [];
 
 	private Action<Item> HolsterWeaponChanged;
 	private Action<Item> PrimaryWeaponChanged;
 	private Action<Item> SecondaryWeaponChanged;
 	private Action<Item> ScabbardWeaponChanged;
 
+	private AssetBundle Assets => HEVMod.Instance.Assets;
+	private HudController HudController => HEVMod.Instance.HudController;
 	private Slot Holster => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Holster);
 	private Slot Primary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon);
 	private Slot Secondary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon);
@@ -71,7 +70,7 @@ public class HudWeaponSelection : MonoBehaviour
 		audioSource = GetComponent<AudioSource>();
 		audioSource.volume = 0.5f;
 		audioSource.playOnAwake = false;
-		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/fx/wpn_moveselect.wav");
+		audioSource.clip = Assets.LoadAsset<AudioClip>("assets/sounds/fx/wpn_moveselect.wav");
 		weaponSelectionUI = transform.Find("WeaponSelection").gameObject;
 		var allTransforms = weaponSelectionUI.GetComponentsInChildren<Transform>(true).ToDictionary(t => t.GetRelativePath(weaponSelectionUI.transform), t => t);
 		for (int i = 0; i < NUM_WEAPONS; i++)
@@ -112,7 +111,7 @@ public class HudWeaponSelection : MonoBehaviour
 	private void OnWeaponChanged(Item weapon, WeaponSelection selection)
 	{
 		selection.name.text = weapon != null ? weapon.ShortName.Localized() : "Error";
-		selection.icon.sprite = weapon != null ? GetWeaponSprite(weapon) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+		selection.icon.sprite = weapon != null ? HudController.GetItemSprite(weapon, new XYCellSizeStruct(5,2)) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
 	}
 
 	void Update()
@@ -147,37 +146,5 @@ public class HudWeaponSelection : MonoBehaviour
 				weapons[i].ammoLevel.fillAmount = item is Weapon weapon ? (float)weapon.GetCurrentMagazineCount() / weapon.GetMaxMagazineCount() : 0f;
 			}
 		}
-	}
-
-	private Sprite GetWeaponSprite(Item item)
-	{
-		if (item == null)
-			return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
-
-		if (weaponIconCache.TryGetValue(item, out Sprite cachedSprite))
-			return cachedSprite;
-
-		GClass929 generatedImage = Singleton<GClass926>.Instance.GetItemIcon(item, new XYCellSizeStruct(5, 2));
-		if (generatedImage == null || generatedImage.Sprite == null)
-			return CacheResourcesPopAbstractClass.Pop<Sprite>("What");
-
-		Texture2D tex = Instantiate(generatedImage.Sprite.texture);
-		Color[] pixels = tex.GetPixels();
-		for (int i = 0; i < pixels.Length; i++)
-		{
-			// Convert to grayscale and adjust exposure
-			Color c = pixels[i];
-			float gray = c.r * 0.299f + c.g * 0.587f + c.b * 0.114f;
-			gray = Mathf.Lerp(gray, 1f, 0.5f);
-			gray *= 1.5f;
-			pixels[i] = new Color(gray, gray, gray, c.a);
-		}
-
-		tex.SetPixels(pixels);
-		tex.Apply();
-
-		Sprite output = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-		weaponIconCache[item] = output;
-		return output;
 	}
 }

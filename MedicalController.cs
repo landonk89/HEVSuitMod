@@ -5,7 +5,6 @@ using EFT.HealthSystem;
 using EFT.InventoryLogic;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace HEVSuitMod;
@@ -13,9 +12,7 @@ namespace HEVSuitMod;
 public class MedicalController : MonoBehaviour
 {
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(MedicalController).FullName}");
-	private readonly Dictionary<string, float> activeStatusEffects = [];
-	private readonly Queue<KeyValuePair<string, float>> pendingStatusEffects = [];
-	private readonly List<string> effectsToRemove = [];
+	private HashSet<IEffect> activeEffects = [];
 
 	// TODO: In an ideal world, I would search the template id from the server
 	// but I don't know shit about how that works yet... Revisit this later
@@ -29,87 +26,17 @@ public class MedicalController : MonoBehaviour
 			{ "zagustin", "5c0e533786f7747fa23f4d47" }
 	};
 
-	private void OnEnable()
+
+    private void OnEnable()
 	{
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStartedHandler;
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += EffectRemoved;
 	}
 
 	private void OnDisable()
 	{
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStartedHandler;
-	}
-
-	private void Update()
-	{
-		if (activeStatusEffects.Count == 0)
-			return;
-
-		while (pendingStatusEffects.Count > 0)
-		{
-			var kv = pendingStatusEffects.Dequeue();
-			activeStatusEffects[kv.Key] = kv.Value;
-		}
-
-		if (activeStatusEffects.Count == 0)
-			return;
-
-		effectsToRemove.Clear();
-		foreach (var kv in activeStatusEffects.ToList())
-		{
-			float remaining = kv.Value - Time.deltaTime;
-			if (remaining <= 0f)
-				effectsToRemove.Add(kv.Key);
-			else
-				activeStatusEffects[kv.Key] = remaining;
-		}
-
-		foreach (var effectName in effectsToRemove)
-		{
-			if (activeStatusEffects.Remove(effectName))
-				log.LogDebug($"Effect {effectName} expired");
-		}
-	}
-
-	private void EffectStartedHandler(IEffect effect)
-	{
-		Type effectType = effect.GetType(); // All effect classes are protected
-		string effectName = effectType.Name;
-		var effectKvp = new KeyValuePair<string, float>(effectName, HEVMod.Instance.ignoreDuplicateEffectsTime.Value);
-		if (activeStatusEffects.ContainsKey(effectName) || pendingStatusEffects.Contains(effectKvp))
-		{
-			log.LogDebug($"Duplicate effect {effectName}");
-			return;
-		}
-
-		pendingStatusEffects.Enqueue(effectKvp);
-		log.LogDebug($"Effect {effectName} added");
-		switch (effectName)
-		{
-			case "Fracture":	// Only stim if a leg is fractured, arm doesn't need it
-				if (effect.BodyPart == EBodyPart.LeftLeg || effect.BodyPart == EBodyPart.RightLeg)
-					UseInjector("morphine");
-				break;
-
-			case "HeavyBleeding":
-			case "LightBleeding":
-				UseInjector("zagustin");
-				break;
-
-			// TODO: Make this configurable? The user may or may not want this level of assistance
-			case "LowEdgeHealth":
-				UseInjector("etgchange");
-				break;
-
-			// TODO: Need to verify this is the effect for being stabbed by cultist knife
-			case "LethalIntoxication":
-			case "Intoxication":
-				UseInjector("antidote");
-				break;
-
-			default:
-				log.LogDebug($"Unhandled health effect {effectName}");
-				break;
-		}
+		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= EffectRemoved;
 	}
 
 	/// <summary>
@@ -150,4 +77,60 @@ public class MedicalController : MonoBehaviour
 			log.LogInfo($"Used {stim.Template.ShortName.Localized()} injector.");
 		}
 	}
+
+	public void EffectStarted(IEffect effect)
+	{
+		Type effectType = effect.GetType(); // All effect classes are protected
+		string effectName = effectType.Name;
+		if (activeEffects.Contains(effect))
+		{
+			log.LogDebug($"Duplicate effect {effectName}");
+			return;
+		}
+
+		bool handled = false;
+		switch (effectName)
+		{
+			case "Fracture":    // Only stim if a leg is fractured, arm doesn't need it
+				if (effect.BodyPart == EBodyPart.LeftLeg || effect.BodyPart == EBodyPart.RightLeg)
+					UseInjector("morphine");
+				handled = true;
+				break;
+
+			case "HeavyBleeding":
+			case "LightBleeding":
+				UseInjector("zagustin");
+				handled = true;
+				break;
+
+			// TODO: Make this configurable? The user may or may not want this level of assistance
+			case "LowEdgeHealth":
+				UseInjector("etgchange");
+				handled = true;
+				break;
+
+			// TODO: Need to verify this is the effect for being stabbed by cultist knife
+			case "LethalIntoxication":
+			case "Intoxication":
+				UseInjector("antidote");
+				handled = true;
+				break;
+
+			default:
+				log.LogDebug($"Unhandled health effect {effectName}");
+				break;
+		}
+
+		if (handled)
+		{
+			activeEffects.Add(effect);
+			log.LogDebug($"Effect {effectName} added");
+		}
+	}
+
+	public void EffectRemoved(IEffect effect)
+    {
+		log.LogDebug($"Effect {effect.GetType().Name} removed.");
+		activeEffects.Remove(effect);
+    }
 }
