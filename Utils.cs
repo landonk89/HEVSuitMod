@@ -10,7 +10,7 @@ namespace HEVSuitMod;
 // Some useful stuff goes here
 public static class Utils
 {
-	private static readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(Utils).FullName}");
+	//private static readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(Utils).FullName}");
 
 	// Simple tree node
 	private class Node
@@ -73,38 +73,6 @@ public static class Utils
 			for (int i = 0; i < orderedChildren.Count; i++)
 				BuildTreeRecursive(sb, orderedChildren[i], childPrefix, i == orderedChildren.Count - 1);
 		}
-	}
-
-	/// <summary>
-	/// Find a component <typeparamref name="T"/> in <paramref name="path"/>
-	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="root"></param>
-	/// <param name="path"></param>
-	/// <returns></returns>
-	public static T FindComponent<T>(GameObject root, string path) where T : Component
-	{
-		T component = root.transform.Find(path)?.GetComponent<T>();
-		if (component == null)
-			log.LogWarning($"FindComponent: {root.name}/{path}\n\tComponent of type {typeof(T)} not found");
-
-		return component;
-	}
-
-	/// <summary>
-	/// Find every component of type <typeparamref name="T"/> in children of <paramref name="path"/>
-	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="root"></param>
-	/// <param name="path"></param>
-	/// <returns></returns>
-	public static T[] FindComponentsInChildren<T>(GameObject root, string path) where T : Component
-	{
-		T[] components = root.transform.Find(path)?.GetComponentsInChildren<T>();
-		if (components == null)
-			log.LogWarning($"FindComponentsInChildren: {root.name}/{path}\n\tComponents of type {typeof(T)} not found");
-		
-		return components;
 	}
 
 	public static string GetRelativePath(this Transform t, Transform root)

@@ -5,8 +5,8 @@ using EFT;
 
 namespace HEVSuitMod
 {
-    public class HudHealthCounter : MonoBehaviour
-    {
+	public class HudHealthCounter : MonoBehaviour
+	{
 		private readonly HudIcon[] healthIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
 		private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
 

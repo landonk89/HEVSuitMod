@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace HEVSuitMod
 {
-    public class HudSuitPowerCounter : MonoBehaviour
+	public class HudSuitPowerCounter : MonoBehaviour
 	{
 		private readonly HudIcon[] suitIcons = new HudIcon[5]; // 3 digits[0,1,2] + fullicon[3] + emptyicon[4]
 		private HudIcon[] SuitNumbers => [suitIcons[0], suitIcons[1], suitIcons[2]];

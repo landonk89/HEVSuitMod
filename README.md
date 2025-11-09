@@ -16,8 +16,8 @@ Working so far:
 	* Damage direction indicators
 	* Damage type indicators
 	* Flashlight status and battery
-* Certain events will play HEV voicelines, such as:
-	* Health effects like fractures and bleeds
+* Events such as:
+	* Health effects like fractures and bleeds: Play HEV voice lines and automatic first aid
 	* Low health warning
 	* Inspecting a weapon (off by default)
 	* Checking the chamber of a weapon (off by default)

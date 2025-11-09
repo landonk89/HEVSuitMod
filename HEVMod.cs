@@ -128,39 +128,17 @@ public class HEVMod : BaseUnityPlugin
 	}
 #endif
 
-	// FIXME: Not working, I assume item isn't null when no rig equipped? need to check
-	private void CheckForSuit(Item item)
-	{
-		if (item == null)
-		{
-			VoiceController.enabled = false;
-			Flashlight.enabled = false;
-			HudController.enabled = false;
-			MedicalController.enabled = false;
-		}
-		else //if (item.Name == "item_equipment_rig_strandhogg") // TODO: Replace with HEV when it's asset is created
-		{
-			VoiceController.enabled = true;
-			Flashlight.enabled = true;
-			HudController.enabled = true;
-			MedicalController.enabled = true;
-		}
-	}
-
 	public void OnGameStarted()
 	{
-		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += CheckForSuit;
 		ComponentContainer = new(PluginInfo.PLUGIN_NAME);
 		VoiceController = ComponentContainer.AddComponent<VoiceController>();
 		Flashlight = ComponentContainer.AddComponent<Flashlight>();
 		HudController = ComponentContainer.AddComponent<HudController>();
 		MedicalController = ComponentContainer.AddComponent<MedicalController>();
-		//CheckForSuit(GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem);
 	}
 
 	public void OnGameEnded()
 	{
-		//GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= CheckForSuit;
 		Destroy(VoiceController);
 		Destroy(Flashlight);
 		Destroy(HudController);

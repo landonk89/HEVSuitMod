@@ -20,8 +20,8 @@ public class HudController : MonoBehaviour
 
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudController).FullName}");
 
-    // TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
-    public Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
+	// TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
+	public Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
 	public Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter
 	public Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
 	public Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
@@ -46,7 +46,7 @@ public class HudController : MonoBehaviour
 	private void Awake()
 	{
 		AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
-		
+
 		// Instantiate HUD prefab and weapon selection controller
 		Hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
 

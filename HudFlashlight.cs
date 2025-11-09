@@ -3,8 +3,8 @@ using UnityEngine.UI;
 
 namespace HEVSuitMod
 {
-    public class HudFlashlight : MonoBehaviour
-    {
+	public class HudFlashlight : MonoBehaviour
+	{
 		private readonly HudIcon[] flashlightIcons = new HudIcon[3];
 		private HudIcon EmptyIcon => flashlightIcons[0];
 		private HudIcon FullIcon => flashlightIcons[1];

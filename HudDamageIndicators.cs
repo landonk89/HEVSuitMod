@@ -12,7 +12,7 @@ namespace HEVSuitMod
 		private readonly HudIcon[] indicators = new HudIcon[4]; // Order: Up, Right, Down, Left
 
 		private Dictionary<int, HudIcon[]> Directions => new()
-        {
+		{
 			[0] = [indicators[0]],
 			[1] = [indicators[0], indicators[1]],
 			[2] = [indicators[1]],
@@ -42,30 +42,30 @@ namespace HEVSuitMod
 		}
 
 		private void Update()
-        {
-            if (!indicators.Any(x => x.state == EIconState.Active))
-                return; // Only proceed if any indicators are active
+		{
+			if (!indicators.Any(x => x.state == EIconState.Active))
+				return; // Only proceed if any indicators are active
 
 			foreach (HudIcon indicator in indicators)
-            {
-                if (indicator.state != EIconState.Active)
-                    continue;
+			{
+				if (indicator.state != EIconState.Active)
+					continue;
 
-                indicator.timer += Time.deltaTime;
-                if (indicator.timer >= HudController.FADE_TIME)
-                {
-                    indicator.timer = 0f;
-                    indicator.image.color = Color.clear;
-                    indicator.state = EIconState.Inactive;
+				indicator.timer += Time.deltaTime;
+				if (indicator.timer >= HudController.FADE_TIME)
+				{
+					indicator.timer = 0f;
+					indicator.image.color = Color.clear;
+					indicator.state = EIconState.Inactive;
 					continue;
 				}
 
-                float t = indicator.timer / HudController.FADE_TIME;
-                indicator.image.color = Color.Lerp(damageIndicatorColor, Color.clear, t);
-            }
-        }
+				float t = indicator.timer / HudController.FADE_TIME;
+				indicator.image.color = Color.Lerp(damageIndicatorColor, Color.clear, t);
+			}
+		}
 
-        private void OnPlayerHit(DamageInfoStruct damageInfo, EBodyPart bodyPart, float damage)
+		private void OnPlayerHit(DamageInfoStruct damageInfo, EBodyPart bodyPart, float damage)
 		{
 			Vector3 lookDir = GamePlayerOwner.MyPlayer.LookDirection.normalized;
 			Vector3 localDir = Quaternion.Inverse(Quaternion.LookRotation(lookDir)) * -damageInfo.Direction;
