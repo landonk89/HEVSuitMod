@@ -30,7 +30,7 @@ public class HudDamageIcons : MonoBehaviour
 	private Sprite dehydrationDamage;
 	private Sprite exhaustionDamage;
 	private Transform damageNotificationArea;
-	private readonly List<DamageIcon> activeIcons = [];
+	private readonly List<HudIcon> activeIcons = [];
 
 	private void Awake()
 	{
@@ -52,12 +52,13 @@ public class HudDamageIcons : MonoBehaviour
 		GamePlayerOwner.MyPlayer.BeingHitAction -= OnPlayerHit;
 	}
 
+	// Don't use HudController's StateUpdate, these are unique
 	private void Update()
 	{
 		if (activeIcons.Count == 0)
 			return;
 
-		foreach (DamageIcon icon in activeIcons.ToArray())
+		foreach (HudIcon icon in activeIcons.ToArray()) // Copy to avoid modification during iteration
 		{
 			icon.timer += Time.deltaTime;
 			icon.image.color = Color.Lerp(Color.clear, HudController.hudColorActive, (Mathf.Sin(icon.timer * 4f) + 1f) * 0.5f);
@@ -120,7 +121,7 @@ public class HudDamageIcons : MonoBehaviour
 		Image iconImage = iconObj.AddComponent<Image>();
 		iconImage.sprite = icon;
 		iconImage.color = HudController.hudColorActive;
-		DamageIcon damageIcon = new(iconImage);
+		HudIcon damageIcon = new(iconImage);
 		activeIcons.Add(damageIcon);
 
 		// TODO: Check if this causes issues with removing while iterating in Update

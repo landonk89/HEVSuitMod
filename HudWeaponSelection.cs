@@ -38,7 +38,6 @@ public class HudWeaponSelection : MonoBehaviour
 	private AudioSource audioSource;
 	private WeaponSelection[] weapons = new WeaponSelection[NUM_WEAPONS];
 	private float activeTimer = 0f;
-	//private Dictionary<Item, Sprite> weaponIconCache = [];
 
 	private Action<Item> HolsterWeaponChanged;
 	private Action<Item> PrimaryWeaponChanged;

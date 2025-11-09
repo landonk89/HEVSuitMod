@@ -20,7 +20,7 @@ public class VoiceController : MonoBehaviour
 	private HashSet<IEffect> activeEffects = [];
 	private IHandsController currentHandsController;
 
-	private Action onShotHandler;
+	private Action OnShotHandler;
 	private GDelegate71 PlayerDeadHandler; // TODO: Test this, was GDelegate70/OnPlayerDead before
 
 	private void Awake()
@@ -61,14 +61,14 @@ public class VoiceController : MonoBehaviour
 		if (handsController is Player.FirearmController faController)
 		{
 			Player.FirearmController current = currentHandsController as Player.FirearmController;
-			current.OnShot -= onShotHandler;
-			onShotHandler = () =>
+			current.OnShot -= OnShotHandler;
+			OnShotHandler = () =>
 			{
 				if (faController.Weapon.GetCurrentMagazine().Count + faController.Weapon.ChamberAmmoCount == 0)
 					PlaySentenceById("OutOfAmmo");
 			};
 			currentHandsController = faController;
-			faController.OnShot += onShotHandler;
+			faController.OnShot += OnShotHandler;
 		}
 	}
 

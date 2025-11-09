@@ -5,23 +5,21 @@ namespace HEVSuitMod
 {
     public class HudFlashlight : MonoBehaviour
     {
-		private Image empty;
-		private Image full;
-		private Image beam;
-		private bool isCritical;
-		private bool isOn;
+		private readonly HudIcon[] flashlightIcons = new HudIcon[3];
+		private HudIcon EmptyIcon => flashlightIcons[0];
+		private HudIcon FullIcon => flashlightIcons[1];
+		private HudIcon BeamIcon => flashlightIcons[2];
+
 		private HudController HudController => HEVMod.Instance.HudController;
 		private Flashlight Flashlight => HEVMod.Instance.Flashlight;
 
 		private void Awake()
 		{
-			empty = transform.Find("Flashlight/IconEmpty").GetComponent<Image>();
-			full = transform.Find("Flashlight/IconFull").GetComponent<Image>();
-			beam = transform.Find("Flashlight/Beam").GetComponent<Image>();
-			beam.enabled = false; // start off and full battery
-			isOn = false;
-			isCritical = false;
-			full.fillAmount = 1f;
+			flashlightIcons[0] = new(transform.Find("Flashlight/IconEmpty").GetComponent<Image>());
+			flashlightIcons[1] = new(transform.Find("Flashlight/IconFull").GetComponent<Image>());
+			flashlightIcons[2] = new(transform.Find("Flashlight/Beam").GetComponent<Image>());
+			BeamIcon.image.enabled = false; // start off and full battery
+			FullIcon.image.fillAmount = 1f;
 			Flashlight.Toggled += FlashlightToggled;
 			Flashlight.BatteryUpdate += SetBatteryLevel;
 			Flashlight.BatteryStateChanged += SetBatteryCritical;
@@ -34,38 +32,26 @@ namespace HEVSuitMod
 			Flashlight.BatteryStateChanged -= SetBatteryCritical;
 		}
 
+		private void Update()
+		{
+			HudController.StateUpdate(flashlightIcons);
+		}
+
 		private void FlashlightToggled(bool turnedOn)
 		{
-			Color color = isCritical switch
-			{
-				true => turnedOn ? HudController.hudColorCriticalActive : HudController.hudColorCritical,
-				false => turnedOn ? HudController.hudColorActive : HudController.hudColor
-			};
-
-			isOn = turnedOn;
-			beam.enabled = turnedOn;
-			empty.color = color;
-			full.color = color;
-			beam.color = color;
+			BeamIcon.image.enabled = turnedOn;
+			foreach (HudIcon img in flashlightIcons)
+				HudController.StartTransition(img, turnedOn ? EIconState.Activating : EIconState.Deactivating);
 		}
 
 		public void SetBatteryLevel(float level)
 		{
-			full.fillAmount = level;
+			FullIcon.image.fillAmount = level;
 		}
 
 		private void SetBatteryCritical(bool critical)
 		{
-			Color color = critical switch
-			{
-				true => isOn ? HudController.hudColorCriticalActive : HudController.hudColorCritical,
-				false => isOn ? HudController.hudColorActive : HudController.hudColor
-			};
-
-			isCritical = critical;
-			empty.color = color;
-			full.color = color;
-			beam.color = color;
+			HudController.SetCritical(flashlightIcons, critical);
 		}
 	}
 }

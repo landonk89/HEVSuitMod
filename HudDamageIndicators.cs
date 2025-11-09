@@ -1,25 +1,17 @@
-﻿using EFT;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using EFT;
 
 namespace HEVSuitMod
 {
 	public class HudDamageIndicators : MonoBehaviour
 	{
-		private class DamageIndicator(Image img)
-		{
-			public Image image = img;
-			public bool active = false;
-			public float timer = 0f;
-		}
+		private Color damageIndicatorColor = new(1f, 1f, 1f, 0.6f); // Slightly transparent
+		private readonly HudIcon[] indicators = new HudIcon[4]; // Order: Up, Right, Down, Left
 
-		private const float FADE_TIME = 0.5f;
-		private Color indicatorColor = new(1f, 1f, 1f, 0.4f); // Slightly transparent
-		private readonly DamageIndicator[] indicators = new DamageIndicator[4]; // Order: Up, Right, Down, Left
-
-		private Dictionary<int, DamageIndicator[]> Directions => new()
+		private Dictionary<int, HudIcon[]> Directions => new()
         {
 			[0] = [indicators[0]],
 			[1] = [indicators[0], indicators[1]],
@@ -51,25 +43,25 @@ namespace HEVSuitMod
 
 		private void Update()
         {
-            if (!indicators.Any(x => x.active))
-                return;
+            if (!indicators.Any(x => x.state == EIconState.Active))
+                return; // Only proceed if any indicators are active
 
-            foreach (DamageIndicator indicator in indicators)
+			foreach (HudIcon indicator in indicators)
             {
-                if (!indicator.active)
+                if (indicator.state != EIconState.Active)
                     continue;
 
                 indicator.timer += Time.deltaTime;
-                if (indicator.timer >= FADE_TIME)
+                if (indicator.timer >= HudController.FADE_TIME)
                 {
                     indicator.timer = 0f;
                     indicator.image.color = Color.clear;
-                    indicator.active = false;
+                    indicator.state = EIconState.Inactive;
 					continue;
 				}
 
-                float t = indicator.timer / FADE_TIME;
-                indicator.image.color = Color.Lerp(indicatorColor, Color.clear, t);
+                float t = indicator.timer / HudController.FADE_TIME;
+                indicator.image.color = Color.Lerp(damageIndicatorColor, Color.clear, t);
             }
         }
 
@@ -89,7 +81,7 @@ namespace HEVSuitMod
 			foreach (var indicator in Directions[dirIndex])
 			{
 				indicator.timer = 0f; // In case it's already active, reset timer
-				indicator.active = true;
+				indicator.state = EIconState.Active;
 			}
 		}
 	}
