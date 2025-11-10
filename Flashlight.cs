@@ -1,5 +1,4 @@
-﻿using BepInEx.Logging;
-using EFT;
+﻿using EFT;
 using System;
 using UnityEngine;
 

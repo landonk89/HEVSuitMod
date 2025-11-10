@@ -13,14 +13,14 @@ namespace HEVSuitMod
 
 		private Dictionary<int, HudIcon[]> Directions => new()
 		{
-			[0] = [indicators[0]],
-			[1] = [indicators[0], indicators[1]],
-			[2] = [indicators[1]],
-			[3] = [indicators[1], indicators[2]],
-			[4] = [indicators[2]],
-			[5] = [indicators[2], indicators[3]],
-			[6] = [indicators[3]],
-			[7] = [indicators[3], indicators[0]]
+			[0] = [indicators[0]], // Front
+			[1] = [indicators[0], indicators[1]], // Front-Right
+			[2] = [indicators[1]], // Right
+			[3] = [indicators[1], indicators[2]], // Back-Right
+			[4] = [indicators[2]], // Back
+			[5] = [indicators[2], indicators[3]], // Back-Left
+			[6] = [indicators[3]], // Left
+			[7] = [indicators[3], indicators[0]] // Front-Left
 		};
 
 		private void Awake()
@@ -43,12 +43,12 @@ namespace HEVSuitMod
 
 		private void Update()
 		{
-			if (!indicators.Any(x => x.state == EIconState.Active))
+			if (indicators.All(x => x.state == EIconState.Dark))
 				return; // Only proceed if any indicators are active
 
 			foreach (HudIcon indicator in indicators)
 			{
-				if (indicator.state != EIconState.Active)
+				if (indicator.state != EIconState.Bright)
 					continue;
 
 				indicator.timer += Time.deltaTime;
@@ -56,7 +56,7 @@ namespace HEVSuitMod
 				{
 					indicator.timer = 0f;
 					indicator.image.color = Color.clear;
-					indicator.state = EIconState.Inactive;
+					indicator.state = EIconState.Dark;
 					continue;
 				}
 
@@ -81,7 +81,7 @@ namespace HEVSuitMod
 			foreach (var indicator in Directions[dirIndex])
 			{
 				indicator.timer = 0f; // In case it's already active, reset timer
-				indicator.state = EIconState.Active;
+				indicator.state = EIconState.Bright;
 			}
 		}
 	}

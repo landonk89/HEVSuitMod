@@ -1,7 +1,5 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
-using EFT;
-using EFT.InventoryLogic;
 using EFT.UI;
 using System.IO;
 using UnityEngine;

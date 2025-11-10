@@ -5,15 +5,15 @@ namespace HEVSuitMod;
 
 public enum EIconState
 {
-	Inactive,
-	Active,
-	Deactivating,
-	Activating,
+	Dark,
+	Bright,
+	GoDark,
+	GoBright,
 	Highlight,
 	FadeHighlight,
 }
 
-public class HudIcon(Image image, EIconState state = EIconState.Inactive, bool isCritical = false, float timer = 0f)
+public class HudIcon(Image image, EIconState state = EIconState.Dark, bool isCritical = false, float timer = 0f)
 {
 	public Image image = image;
 	public EIconState state = state;

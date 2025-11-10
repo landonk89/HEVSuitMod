@@ -1,65 +1,64 @@
-﻿using System;
+﻿using EFT;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
-using EFT;
 
-namespace HEVSuitMod
+namespace HEVSuitMod;
+
+public class HudHealthCounter : MonoBehaviour
 {
-	public class HudHealthCounter : MonoBehaviour
-	{
-		private readonly HudIcon[] healthIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
-		private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
+    private readonly HudIcon[] healthIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
+    private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
 
-		private HudController HudController => HEVMod.Instance.HudController;
+    private HudController HudController => HEVMod.Instance.HudController;
 
-		private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
-		private GDelegate70 PlayerDeadAction;
+    private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
+    private GDelegate70 PlayerDeadAction;
 
-		private void Awake()
-		{
-			HealthChangedAction = (_, _, _) => HealthChanged();
-			PlayerDeadAction = (_, _, _, _) => HealthChanged(false);
-			healthIcons[3] = new(transform.Find("HealthAndSuitPower/HealthIcon").GetComponent<Image>());
-			for (int i = 0; i < 3; i++)
-				healthIcons[i] = new(transform.Find($"HealthAndSuitPower/HealthValue/Digit{i}").GetComponent<Image>());
+    private void Awake()
+    {
+        HealthChangedAction = (_, _, _) => HealthChanged();
+        PlayerDeadAction = (_, _, _, _) => HealthChanged(false);
+        healthIcons[3] = new(transform.Find("HealthAndSuitPower/HealthIcon").GetComponent<Image>());
+        for (int i = 0; i < 3; i++)
+            healthIcons[i] = new(transform.Find($"HealthAndSuitPower/HealthValue/Digit{i}").GetComponent<Image>());
 
-			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += HealthChangedAction;
-			GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
-		}
+        GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += HealthChangedAction;
+        GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
+    }
 
-		private void Start()
-		{
-			HealthChanged();
-		}
+    private void Start()
+    {
+        HealthChanged();
+    }
 
-		private void OnDestroy()
-		{
-			GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= HealthChangedAction;
-			GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
-		}
+    private void OnDestroy()
+    {
+        GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= HealthChangedAction;
+        GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
+    }
 
-		private void Update()
-		{
-			HudController.StateUpdate(healthIcons);
-			if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
-			{
-				if (healthIcons[0].critical)
-					HudController.Highlight(healthIcons);
-			}
-		}
+    private void Update()
+    {
+        HudController.StateUpdate(healthIcons);
+        if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
+        {
+            if (healthIcons[0].critical)
+                HudController.Highlight(healthIcons);
+        }
+    }
 
-		private void HealthChanged(bool alive = true)
-		{
-			// FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
-			int normalizedHealth = 0;
-			if (alive)
-			{
-				float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
-				normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
-			}
-			HudController.SetNumberDigits(HealthNumbers, normalizedHealth);
-			HudController.SetCritical(healthIcons, normalizedHealth <= 20);
-			HudController.Highlight(healthIcons);
-		}
-	}
+    private void HealthChanged(bool alive = true)
+    {
+        // FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
+        int normalizedHealth = 0;
+        if (alive)
+        {
+            float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
+            normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+        }
+        HudController.SetNumberDigits(HealthNumbers, normalizedHealth);
+        HudController.SetCritical(healthIcons, normalizedHealth <= 20);
+        HudController.Highlight(healthIcons);
+    }
 }

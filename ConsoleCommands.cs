@@ -35,12 +35,6 @@ public class ImpulseCommand(string impulse) : SyncCommand
 
 			// TODO: super neato stuff will go here
 			case 101:
-				//GamePlayerOwner.MyPlayer.ActiveHealthController.TryDoExternalBuff("BuffseTGchange");
-				// TODO: Test tomorrow, sleepy now...
-				var itemFactory = Singleton<ItemFactoryClass>.Instance;
-				var stim = itemFactory.GetPresetItem("544fb3f34bdc2d03748b456a");
-				GamePlayerOwner.MyPlayer.Inventory.Stash.Class2312_0.AddAnywhere(stim, EFT.InventoryLogic.EErrorHandlingType.Log);
-                GamePlayerOwner.MyPlayer.ActiveHealthController.DoMedEffect(stim, EBodyPart.Head);
 				ConsoleScreen.Log("Cheater!");
 				break;
 		}

@@ -92,6 +92,11 @@ public class HudController : MonoBehaviour
 		Hud.SetActive(!closing);
 	}
 
+	/// <summary>
+	/// Initiates a transition of the specified HUD icon to a new visual state.
+	/// </summary>
+	/// <param name="img">The HUD icon to transition. Cannot be null.</param>
+	/// <param name="nextState">The state to which the HUD icon will transition.</param>
 	public void StartTransition(HudIcon img, EIconState nextState)
 	{
 		img.timer = 0f;
@@ -99,7 +104,13 @@ public class HudController : MonoBehaviour
 		img.state = nextState;
 	}
 
-	// Returns true if transition completed
+	/// <summary>
+	/// Per frame update of a HUD icon transition towards a target color over a specified duration.
+	/// </summary>
+	/// <param name="img">The HUD icon to update. Cannot be null</param>
+	/// <param name="duration">Overall duration of the transition</param>
+	/// <param name="target">Desired final color</param>
+	/// <returns>False until transition completed, then True</returns>
 	public bool UpdateTransition(HudIcon img, float duration, Color target)
 	{
 		img.timer += Time.deltaTime;
@@ -114,6 +125,14 @@ public class HudController : MonoBehaviour
 		return false;
 	}
 
+	/// <summary>
+	/// Updates the state and appearance of the specified HUD icons based on their current state and critical status. Should be called every frame.
+	/// </summary>
+	/// <remarks>This method processes each icon in the array and may change its state or color to reflect
+	/// transitions such as activation, deactivation, or highlighting. The method does not return a value; changes are
+	/// applied directly to the provided icon objects.</remarks>
+	/// <param name="icons">An array of HUD icons to update. Each icon's state and visual appearance will be modified according to its current
+	/// state and whether it is marked as critical.</param>
 	public void StateUpdate(HudIcon[] icons)
 	{
 		foreach (HudIcon icon in icons)
@@ -123,18 +142,18 @@ public class HudController : MonoBehaviour
 
 			switch (icon.state)
 			{
-				case EIconState.Active:
-				case EIconState.Inactive:
+				case EIconState.Bright:
+				case EIconState.Dark:
 					break;
 
-				case EIconState.Deactivating:
+				case EIconState.GoDark:
 					if (UpdateTransition(icon, ACTIVATE_TIME, inactiveColor))
-						icon.state = EIconState.Inactive;
+						icon.state = EIconState.Dark;
 					break;
 
-				case EIconState.Activating:
+				case EIconState.GoBright:
 					if (UpdateTransition(icon, ACTIVATE_TIME, activeColor))
-						icon.state = EIconState.Active;
+						icon.state = EIconState.Bright;
 					break;
 
 				case EIconState.Highlight:
@@ -144,12 +163,17 @@ public class HudController : MonoBehaviour
 
 				case EIconState.FadeHighlight:
 					if (UpdateTransition(icon, FADE_TIME, inactiveColor))
-						icon.state = EIconState.Inactive;
+						icon.state = EIconState.Dark;
 					break;
 			}
 		}
 	}
 
+	/// <summary>
+	/// Sets the critical status for the specified HUD icons, updating their appearance accordingly.
+	/// </summary>
+	/// <param name="icons">An array of HUD icons whose critical status will be set. Cannot be null.</param>
+	/// <param name="critical">A value indicating whether the specified icons should be marked as critical.</param>
 	public void SetCritical(HudIcon[] icons, bool critical)
 	{
 		foreach (HudIcon icon in icons)
@@ -157,18 +181,31 @@ public class HudController : MonoBehaviour
 			icon.critical = critical;
 			icon.image.color = icon.state switch
 			{
-				EIconState.Inactive => critical ? hudColorCritical : hudColor,
+				EIconState.Dark => critical ? hudColorCritical : hudColor,
 				_ => critical ? hudColorCriticalActive : hudColorActive
 			};
 		}
 	}
 
+	/// <summary>
+	/// Sets the state of each specified HUD icon to highlighted.
+	/// </summary>
+	/// <param name="images">An array of HUD icons whose state will be set to highlighted. Cannot be null.</param>
 	public void Highlight(HudIcon[] images)
 	{
 		foreach (HudIcon image in images)
 			image.state = EIconState.Highlight;
 	}
 
+	/// <summary>
+	/// Sets the digit images to visually represent the specified number, displaying up to three digits with leading zeros hidden.
+	/// </summary>
+	/// <remarks>Leading zeros are hidden except for the rightmost digit, which is always shown. If number is less
+	/// than 0 or greater than 999, it is automatically clamped to the valid range before updating the images.</remarks>
+	/// <param name="digitImages">An array of three HudIcon objects whose images will be updated to display the digits of the number. Each element
+	/// corresponds to a digit position, from left (hundreds) to right (ones).</param>
+	/// <param name="number">The non-negative integer value to display, in the range 0 to 999. Values outside this range are clamped.</param>
+	/// <exception cref="InvalidOperationException">Thrown if the length of digitImages is not exactly 3.</exception>
 	public void SetNumberDigits(HudIcon[] digitImages, int number)
 	{
 		if (number < 0 || number > 999)

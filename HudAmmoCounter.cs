@@ -10,7 +10,7 @@ namespace HEVSuitMod;
 public class HudAmmoCounter : MonoBehaviour
 {
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudAmmoCounter).FullName}");
-	private HudIcon[] ammoIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
+	private readonly HudIcon[] ammoIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
 	private IHandsController currentHandsController;
 	
 	private HudController HudController => HEVMod.Instance.HudController;

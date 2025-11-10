@@ -48,7 +48,7 @@ public class SentenceParser
 {
 	private const string SENTENCES_FILE = "assets/scripts/sentences.txt";
 
-	private static ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource("HEVSuitMod.SentenceParser");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(SentenceParser).FullName}");
 	private readonly AssetBundle assets;
 	private readonly List<string> allFiles = [];
 	private readonly List<string> missingFiles = []; // Catch 404s
