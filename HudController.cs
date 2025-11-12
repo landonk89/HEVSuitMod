@@ -2,7 +2,6 @@
 using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,57 +10,56 @@ namespace HEVSuitMod;
 public class HudController : MonoBehaviour
 {
 	public const float AMMO_RATIO_CRITICAL = 0.2f; // 20% left in mag+chamber
-	public const int MAX_NOTIFICATIONS = 7; // The area fits 7 images at 100x100 comfortably
-	public const float NOTIFY_TIME = 1.5f;
+	public const int HEALTH_CRITICAL = 20;
+	public const int MAX_NOTIFY_ICONS = 7; // The area fits 7 images at 100x100 comfortably
+	public const int MAX_DMG_ICONS = 5;
+	public const float NOTIFY_FLASH_TIME = 1.5f;
+	public const float NOTIFY_STAY_TIME = 2f;
 	public const float DMG_NOTIFY_TIME = 4f;
 	public const float ACTIVATE_TIME = 0.25f;
 	public const float FADE_TIME = 0.5f;
 	public const float FLASH_TIME = 1f;
 
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudController).FullName}");
-
-	// TODO: MIN_ALPHA 0.4 from hl1 looks a little too dark in Unity, maybe tinker with it?
 	public Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
 	public Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter
 	public Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
 	public Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
 	public Color damageIndicatorColor = new(1f, 1f, 1f, 0.6f); // Slightly transparent
 
-	// Number sprites
-	private readonly Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
+	protected static Dictionary<Item, Sprite> spriteCache = [];
+	protected static Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
 
-	// Sub components
 	HudWeaponSelection hudWeaponSelection;
 	HudDamageIndicators hudDamageIndicators;
-	HudDamageIcons hudDamageIcons;
+	HudDamageTypes hudDamageIcons;
 	HudFlashlight hudFlashlight;
 	HudAmmoCounter hudAmmoCounter;
 	HudHealthCounter hudHealthCounter;
 	HudSuitPowerCounter hudSuitPowerCounter;
-
-	private readonly Dictionary<Item, Sprite> spriteCache = [];
+	HudItemPickups hudItemPickups;
 
 	public GameObject Hud { get; private set; }
+	private AssetBundle Assets => HEVMod.Instance.Assets;
 
+#pragma warning disable IDE0051
 	private void Awake()
 	{
-		AssetBundle assets = HEVMod.Instance.Assets; // Shortcut
+		// Cache number sprites
+		numberSprites[10] = Assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
+		for (int i = 0; i < 10; i++)
+			numberSprites[i] = Assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
 
-		// Instantiate HUD prefab and weapon selection controller
-		Hud = Instantiate(assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
-
-		// Cache number sprites, index 10 is a blank sprite
-		for (int i = 0; i < 10; i++) numberSprites[i] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
-		numberSprites[10] = assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
-
-		// TODO: Separate all hud functionality into their own components
+		// Instantiate HUD prefab and components for its elements
+		Hud = Instantiate(Assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
 		hudWeaponSelection = Hud.AddComponent<HudWeaponSelection>();
 		hudDamageIndicators = Hud.AddComponent<HudDamageIndicators>();
-		hudDamageIcons = Hud.AddComponent<HudDamageIcons>();
+		hudDamageIcons = Hud.AddComponent<HudDamageTypes>();
 		hudFlashlight = Hud.AddComponent<HudFlashlight>();
 		hudAmmoCounter = Hud.AddComponent<HudAmmoCounter>();
 		hudHealthCounter = Hud.AddComponent<HudHealthCounter>();
 		hudSuitPowerCounter = Hud.AddComponent<HudSuitPowerCounter>();
+		hudItemPickups = Hud.AddComponent<HudItemPickups>();
 	}
 
 	private void Start()
@@ -80,48 +78,49 @@ public class HudController : MonoBehaviour
 		Destroy(hudAmmoCounter);
 		Destroy(hudHealthCounter);
 		Destroy(hudSuitPowerCounter);
+		Destroy(hudItemPickups);
 	}
+#pragma warning restore IDE0051
 
 	private void OnInventoryOpened(Player player, bool closing)
 	{
-		// Shouldn't happen but just be safe
 		if (player != GamePlayerOwner.MyPlayer)
 			return;
 
-		enabled = !closing;
 		Hud.SetActive(!closing);
 	}
 
 	/// <summary>
 	/// Initiates a transition of the specified HUD icon to a new visual state.
 	/// </summary>
-	/// <param name="img">The HUD icon to transition. Cannot be null.</param>
+	/// <param name="icon">The HUD icon to transition. Cannot be null.</param>
 	/// <param name="nextState">The state to which the HUD icon will transition.</param>
-	public void StartTransition(HudIcon img, EIconState nextState)
+	public void StartTransition(HudIcon icon, EIconState nextState)
 	{
-		img.timer = 0f;
-		img.lastColor = img.image.color;
-		img.state = nextState;
+		icon.timer = 0f;
+		icon.lastColor = icon.image.color;
+		icon.state = nextState;
 	}
 
 	/// <summary>
 	/// Per frame update of a HUD icon transition towards a target color over a specified duration.
 	/// </summary>
-	/// <param name="img">The HUD icon to update. Cannot be null</param>
+	/// <param name="icon">The HUD icon to update. Cannot be null</param>
 	/// <param name="duration">Overall duration of the transition</param>
 	/// <param name="target">Desired final color</param>
 	/// <returns>False until transition completed, then True</returns>
-	public bool UpdateTransition(HudIcon img, float duration, Color target)
+	public bool UpdateTransition(HudIcon icon, float duration, Color target)
 	{
-		img.timer += Time.deltaTime;
-		if (img.timer >= duration)
+		icon.timer += Time.deltaTime;
+		if (icon.timer >= duration)
 		{
-			img.image.color = target;
-			img.timer = 0f;
+			icon.image.color = target;
+			icon.lastColor = target; // TODO: TEST
+			icon.timer = 0f;
 			return true;
 		}
-		float t = img.timer / duration;
-		img.image.color = Color.Lerp(img.lastColor, target, t);
+		float t = icon.timer / duration;
+		icon.image.color = Color.Lerp(icon.lastColor, target, t);
 		return false;
 	}
 
@@ -133,7 +132,7 @@ public class HudController : MonoBehaviour
 	/// applied directly to the provided icon objects.</remarks>
 	/// <param name="icons">An array of HUD icons to update. Each icon's state and visual appearance will be modified according to its current
 	/// state and whether it is marked as critical.</param>
-	public void StateUpdate(HudIcon[] icons)
+	public void IconUpdate(HudIcon[] icons)
 	{
 		foreach (HudIcon icon in icons)
 		{
@@ -142,28 +141,18 @@ public class HudController : MonoBehaviour
 
 			switch (icon.state)
 			{
-				case EIconState.Bright:
-				case EIconState.Dark:
+				case EIconState.Active:
+				case EIconState.Inactive:
 					break;
 
-				case EIconState.GoDark:
-					if (UpdateTransition(icon, ACTIVATE_TIME, inactiveColor))
-						icon.state = EIconState.Dark;
+				case EIconState.Deactivate:
+					if (UpdateTransition(icon, icon.transitionTime, inactiveColor))
+						icon.state = EIconState.Inactive;
 					break;
 
-				case EIconState.GoBright:
-					if (UpdateTransition(icon, ACTIVATE_TIME, activeColor))
-						icon.state = EIconState.Bright;
-					break;
-
-				case EIconState.Highlight:
-					icon.image.color = activeColor;
-					StartTransition(icon, EIconState.FadeHighlight);
-					break;
-
-				case EIconState.FadeHighlight:
-					if (UpdateTransition(icon, FADE_TIME, inactiveColor))
-						icon.state = EIconState.Dark;
+				case EIconState.Activate:
+					if (UpdateTransition(icon, icon.transitionTime, activeColor))
+						icon.state = EIconState.Active;
 					break;
 			}
 		}
@@ -174,68 +163,95 @@ public class HudController : MonoBehaviour
 	/// </summary>
 	/// <param name="icons">An array of HUD icons whose critical status will be set. Cannot be null.</param>
 	/// <param name="critical">A value indicating whether the specified icons should be marked as critical.</param>
-	public void SetCritical(HudIcon[] icons, bool critical)
+	public void IconSetCritical(HudIcon[] icons, bool critical)
 	{
 		foreach (HudIcon icon in icons)
 		{
 			icon.critical = critical;
 			icon.image.color = icon.state switch
 			{
-				EIconState.Dark => critical ? hudColorCritical : hudColor,
+				EIconState.Inactive => critical ? hudColorCritical : hudColor,
 				_ => critical ? hudColorCriticalActive : hudColorActive
 			};
 		}
 	}
 
 	/// <summary>
-	/// Sets the state of each specified HUD icon to highlighted.
+	/// Flash a set of icons - instant active, fade back to inactive (requires use of IconUpdate per frame)
 	/// </summary>
-	/// <param name="images">An array of HUD icons whose state will be set to highlighted. Cannot be null.</param>
-	public void Highlight(HudIcon[] images)
+	/// <param name="icons">An array of HUD icons to be flashed. Cannot be null.</param>
+	public void IconFlash(HudIcon[] icons)
 	{
-		foreach (HudIcon image in images)
-			image.state = EIconState.Highlight;
+		foreach (HudIcon icon in icons)
+		{
+			icon.image.color = icon.critical ? hudColorCriticalActive : hudColorActive;
+			icon.transitionTime = FADE_TIME;
+			StartTransition(icon, EIconState.Deactivate);
+		}
 	}
 
 	/// <summary>
-	/// Sets the digit images to visually represent the specified number, displaying up to three digits with leading zeros hidden.
+	/// Transition specified icons to the brighter active state (requires use of IconUpdate per frame)
 	/// </summary>
-	/// <remarks>Leading zeros are hidden except for the rightmost digit, which is always shown. If number is less
-	/// than 0 or greater than 999, it is automatically clamped to the valid range before updating the images.</remarks>
-	/// <param name="digitImages">An array of three HudIcon objects whose images will be updated to display the digits of the number. Each element
-	/// corresponds to a digit position, from left (hundreds) to right (ones).</param>
-	/// <param name="number">The non-negative integer value to display, in the range 0 to 999. Values outside this range are clamped.</param>
-	/// <exception cref="InvalidOperationException">Thrown if the length of digitImages is not exactly 3.</exception>
-	public void SetNumberDigits(HudIcon[] digitImages, int number)
+	/// <param name="icons"></param>
+	public void IconActivate(HudIcon[] icons)
 	{
-		if (number < 0 || number > 999)
+		foreach (HudIcon icon in icons)
 		{
-			log.LogWarning($"SetNumberDigits() value {number} out of range, min:0 max:999");
-			number = Mathf.Clamp(number, 0, 999);
+			icon.transitionTime = ACTIVATE_TIME;
+			StartTransition(icon, EIconState.Activate);
+		}
+	}
+
+	/// <summary>
+	/// Transition specified icons to the darker inactive state (requires use of IconUpdate per frame)
+	/// </summary>
+	/// <param name="icons"></param>
+	public void IconDeactivate(HudIcon[] icons)
+	{
+		foreach (HudIcon icon in icons)
+		{
+			icon.transitionTime = ACTIVATE_TIME;
+			StartTransition(icon, EIconState.Deactivate);
+		}
+	}
+
+	/// <summary>
+	/// Updates the specified array of HUD digit icons to visually represent the given number, displaying each digit in its
+	/// corresponding position.
+	/// </summary>
+	/// <remarks>Leading zeros are hidden except for the least significant digit, ensuring that only significant
+	/// digits are shown. The number is padded with leading zeros if it has fewer digits than the length of the digitIcons
+	/// array.</remarks>
+	/// <param name="digitIcons">An array of HUD icon objects representing the digit positions to update. The length of the array determines the
+	/// number of digits displayed.</param>
+	/// <param name="number">The non-negative integer value to display. If the value is less than zero, it is clamped to zero.</param>
+	public void IconSetDigits(HudIcon[] digitIcons, int number)
+	{
+		if (number < 0)
+		{
+			log.LogWarning($"IconSetDigits() value {number} below 0, clamping to 0");
+			number = 0;
 		}
 
-		if (digitImages.Length != 3)
-		{
-			string error = $"SetNumberDigits() expected 3 digit images but got {digitImages.Length}";
-			log.LogError(error);
-			throw new InvalidOperationException(error);
-		}
-
-		char[] digits = number.ToString("000").ToCharArray();
+		// Convert the number to string and pad with zeros to fit all digits
+		string numString = number.ToString().PadLeft(digitIcons.Length, '0');
+		char[] digits = numString.ToCharArray();
 		bool foundNonZero = false;
-		for (int i = 0; i < 3; i++)
-		{
-			int digit = digits[i] - '0'; // Neat trick so we don't need a call to int.TryParse
 
-			// Hide leading zeros
-			if (!foundNonZero && digit == 0 && i != 2) // Keep the last digit visible even if it's 0
+		for (int i = 0; i < digitIcons.Length; i++)
+		{
+			int digit = digits[i] - '0';
+
+			// Hide leading zeros (except for the last digit)
+			if (!foundNonZero && digit == 0 && i != digitIcons.Length - 1)
 			{
-				digitImages[i].image.sprite = numberSprites[10]; // 10 = blank
+				digitIcons[i].image.sprite = numberSprites[10]; // 10 = blank
 			}
 			else
 			{
 				foundNonZero = true;
-				digitImages[i].image.sprite = numberSprites[digit];
+				digitIcons[i].image.sprite = numberSprites[digit];
 			}
 		}
 	}

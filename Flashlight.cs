@@ -33,6 +33,7 @@ public class Flashlight : MonoBehaviour
 	public event Action<float> BatteryUpdate;
 	public event Action<bool> BatteryStateChanged;
 
+#pragma warning disable IDE0051
 	private void Awake()
 	{
 		flashlight = new("FlashlightContainer");
@@ -116,6 +117,7 @@ public class Flashlight : MonoBehaviour
 			BatteryStateChanged?.Invoke(batteryCritical);
 		}
 	}
+#pragma warning restore IDE0051
 
 	public void Toggle()
 	{

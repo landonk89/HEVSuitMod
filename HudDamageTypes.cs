@@ -6,7 +6,7 @@ using EFT;
 
 namespace HEVSuitMod;
 
-public class HudDamageIcons : MonoBehaviour
+public class HudDamageTypes : MonoBehaviour
 {
 	private class DamageIcon(Image img)
 	{
@@ -14,12 +14,6 @@ public class HudDamageIcons : MonoBehaviour
 		public float timer = 0f;
 	}
 
-	private const int MAX_NOTIFICATIONS = 5;
-	private const float NOTIFY_TIME = 4f;
-
-	private AssetBundle Assets => HEVMod.Instance.Assets;
-	private HudController HudController => HEVMod.Instance.HudController;
-	
 	private Sprite bulletDamage;
 	private Sprite coldDamage;
 	private Sprite fireDamage;
@@ -29,9 +23,13 @@ public class HudDamageIcons : MonoBehaviour
 	private Sprite radiationDamage;
 	private Sprite dehydrationDamage;
 	private Sprite exhaustionDamage;
-	private Transform damageNotificationArea;
+	private Transform damageIconArea;
 	private readonly List<HudIcon> activeIcons = [];
 
+	private AssetBundle Assets => HEVMod.Instance.Assets;
+	private HudController Hud => HEVMod.Instance.HudController;
+
+#pragma warning disable IDE0051
 	private void Awake()
 	{
 		bulletDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bullet.tga");
@@ -43,7 +41,7 @@ public class HudDamageIcons : MonoBehaviour
 		radiationDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_rad.tga");
 		dehydrationDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_dehydrated.tga");
 		exhaustionDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_exhausted.tga");
-		damageNotificationArea = transform.Find("LeftNotifyArea");
+		damageIconArea = transform.Find("LeftNotifyArea");
 		GamePlayerOwner.MyPlayer.BeingHitAction += OnPlayerHit;
 	}
 
@@ -52,23 +50,25 @@ public class HudDamageIcons : MonoBehaviour
 		GamePlayerOwner.MyPlayer.BeingHitAction -= OnPlayerHit;
 	}
 
-	// Don't use HudController's StateUpdate, these are unique
+	// Don't use Hud's StateUpdate, these are unique
 	private void Update()
 	{
+		// Unique state update, don't use base.IconUpdate
 		if (activeIcons.Count == 0)
 			return;
 
 		foreach (HudIcon icon in activeIcons.ToArray()) // Copy to avoid modification during iteration
 		{
 			icon.timer += Time.deltaTime;
-			icon.image.color = Color.Lerp(Color.clear, HudController.hudColorActive, (Mathf.Sin(icon.timer * 4f) + 1f) * 0.5f);
-			if (icon.timer >= NOTIFY_TIME)
+			icon.image.color = Color.Lerp(Color.clear, Hud.hudColorActive, (Mathf.Sin(icon.timer * 4f) + 1f) * 0.5f);
+			if (icon.timer >= HudController.DMG_NOTIFY_TIME)
 			{
 				Destroy(icon.image.gameObject);
 				activeIcons.Remove(icon);
 			}
 		}
 	}
+#pragma warning restore IDE0051
 
 	private void OnPlayerHit(DamageInfoStruct damageInfo, EBodyPart part, float amount)
 	{
@@ -117,15 +117,14 @@ public class HudDamageIcons : MonoBehaviour
 			return;
 
 		GameObject iconObj = new("icon");
-		iconObj.transform.parent = damageNotificationArea;
+		iconObj.transform.parent = damageIconArea;
 		Image iconImage = iconObj.AddComponent<Image>();
 		iconImage.sprite = icon;
-		iconImage.color = HudController.hudColorActive;
+		iconImage.color = Hud.hudColorActive;
 		HudIcon damageIcon = new(iconImage);
 		activeIcons.Add(damageIcon);
 
-		// TODO: Check if this causes issues with removing while iterating in Update
-		if (activeIcons.Count > MAX_NOTIFICATIONS)
-			activeIcons[0].timer = NOTIFY_TIME; // Force remove oldest
+		if (activeIcons.Count > HudController.MAX_DMG_ICONS)
+			activeIcons[0].timer = HudController.DMG_NOTIFY_TIME; // Force remove oldest
 	}
 }

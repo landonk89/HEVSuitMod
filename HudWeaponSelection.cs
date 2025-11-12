@@ -36,7 +36,7 @@ public class HudWeaponSelection : MonoBehaviour
 	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudWeaponSelection).FullName}");
 	private GameObject weaponSelectionUI;
 	private AudioSource audioSource;
-	private WeaponSelection[] weapons = new WeaponSelection[NUM_WEAPONS];
+	private readonly WeaponSelection[] weapons = new WeaponSelection[NUM_WEAPONS];
 	private float activeTimer = 0f;
 
 	private Action<Item> HolsterWeaponChanged;
@@ -45,13 +45,13 @@ public class HudWeaponSelection : MonoBehaviour
 	private Action<Item> ScabbardWeaponChanged;
 
 	private AssetBundle Assets => HEVMod.Instance.Assets;
-	private HudController HudController => HEVMod.Instance.HudController;
+	private HudController Hud => HEVMod.Instance.HudController;
 	private Slot Holster => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Holster);
 	private Slot Primary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon);
 	private Slot Secondary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon);
 	private Slot Scabbard => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Scabbard);
 
-	private Dictionary<ESlot, Slot> slotMap => new()
+	private Dictionary<ESlot, Slot> SlotMap => new()
 	{
 		{ ESlot.Holster, Holster },
 		{ ESlot.Primary, Primary },
@@ -59,6 +59,7 @@ public class HudWeaponSelection : MonoBehaviour
 		{ ESlot.Scabbard, Scabbard }
 	};
 
+#pragma warning disable IDE0051
 	private void Awake()
 	{
 		HolsterWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Holster]);
@@ -96,7 +97,7 @@ public class HudWeaponSelection : MonoBehaviour
 		Scabbard.OnAddOrRemoveItem += ScabbardWeaponChanged;
 
 		for (int i = 0; i < NUM_WEAPONS; i++)
-			OnWeaponChanged(slotMap[(ESlot)i].ContainedItem, weapons[i]);
+			OnWeaponChanged(SlotMap[(ESlot)i].ContainedItem, weapons[i]);
 	}
 
 	private void OnDestroy()
@@ -110,7 +111,7 @@ public class HudWeaponSelection : MonoBehaviour
 	private void OnWeaponChanged(Item weapon, WeaponSelection selection)
 	{
 		selection.name.text = weapon != null ? weapon.ShortName.Localized() : "Error";
-		selection.icon.sprite = weapon != null ? HudController.GetItemSprite(weapon, new XYCellSizeStruct(5,2)) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+		selection.icon.sprite = weapon != null ? Hud.GetItemSprite(weapon, new XYCellSizeStruct(5,2)) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
 	}
 
 	void Update()
@@ -122,6 +123,7 @@ public class HudWeaponSelection : MonoBehaviour
 				weaponSelectionUI.SetActive(false);
 		}
 	}
+#pragma warning restore IDE0051
 
 	private void SelectWeapon(ESlot index)
 	{
@@ -130,7 +132,7 @@ public class HudWeaponSelection : MonoBehaviour
 		activeTimer = DISPLAY_TIME;
 		for (int i = 0; i < NUM_WEAPONS; i++)
 		{
-			Item item = slotMap[(ESlot)i].ContainedItem;
+			Item item = SlotMap[(ESlot)i].ContainedItem;
 			if (i != (int)index || item == null) // Not selected
 			{
 				weapons[i].expander.SetActive(false);

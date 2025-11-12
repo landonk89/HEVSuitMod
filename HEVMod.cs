@@ -29,6 +29,7 @@ public class HEVMod : BaseUnityPlugin
 	public ConfigEntry<bool> identifyWeapon;
 	public ConfigEntry<bool> identifyAmmo;
 
+#pragma warning disable IDE0051 // Don't mark Unity methods as unused
 	private void Awake()
 	{
 		if (Instance != null && Instance != this)
@@ -125,6 +126,7 @@ public class HEVMod : BaseUnityPlugin
 		}
 	}
 #endif
+#pragma warning restore IDE0051
 
 	public void OnGameStarted()
 	{

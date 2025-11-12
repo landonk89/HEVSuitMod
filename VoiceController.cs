@@ -23,16 +23,21 @@ public class VoiceController : MonoBehaviour
 	private Flashlight Flashlight => HEVMod.Instance.Flashlight;
 
 	private Action OnShotHandler;
-	private GDelegate71 PlayerDeadHandler; // TODO: Test this, was GDelegate70/OnPlayerDead before
+	private GDelegate71 PlayerDeadHandler; // TODO: OnTakeHandler this, was GDelegate70/OnPlayerDead before
 
+#pragma warning disable IDE0051
 	private void Awake()
 	{
 		PlayerDeadHandler = (_) => PlayerDied();
 		audioSource = gameObject.AddComponent<AudioSource>();
-		//Assets = HEVMod.Instance.Assets;
 		allSentences = HEVMod.Instance.SentenceParser.allSentences;
+	}
+
+	private void Start()
+	{
 		currentHandsController = GamePlayerOwner.MyPlayer.HandsController;
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += EffectRemoved;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		Flashlight.BatteryStateChanged += FlashlightCritical;
@@ -55,10 +60,12 @@ public class VoiceController : MonoBehaviour
 		}
 
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStarted;
+		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= EffectRemoved;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		Flashlight.BatteryStateChanged -= FlashlightCritical;
 	}
+#pragma warning restore IDE0051
 
 	// This handles the playback, triggered by Update() when needed
 	private IEnumerator PlaySentences()

@@ -26,8 +26,8 @@ public class MedicalController : MonoBehaviour
 			{ "zagustin", "5c0e533786f7747fa23f4d47" }
 	};
 
-
-    private void OnEnable()
+#pragma warning disable IDE0051
+	private void OnEnable()
 	{
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStarted;
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += EffectRemoved;
@@ -38,6 +38,7 @@ public class MedicalController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStarted;
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= EffectRemoved;
 	}
+#pragma warning restore IDE0051
 
 	/// <summary>
 	/// Try to use a medical injector on the player

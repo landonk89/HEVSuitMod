@@ -13,14 +13,15 @@ public class HudAmmoCounter : MonoBehaviour
 	private readonly HudIcon[] ammoIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
 	private IHandsController currentHandsController;
 	
-	private HudController HudController => HEVMod.Instance.HudController;
-	private HudIcon[] AmmoNumbers => [ammoIcons[0], ammoIcons[1], ammoIcons[2]];
-
 	private Action OnShotHandler;
 	private Action<Item> OnMagChangedHandler;
+	
+	private HudIcon[] AmmoNumbers => [ammoIcons[0], ammoIcons[1], ammoIcons[2]];
+	private HudController Hud => HEVMod.Instance.HudController;
 
+#pragma warning disable IDE0051
 	private void Awake()
-	{
+	{ 
 		currentHandsController = GamePlayerOwner.MyPlayer.HandsController;
 		OnMagChangedHandler = (_) => AmmoChanged(currentHandsController);
 		OnShotHandler = () => AmmoChanged(currentHandsController);
@@ -38,13 +39,14 @@ public class HudAmmoCounter : MonoBehaviour
 
 	private void Update()
 	{
-		HudController.StateUpdate(ammoIcons);
+		Hud.IconUpdate(ammoIcons);
 		if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
 		{
 			if (ammoIcons[0].critical)
-				HudController.Highlight(ammoIcons);
+				Hud.IconFlash(ammoIcons);
 		}
 	}
+#pragma warning restore IDE0051
 
 	public void HandsChanged(IHandsController handsController)
 	{
@@ -68,20 +70,20 @@ public class HudAmmoCounter : MonoBehaviour
 	{
 		if (handsController == null || handsController.Item is not Weapon weapon)
 		{
-			HudController.SetNumberDigits(AmmoNumbers, 0);
-			HudController.SetCritical(ammoIcons, true);
-			HudController.Highlight(ammoIcons);
+			Hud.IconSetDigits(AmmoNumbers, 0);
+			Hud.IconSetCritical(ammoIcons, true);
+			Hud.IconFlash(ammoIcons);
 			return;
 		}
 
-		// TODO/FIXME: This is not working for weapons with internal mags when reloading
+		// FIXME: This is not working for weapons with internal mags when reloading
 		int maxAmmo = weapon.Chambers.Length + weapon.GetMaxMagazineCount();
 		int ammoCount = weapon.ChamberAmmoCount + weapon.GetCurrentMagazineCount();
 		float ammoRatio = (float)ammoCount / maxAmmo;
 		bool critical = ammoRatio <= HudController.AMMO_RATIO_CRITICAL;
 		log.LogDebug($"AmmoChanged: maxAmmo {maxAmmo}, ammoCount {ammoCount}, ammoRatio {ammoRatio}");
-		HudController.SetNumberDigits(AmmoNumbers, ammoCount);
-		HudController.SetCritical(ammoIcons, critical);
-		HudController.Highlight(ammoIcons);
+		Hud.IconSetDigits(AmmoNumbers, ammoCount);
+		Hud.IconSetCritical(ammoIcons, critical);
+		Hud.IconFlash(ammoIcons);
 	}
 }
