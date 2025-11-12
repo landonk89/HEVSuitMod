@@ -23,7 +23,7 @@ public class VoiceController : MonoBehaviour
 	private Flashlight Flashlight => HEVMod.Instance.Flashlight;
 
 	private Action OnShotHandler;
-	private GDelegate71 PlayerDeadHandler; // TODO: OnTakeHandler this, was GDelegate70/OnPlayerDead before
+	private GDelegate71 PlayerDeadHandler; // TODO: OnPickupLoot this, was GDelegate70/OnPlayerDead before
 
 #pragma warning disable IDE0051
 	private void Awake()

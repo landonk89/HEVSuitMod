@@ -2,6 +2,7 @@
 using System.Reflection;
 using EFT;
 using EFT.InputSystem;
+using EFT.InventoryLogic;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using ESlot = HEVSuitMod.HudWeaponSelection.ESlot;
@@ -83,7 +84,7 @@ internal class OnInspectChamber : ModulePatch
 }
 
 /// <summary>
-/// Intercepts weapon selection commands and raises an event when a weapon slot is selected.
+/// A patch that raises an event when a weapon slot is selected.
 /// </summary>
 internal class SelectWeaponPatch : ModulePatch
 {
@@ -110,6 +111,27 @@ internal class SelectWeaponPatch : ModulePatch
 		if (slot != ESlot.None)
 			SelectionEvent?.Invoke(slot);
     }
+}
+
+/// <summary>
+/// A patch that raises an event when loot is picked up in the game.
+/// </summary>
+/// <remarks>This patch hooks into the loot pickup process and triggers the PickupLootEvent when an item is picked up.</remarks>
+internal class PickupLootPatch : ModulePatch
+{
+	public static event Action<Item> PickupLootEvent;
+
+    protected override MethodBase GetTargetMethod()
+    {
+		return AccessTools.Method(typeof(GetActionsClass), nameof(GetActionsClass.smethod_10));
+    }
+
+	[PatchPostfix]
+	private static void Postfix(ref Item rootItem)
+	{
+		if (rootItem != null)
+			PickupLootEvent?.Invoke(rootItem);
+	}
 }
 
 // FIXME: This isn't working as expected, revisit

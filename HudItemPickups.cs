@@ -3,7 +3,6 @@ using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,10 +20,7 @@ public class HudItemPickups : MonoBehaviour
 	{
 		iconArea = transform.Find("RightNotifyArea").gameObject;
 		// FIXME: Not working, find the correct way to determine item being picked up
-		if (GamePlayerOwner.MyPlayer.LeftHandController is GClass2725 leftHandController)
-			leftHandController.IleftHandInteractionEvents_0.OnTakeEvent += OnTakeHandler;
-		else
-			log.LogError("LeftHandController is not GClass2725.");
+		PickupLootPatch.PickupLootEvent += Notification;
 	}
 
 	private void Update()
@@ -58,17 +54,9 @@ public class HudItemPickups : MonoBehaviour
 
 	private void OnDestroy()
 	{
-		(GamePlayerOwner.MyPlayer.LeftHandController as GClass2725)?.IleftHandInteractionEvents_0.OnTakeEvent -= OnTakeHandler;
+		PickupLootPatch.PickupLootEvent -= Notification;
 	}
 #pragma warning restore IDE0051
-
-	private void OnTakeHandler(IAnimatorEventParameter param)
-	{
-		if (GamePlayerOwner.MyPlayer.LeftHandController is GClass2725 leftHand)
-		{
-			Notification(leftHand.Item_0);
-		}
-	}
 
 	private void Notification(Item item)
 	{

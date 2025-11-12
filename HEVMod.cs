@@ -94,6 +94,7 @@ public class HEVMod : BaseUnityPlugin
 		new OnInspectWeapon().Enable();
 		new OnInspectChamber().Enable();
 		new SelectWeaponPatch().Enable();
+		new PickupLootPatch().Enable();
 		//new OnLoadSingleAmmo().Enable();
 
 		// Register console commands
