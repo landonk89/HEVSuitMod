@@ -18,6 +18,6 @@ internal class GameEndedPatch : ModulePatch
     [PatchPostfix]
     private static void GameEnded()
     {
-        HEVMod.Instance.OnGameEnded();
+        HEVSuitMod.Instance.OnGameEnded();
     }
 }

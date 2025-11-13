@@ -14,7 +14,7 @@ public class HudCrosshair : MonoBehaviour
     private Camera camera;
     private readonly int layerMask = LayerMaskClass.PlayerCollisionsMask + LayerMaskClass.HitColliderMask; //537136073
 
-    private HudController Hud => HEVMod.Instance.HudController;
+    private HudController Hud => HEVSuitMod.Instance.HudController;
 
 #pragma warning disable IDE0051
     private void Awake()

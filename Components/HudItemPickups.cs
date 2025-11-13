@@ -14,7 +14,7 @@ public class HudItemPickups : MonoBehaviour
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudItemPickups).FullName}");
 	private Transform iconArea;
 	private readonly List<HudIcon> activeIcons = [];
-	private HudController Hud => HEVMod.Instance.HudController;
+	private HudController Hud => HEVSuitMod.Instance.HudController;
 
 #pragma warning disable IDE0051
 	private void Awake()

@@ -9,8 +9,8 @@ public class HudFlashlight : MonoBehaviour
 	private readonly HudIcon[] flashlightIcons = new HudIcon[3];
 	private HudIcon FullIcon => flashlightIcons[1];
 	private HudIcon BeamIcon => flashlightIcons[2];
-	private HudController Hud => HEVMod.Instance.HudController;
-	private Flashlight Flashlight => HEVMod.Instance.Flashlight;
+	private HudController Hud => HEVSuitMod.Instance.HudController;
+	private Flashlight Flashlight => HEVSuitMod.Instance.Flashlight;
 
 #pragma warning disable IDE0051
 	private void Awake()

@@ -20,7 +20,7 @@ public class SentenceParser
 	public readonly List<HEVSentence> allSentences = [];
 	private string workingDirectory = DEFAULT_DIRECTORY;
 
-	private AssetBundle Assets => HEVMod.Instance.Assets;
+	private AssetBundle Assets => HEVSuitMod.Instance.Assets;
 
 	public SentenceParser()
 	{
@@ -82,8 +82,8 @@ public class SentenceParser
 			int loops = 1;
 			float interval = 0f; // Default space between loops
 			float pitch = 1f;
-			float volume = HEVMod.Instance.globalVolume.Value;
-			float delay = HEVMod.DEFAULT_PLAYBACK_DELAY;
+			float volume = HEVSuitMod.Instance.globalVolume.Value;
+			float delay = HEVSuitMod.DEFAULT_PLAYBACK_DELAY;
 
 			// For each token there may be parameters formatted like [param:value,param2:value]
 			if (tokens[i].StartsWith("["))

@@ -10,7 +10,7 @@ namespace HEVSuitMod.Components;
 public class HudDamageIndicators : MonoBehaviour
 {
     private readonly HudIcon[] indicators = new HudIcon[4]; // Order: Up, Right, Down, Left
-    private HudController Hud => HEVMod.Instance.HudController;
+    private HudController Hud => HEVSuitMod.Instance.HudController;
 
     private Dictionary<int, HudIcon[]> Directions => new()
     {

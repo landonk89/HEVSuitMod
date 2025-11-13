@@ -22,14 +22,14 @@ public class HudController : MonoBehaviour
 	public const float FLASH_TIME = 1f;
 
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudController).FullName}");
-	public Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
-	public Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter
-	public Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
-	public Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
-	public Color damageIndicatorColor = new(1f, 1f, 1f, 0.6f); // Slightly transparent
+	public readonly Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
+	public readonly Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter
+	public readonly Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
+	public readonly Color hudColorCriticalActive = new(1f, 0f, 0f, 1f); // Brighter red
+	public readonly Color damageIndicatorColor = new(1f, 1f, 1f, 0.6f); // Slightly transparent
 
-	protected static Dictionary<Item, Sprite> spriteCache = [];
-	protected static Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
+	protected readonly Dictionary<Item, Sprite> spriteCache = [];
+	protected readonly Sprite[] numberSprites = new Sprite[11]; // 0-9 plus a blank one
 
 	HudWeaponSelection hudWeaponSelection;
 	HudDamageIndicators hudDamageIndicators;
@@ -42,7 +42,7 @@ public class HudController : MonoBehaviour
 	HudCrosshair hudCrosshair;
 
 	public GameObject Hud { get; private set; }
-	private AssetBundle Assets => HEVMod.Instance.Assets;
+	private AssetBundle Assets => HEVSuitMod.Instance.Assets;
 
 #pragma warning disable IDE0051
 	private void Awake()
@@ -131,11 +131,6 @@ public class HudController : MonoBehaviour
 	/// <summary>
 	/// Updates the State and appearance of the specified HUD icons based on their current State and Critical status. Should be called every frame.
 	/// </summary>
-	/// <remarks>This method processes each icon in the array and may change its State or color to reflect
-	/// transitions such as activation, deactivation, or highlighting. The method does not return a value; changes are
-	/// applied directly to the provided icon objects.</remarks>
-	/// <param name="icons">An array of HUD icons to update. Each icon's State and visual appearance will be modified according to its current
-	/// State and whether it is marked as Critical.</param>
 	public void IconUpdate(HudIcon[] icons)
 	{
 		foreach (HudIcon icon in icons)

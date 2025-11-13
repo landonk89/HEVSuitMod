@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <AssemblyName>com.redcrowbar.hevsuitmod</AssemblyName>
+    <AssemblyName>com.Landonk89.hevsuitmod</AssemblyName>
     <Description>HEV Suit from Half-Life for Escape from Tarkov</Description>
     <Version>0.1.0</Version>
 	<Product>HEVSuitMod</Product>

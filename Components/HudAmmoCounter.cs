@@ -20,7 +20,7 @@ public class HudAmmoCounter : MonoBehaviour
 	private Action LoadSingleAmmoHandler;
 	
 	private HudIcon[] AmmoNumbers => [ammoIcons[0], ammoIcons[1], ammoIcons[2]];
-	private HudController Hud => HEVMod.Instance.HudController;
+	private HudController Hud => HEVSuitMod.Instance.HudController;
 
 #pragma warning disable IDE0051
 	private void Awake()

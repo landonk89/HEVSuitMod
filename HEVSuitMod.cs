@@ -10,13 +10,13 @@ using UnityEngine;
 namespace HEVSuitMod;
 
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-public class HEVMod : BaseUnityPlugin
+public class HEVSuitMod : BaseUnityPlugin
 {
 	public const float DEFAULT_PLAYBACK_DELAY = 0.25f;
 	private const string SETTINGS_SECTION_GENERAL = "General Settings";
 	private readonly string bundlePath = Path.Combine(BepInEx.Paths.PluginPath, PluginInfo.PLUGIN_NAME, "hevsuit.bundle");
 
-	public static HEVMod Instance { get; private set; }
+	public static HEVSuitMod Instance { get; private set; }
 
 	public AssetBundle Assets { get; private set; }
 	public GameObject ComponentContainer { get; private set; }

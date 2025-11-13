@@ -46,8 +46,8 @@ public class HudWeaponSelection : MonoBehaviour
 	private Action<Item> SecondaryWeaponChanged;
 	private Action<Item> ScabbardWeaponChanged;
 
-	private AssetBundle Assets => HEVMod.Instance.Assets;
-	private HudController Hud => HEVMod.Instance.HudController;
+	private AssetBundle Assets => HEVSuitMod.Instance.Assets;
+	private HudController Hud => HEVSuitMod.Instance.HudController;
 	private Slot Holster => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Holster);
 	private Slot Primary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon);
 	private Slot Secondary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon);

@@ -18,6 +18,6 @@ internal class GameStartedPatch : ModulePatch
     [PatchPostfix]
     private static void GameStarted()
     {
-        HEVMod.Instance.OnGameStarted();
+        HEVSuitMod.Instance.OnGameStarted();
     }
 }

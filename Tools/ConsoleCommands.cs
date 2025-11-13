@@ -29,7 +29,7 @@ public class ImpulseCommand(string impulse) : SyncCommand
 		{
 			// Play a random sentence
 			case 1:
-				HEVMod.Instance.VoiceController?.PlaySentenceById(HEVMod.Instance.SentenceParser?.allSentences.PickRandom().Identifier);
+				HEVSuitMod.Instance.VoiceController?.PlaySentenceById(HEVSuitMod.Instance.SentenceParser?.allSentences.PickRandom().Identifier);
 				break;
 
 			// TODO: super neato stuff will go here

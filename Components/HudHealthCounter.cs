@@ -14,7 +14,7 @@ public class HudHealthCounter : MonoBehaviour
     private GDelegate71 PlayerDeadHandler;
     
     private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
-    private HudController Hud => HEVMod.Instance.HudController;
+    private HudController Hud => HEVSuitMod.Instance.HudController;
     private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;
 
 #pragma warning disable IDE0051

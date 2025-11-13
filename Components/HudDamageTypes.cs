@@ -27,8 +27,8 @@ public class HudDamageTypes : MonoBehaviour
 	private Transform damageIconArea;
 	private readonly List<HudIcon> activeIcons = [];
 
-	private AssetBundle Assets => HEVMod.Instance.Assets;
-	private HudController Hud => HEVMod.Instance.HudController;
+	private AssetBundle Assets => HEVSuitMod.Instance.Assets;
+	private HudController Hud => HEVSuitMod.Instance.HudController;
 
 #pragma warning disable IDE0051
 	private void Awake()

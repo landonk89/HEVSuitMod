@@ -15,7 +15,7 @@ namespace HEVSuitMod.Components
 		private Action<Item> SuitChangedAction;
 		private HudIcon SuitFull => suitIcons[3];
 		private HudIcon[] SuitNumbers => [suitIcons[0], suitIcons[1], suitIcons[2]];
-		private HudController Hud => HEVMod.Instance.HudController;
+		private HudController Hud => HEVSuitMod.Instance.HudController;
 
 #pragma warning disable IDE0051
 		private void Awake()

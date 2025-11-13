@@ -27,7 +27,7 @@ public class HEVAudioClip
 		Loops = 1;
 		Interval = 0f;
 		Pitch = 1f;
-		Volume = HEVMod.Instance.globalVolume.Value;
-		Delay = HEVMod.DEFAULT_PLAYBACK_DELAY;
+		Volume = HEVSuitMod.Instance.globalVolume.Value;
+		Delay = HEVSuitMod.DEFAULT_PLAYBACK_DELAY;
 	}
 }

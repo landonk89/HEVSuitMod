@@ -30,9 +30,9 @@ public class VoiceController : MonoBehaviour
 	private Action OnShotHandler;
 	private GDelegate71 PlayerDeadHandler; // TODO: TEST! Was GDelegate70
 
-	private AssetBundle Assets => HEVMod.Instance.Assets;
-	private Flashlight Flashlight => HEVMod.Instance.Flashlight;
-	private SentenceParser Parser => HEVMod.Instance.SentenceParser;
+	private AssetBundle Assets => HEVSuitMod.Instance.Assets;
+	private Flashlight Flashlight => HEVSuitMod.Instance.Flashlight;
+	private SentenceParser Parser => HEVSuitMod.Instance.SentenceParser;
 	private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;
 
 #pragma warning disable IDE0051
@@ -40,7 +40,7 @@ public class VoiceController : MonoBehaviour
 	{
 		PlayerDeadHandler = (_) => PlayerDied();
 		audioSource = gameObject.AddComponent<AudioSource>();
-		allSentences = HEVMod.Instance.SentenceParser.allSentences;
+		allSentences = HEVSuitMod.Instance.SentenceParser.allSentences;
 	}
 
 	private void Start()
@@ -161,7 +161,7 @@ public class VoiceController : MonoBehaviour
 		{
 			clipNames[i] = $"Assets/sounds/numbers/{clipNames[i]}.wav";
 			AudioClip clip = Assets.LoadAsset<AudioClip>(clipNames[i]);
-			clips.Add(new HEVAudioClip(clip, 1, 0f, 1f, HEVMod.Instance.globalVolume.Value, 0f));
+			clips.Add(new HEVAudioClip(clip, 1, 0f, 1f, HEVSuitMod.Instance.globalVolume.Value, 0f));
 		}
 
 		sentence = new(number.ToString(), clips);
@@ -274,7 +274,7 @@ public class VoiceController : MonoBehaviour
 	private void SayTime()
 	{
 		DateTime time = Singleton<GameWorld>.Instance.GameDateTime.Calculate();
-		bool milTime = HEVMod.Instance.milTime.Value;
+		bool milTime = HEVSuitMod.Instance.milTime.Value;
 		string[] hour = GetNumberClips(milTime ? time.Hour : (time.Hour <= 12 ? time.Hour : time.Hour - 12));
 		string[] minute = GetNumberClips(time.Minute);
 		StringBuilder sentence = new();
@@ -413,7 +413,7 @@ public class VoiceController : MonoBehaviour
 
 	public void WeaponInspectEvent()
 	{
-		if (!HEVMod.Instance.identifyWeapon.Value)
+		if (!HEVSuitMod.Instance.identifyWeapon.Value)
 			return;
 
 		// Play sentence with identifier matching held weapon
@@ -426,7 +426,7 @@ public class VoiceController : MonoBehaviour
 
 	public void ChamberInspectEvent()
 	{
-		if (!HEVMod.Instance.identifyAmmo.Value)
+		if (!HEVSuitMod.Instance.identifyAmmo.Value)
 			return;
 
 		// Play sentence with identifier matching ammo in chamber
