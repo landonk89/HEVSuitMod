@@ -59,7 +59,7 @@ public class HudAmmoCounter : MonoBehaviour
 			Player.FirearmController current = currentHandsController as Player.FirearmController;
 			current.OnShot -= OnShotHandler;
 			current.OnReadyToOperate -= AmmoChanged;
-			current.Weapon.GetMagazineSlot().OnAddOrRemoveItem -= OnMagChangedHandler;
+			current.Weapon.GetMagazineSlot()?.OnAddOrRemoveItem -= OnMagChangedHandler;
 			LoadSingleAmmoPatch.SingleLoadAmmoEvent -= LoadSingleAmmoHandler;
 
 			OnShotHandler = () => AmmoChanged(faController);
@@ -67,7 +67,7 @@ public class HudAmmoCounter : MonoBehaviour
 			
 			faController.OnShot += OnShotHandler;
 			faController.OnReadyToOperate += AmmoChanged;
-			faController.Weapon.GetMagazineSlot().OnAddOrRemoveItem += OnMagChangedHandler;
+			faController.Weapon.GetMagazineSlot()?.OnAddOrRemoveItem += OnMagChangedHandler;
 			LoadSingleAmmoPatch.SingleLoadAmmoEvent += LoadSingleAmmoHandler;
 
 			currentHandsController = faController;
