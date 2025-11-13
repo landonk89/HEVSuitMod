@@ -39,7 +39,7 @@ public class HudCrosshair : MonoBehaviour
 
     private void Update()
     {
-        // Handle crosshair states
+        // Fade it out if we're ADS, fade back in when not ADS
         switch (crosshair.State)
         {
             case EHudIconState.Activate:
@@ -59,7 +59,6 @@ public class HudCrosshair : MonoBehaviour
                 break;
         }
 
-        // TODO: Fade out if we're ADS, fade back in when unADS
         if (currentFirearm == null)
             return;
 

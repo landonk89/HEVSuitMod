@@ -8,20 +8,15 @@ Please see https://github.com/landonk89/HEVSuitAssets for the related asset file
 Right now, this is early in development. I want to eventually have a fully functioning HEV suit experience in EFT
 but my modelling/texturing skills are extremely limited, so this is a learning project for me as well.
 
-Working so far:
-* HUD
-	* Health
-	* Armor
-	* Ammo
-	* Damage direction indicators
-	* Damage type indicators
-	* Flashlight status and battery
-* Events such as:
-	* Health effects like fractures and bleeds: Play HEV voice lines and automatic first aid
-	* Low health warning
-	* Inspecting a weapon (off by default)
-	* Checking the chamber of a weapon (off by default)
-* Flashlight - Toggle with 'J' key, configurable in settings
+This is the first version that I consider somewhat functional.
+
+* Hud mostly works (suit counter uses tactical vest slot, tested with strandhogg).
+* Taking damage will display the direction it came from and type (like bullets, barbed wire, fire, etc etc)
+* Major injuries will play a voiceline and automatically inject a relevant stim like morphine (doesn't need to be on your pmc)
+* A crosshair shows where your bullets will hit in the world and highlight red when over a player/bot
+* Working flashlight, toggled with 'J' by default (configurable in settings)
+* Picking up items in the world will display a notification icon on the right side
+* Weapon selection will show an icon and ammo level of the weapon at the top
 
 Any contributions or advice are welcome,
 hopefully some talented people who love these two games as much as I do will stumble into this project and find interest!
