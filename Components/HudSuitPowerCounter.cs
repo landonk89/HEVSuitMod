@@ -55,7 +55,7 @@ namespace HEVSuitMod.Components
 			float current = 0, max = 0;
 			if (GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).ContainedItem is not VestItemClass vest)
 			{
-				SuitFull.image.fillAmount = 0f;
+				SuitFull.Image.fillAmount = 0f;
 				Hud.IconSetDigits(SuitNumbers, 0);
 				return;
 			}
@@ -71,7 +71,7 @@ namespace HEVSuitMod.Components
 			}
 
 			int normalized = Mathf.CeilToInt(current / max * 100f);
-			SuitFull.image.fillAmount = normalized / 100f;
+			SuitFull.Image.fillAmount = normalized / 100f;
 			Hud.IconSetDigits(SuitNumbers, normalized);
 			if (damageInfo?.DidArmorDamage < 0.01)
 				return; // Don't highlight unless it was noticeable

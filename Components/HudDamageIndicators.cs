@@ -45,26 +45,26 @@ public class HudDamageIndicators : MonoBehaviour
 
     private void Update()
     {
-        // Unique state update, don't use IconUpdate
-        if (indicators.All(x => x.state == EIconState.Inactive))
+        // Unique State update, don't use IconUpdate
+        if (indicators.All(x => x.State == EHudIconState.Inactive))
             return; // Only proceed if any indicators are active
 
         foreach (HudIcon indicator in indicators)
         {
-            if (indicator.state != EIconState.Active)
+            if (indicator.State != EHudIconState.Active)
                 continue;
 
-            indicator.timer += Time.deltaTime;
-            if (indicator.timer >= indicator.transitionTime)
+            indicator.Timer += Time.deltaTime;
+            if (indicator.Timer >= indicator.TransitionTime)
             {
-                indicator.timer = 0f;
-                indicator.image.color = Color.clear;
-                indicator.state = EIconState.Inactive;
+                indicator.Timer = 0f;
+                indicator.Image.color = Color.clear;
+                indicator.State = EHudIconState.Inactive;
                 continue;
             }
 
-            float t = indicator.timer / indicator.transitionTime;
-            indicator.image.color = Color.Lerp(Hud.damageIndicatorColor, Color.clear, t);
+            float t = indicator.Timer / indicator.TransitionTime;
+            indicator.Image.color = Color.Lerp(Hud.damageIndicatorColor, Color.clear, t);
         }
     }
 #pragma warning restore IDE0051
@@ -84,8 +84,8 @@ public class HudDamageIndicators : MonoBehaviour
         int dirIndex = Mathf.FloorToInt((angle + 22.5f) % 360f / 45f);
         foreach (var indicator in Directions[dirIndex])
         {
-            indicator.timer = 0f; // In case it's already active, reset timer
-            indicator.state = EIconState.Active;
+            indicator.Timer = 0f; // In case it's already active, reset Timer
+            indicator.State = EHudIconState.Active;
         }
     }
 }

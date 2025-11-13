@@ -18,8 +18,8 @@ public class HudFlashlight : MonoBehaviour
 		flashlightIcons[0] = new(transform.Find("Flashlight/IconEmpty").GetComponent<Image>());
 		flashlightIcons[1] = new(transform.Find("Flashlight/IconFull").GetComponent<Image>());
 		flashlightIcons[2] = new(transform.Find("Flashlight/Beam").GetComponent<Image>());
-		BeamIcon.image.enabled = false; // start off and full battery
-		FullIcon.image.fillAmount = 1f;
+		BeamIcon.Image.enabled = false; // start off and full battery
+		FullIcon.Image.fillAmount = 1f;
 		Flashlight.Toggled += FlashlightToggled;
 		Flashlight.BatteryUpdate += SetBatteryLevel;
 		Flashlight.BatteryStateChanged += SetBatteryCritical;
@@ -40,7 +40,7 @@ public class HudFlashlight : MonoBehaviour
 
 	private void FlashlightToggled(bool turnedOn)
 	{
-		BeamIcon.image.enabled = turnedOn;
+		BeamIcon.Image.enabled = turnedOn;
 		if (turnedOn)
 			Hud.IconActivate(flashlightIcons);
 		else
@@ -49,7 +49,7 @@ public class HudFlashlight : MonoBehaviour
 
 	public void SetBatteryLevel(float level)
 	{
-		FullIcon.image.fillAmount = level;
+		FullIcon.Image.fillAmount = level;
 	}
 
 	private void SetBatteryCritical(bool critical)

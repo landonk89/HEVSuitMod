@@ -39,6 +39,7 @@ public class HudController : MonoBehaviour
 	HudHealthCounter hudHealthCounter;
 	HudSuitPowerCounter hudSuitPowerCounter;
 	HudItemPickups hudItemPickups;
+	HudCrosshair hudCrosshair;
 
 	public GameObject Hud { get; private set; }
 	private AssetBundle Assets => HEVMod.Instance.Assets;
@@ -61,6 +62,7 @@ public class HudController : MonoBehaviour
 		hudHealthCounter = Hud.AddComponent<HudHealthCounter>();
 		hudSuitPowerCounter = Hud.AddComponent<HudSuitPowerCounter>();
 		hudItemPickups = Hud.AddComponent<HudItemPickups>();
+		hudCrosshair = Hud.AddComponent <HudCrosshair>();
 	}
 
 	private void Start()
@@ -80,6 +82,7 @@ public class HudController : MonoBehaviour
 		Destroy(hudHealthCounter);
 		Destroy(hudSuitPowerCounter);
 		Destroy(hudItemPickups);
+		Destroy(hudCrosshair);
 	}
 #pragma warning restore IDE0051
 
@@ -92,15 +95,15 @@ public class HudController : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Initiates a transition of the specified HUD icon to a new visual state.
+	/// Initiates a transition of the specified HUD icon to a new visual State.
 	/// </summary>
 	/// <param name="icon">The HUD icon to transition. Cannot be null.</param>
-	/// <param name="nextState">The state to which the HUD icon will transition.</param>
-	public void StartTransition(HudIcon icon, EIconState nextState)
+	/// <param name="nextState">The State to which the HUD icon will transition.</param>
+	public void StartTransition(HudIcon icon, EHudIconState nextState)
 	{
-		icon.timer = 0f;
-		icon.lastColor = icon.image.color;
-		icon.state = nextState;
+		icon.Timer = 0f;
+		icon.LastColor = icon.Image.color;
+		icon.State = nextState;
 	}
 
 	/// <summary>
@@ -112,66 +115,66 @@ public class HudController : MonoBehaviour
 	/// <returns>False until transition completed, then True</returns>
 	public bool UpdateTransition(HudIcon icon, float duration, Color target)
 	{
-		icon.timer += Time.deltaTime;
-		if (icon.timer >= duration)
+		icon.Timer += Time.deltaTime;
+		if (icon.Timer >= duration)
 		{
-			icon.image.color = target;
-			icon.lastColor = target; // TODO: TEST
-			icon.timer = 0f;
+			icon.Image.color = target;
+			icon.LastColor = target; // TODO: TEST
+			icon.Timer = 0f;
 			return true;
 		}
-		float t = icon.timer / duration;
-		icon.image.color = Color.Lerp(icon.lastColor, target, t);
+		float t = icon.Timer / duration;
+		icon.Image.color = Color.Lerp(icon.LastColor, target, t);
 		return false;
 	}
 
 	/// <summary>
-	/// Updates the state and appearance of the specified HUD icons based on their current state and critical status. Should be called every frame.
+	/// Updates the State and appearance of the specified HUD icons based on their current State and Critical status. Should be called every frame.
 	/// </summary>
-	/// <remarks>This method processes each icon in the array and may change its state or color to reflect
+	/// <remarks>This method processes each icon in the array and may change its State or color to reflect
 	/// transitions such as activation, deactivation, or highlighting. The method does not return a value; changes are
 	/// applied directly to the provided icon objects.</remarks>
-	/// <param name="icons">An array of HUD icons to update. Each icon's state and visual appearance will be modified according to its current
-	/// state and whether it is marked as critical.</param>
+	/// <param name="icons">An array of HUD icons to update. Each icon's State and visual appearance will be modified according to its current
+	/// State and whether it is marked as Critical.</param>
 	public void IconUpdate(HudIcon[] icons)
 	{
 		foreach (HudIcon icon in icons)
 		{
-			Color activeColor = icon.critical ? hudColorCriticalActive : hudColorActive;
-			Color inactiveColor = icon.critical ? hudColorCritical : hudColor;
+			Color activeColor = icon.Critical ? hudColorCriticalActive : hudColorActive;
+			Color inactiveColor = icon.Critical ? hudColorCritical : hudColor;
 
-			switch (icon.state)
+			switch (icon.State)
 			{
-				case EIconState.Active:
-				case EIconState.Inactive:
+				case EHudIconState.Active:
+				case EHudIconState.Inactive:
 					break;
 
-				case EIconState.Deactivate:
-					if (UpdateTransition(icon, icon.transitionTime, inactiveColor))
-						icon.state = EIconState.Inactive;
+				case EHudIconState.Deactivate:
+					if (UpdateTransition(icon, icon.TransitionTime, inactiveColor))
+						icon.State = EHudIconState.Inactive;
 					break;
 
-				case EIconState.Activate:
-					if (UpdateTransition(icon, icon.transitionTime, activeColor))
-						icon.state = EIconState.Active;
+				case EHudIconState.Activate:
+					if (UpdateTransition(icon, icon.TransitionTime, activeColor))
+						icon.State = EHudIconState.Active;
 					break;
 			}
 		}
 	}
 
 	/// <summary>
-	/// Sets the critical status for the specified HUD icons, updating their appearance accordingly.
+	/// Sets the Critical status for the specified HUD icons, updating their appearance accordingly.
 	/// </summary>
-	/// <param name="icons">An array of HUD icons whose critical status will be set. Cannot be null.</param>
-	/// <param name="critical">A value indicating whether the specified icons should be marked as critical.</param>
+	/// <param name="icons">An array of HUD icons whose Critical status will be set. Cannot be null.</param>
+	/// <param name="critical">A value indicating whether the specified icons should be marked as Critical.</param>
 	public void IconSetCritical(HudIcon[] icons, bool critical)
 	{
 		foreach (HudIcon icon in icons)
 		{
-			icon.critical = critical;
-			icon.image.color = icon.state switch
+			icon.Critical = critical;
+			icon.Image.color = icon.State switch
 			{
-				EIconState.Inactive => critical ? hudColorCritical : hudColor,
+				EHudIconState.Inactive => critical ? hudColorCritical : hudColor,
 				_ => critical ? hudColorCriticalActive : hudColorActive
 			};
 		}
@@ -185,35 +188,35 @@ public class HudController : MonoBehaviour
 	{
 		foreach (HudIcon icon in icons)
 		{
-			icon.image.color = icon.critical ? hudColorCriticalActive : hudColorActive;
-			icon.transitionTime = FADE_TIME;
-			StartTransition(icon, EIconState.Deactivate);
+			icon.Image.color = icon.Critical ? hudColorCriticalActive : hudColorActive;
+			icon.TransitionTime = FADE_TIME;
+			StartTransition(icon, EHudIconState.Deactivate);
 		}
 	}
 
 	/// <summary>
-	/// Transition specified icons to the brighter active state (requires use of IconUpdate per frame)
+	/// Transition specified icons to the brighter active State (requires use of IconUpdate per frame)
 	/// </summary>
 	/// <param name="icons"></param>
 	public void IconActivate(HudIcon[] icons)
 	{
 		foreach (HudIcon icon in icons)
 		{
-			icon.transitionTime = ACTIVATE_TIME;
-			StartTransition(icon, EIconState.Activate);
+			icon.TransitionTime = ACTIVATE_TIME;
+			StartTransition(icon, EHudIconState.Activate);
 		}
 	}
 
 	/// <summary>
-	/// Transition specified icons to the darker inactive state (requires use of IconUpdate per frame)
+	/// Transition specified icons to the darker inactive State (requires use of IconUpdate per frame)
 	/// </summary>
 	/// <param name="icons"></param>
 	public void IconDeactivate(HudIcon[] icons)
 	{
 		foreach (HudIcon icon in icons)
 		{
-			icon.transitionTime = ACTIVATE_TIME;
-			StartTransition(icon, EIconState.Deactivate);
+			icon.TransitionTime = ACTIVATE_TIME;
+			StartTransition(icon, EHudIconState.Deactivate);
 		}
 	}
 
@@ -247,12 +250,12 @@ public class HudController : MonoBehaviour
 			// Hide leading zeros (except for the last digit)
 			if (!foundNonZero && digit == 0 && i != digitIcons.Length - 1)
 			{
-				digitIcons[i].image.sprite = numberSprites[10]; // 10 = blank
+				digitIcons[i].Image.sprite = numberSprites[10]; // 10 = blank
 			}
 			else
 			{
 				foundNonZero = true;
-				digitIcons[i].image.sprite = numberSprites[digit];
+				digitIcons[i].Image.sprite = numberSprites[digit];
 			}
 		}
 	}

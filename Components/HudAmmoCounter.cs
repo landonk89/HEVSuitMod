@@ -1,6 +1,7 @@
 ﻿using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
+using HEVSuitMod.Patches;
 using HEVSuitMod.Types;
 using System;
 using UnityEngine;
@@ -16,6 +17,7 @@ public class HudAmmoCounter : MonoBehaviour
 	
 	private Action OnShotHandler;
 	private Action<Item> OnMagChangedHandler;
+	private Action LoadSingleAmmoHandler;
 	
 	private HudIcon[] AmmoNumbers => [ammoIcons[0], ammoIcons[1], ammoIcons[2]];
 	private HudController Hud => HEVMod.Instance.HudController;
@@ -26,6 +28,7 @@ public class HudAmmoCounter : MonoBehaviour
 		currentHandsController = GamePlayerOwner.MyPlayer.HandsController;
 		OnMagChangedHandler = (_) => AmmoChanged(currentHandsController);
 		OnShotHandler = () => AmmoChanged(currentHandsController);
+		LoadSingleAmmoHandler = () => AmmoChanged(currentHandsController);
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		Image iconImg = transform.Find("AmmoCounter/Icon").GetComponent<Image>();
 		ammoIcons[3] = new(iconImg);
@@ -43,7 +46,7 @@ public class HudAmmoCounter : MonoBehaviour
 		Hud.IconUpdate(ammoIcons);
 		if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
 		{
-			if (ammoIcons[0].critical)
+			if (ammoIcons[0].Critical)
 				Hud.IconFlash(ammoIcons);
 		}
 	}
@@ -57,11 +60,15 @@ public class HudAmmoCounter : MonoBehaviour
 			current.OnShot -= OnShotHandler;
 			current.OnReadyToOperate -= AmmoChanged;
 			current.Weapon.GetMagazineSlot().OnAddOrRemoveItem -= OnMagChangedHandler;
+			LoadSingleAmmoPatch.SingleLoadAmmoEvent -= LoadSingleAmmoHandler;
 
 			OnShotHandler = () => AmmoChanged(faController);
+			LoadSingleAmmoHandler = () => AmmoChanged(faController);
+			
 			faController.OnShot += OnShotHandler;
 			faController.OnReadyToOperate += AmmoChanged;
 			faController.Weapon.GetMagazineSlot().OnAddOrRemoveItem += OnMagChangedHandler;
+			LoadSingleAmmoPatch.SingleLoadAmmoEvent += LoadSingleAmmoHandler;
 
 			currentHandsController = faController;
 			AmmoChanged(faController);

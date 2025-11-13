@@ -2,7 +2,6 @@
 using EFT;
 using EFT.Console.Core;
 using EFT.UI;
-using System.Linq;
 
 namespace HEVSuitMod.Tools;
 
@@ -16,8 +15,8 @@ public class ImpulseCommand(string impulse) : SyncCommand
 	{
 		if (!Singleton<GameWorld>.Instantiated)
 		{
-			//ConsoleScreen.LogError("Impulse commands only work in-raid.");
-			//return;
+			ConsoleScreen.LogError("Impulse commands only work in-raid.");
+			return;
 		}
 
 		if (!int.TryParse(impulse, out var impulseValue))

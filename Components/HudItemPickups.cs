@@ -35,18 +35,18 @@ public class HudItemPickups : MonoBehaviour
 		// Idle for a sec and fade away once inactive
 		foreach (HudIcon icon in activeIcons.ToArray())
 		{
-			if (icon.state != EIconState.Inactive)
+			if (icon.State != EHudIconState.Inactive)
 				continue;
 			
-			icon.timer += Time.deltaTime;
-			if (icon.timer >= HudController.NOTIFY_STAY_TIME)
+			icon.Timer += Time.deltaTime;
+			if (icon.Timer >= HudController.NOTIFY_STAY_TIME)
 			{
-				float t = (icon.timer - icon.transitionTime) / icon.transitionTime;
-				icon.image.color = Color.Lerp(Hud.hudColor, Color.clear, t);
+				float t = (icon.Timer - icon.TransitionTime) / icon.TransitionTime;
+				icon.Image.color = Color.Lerp(Hud.hudColor, Color.clear, t);
 				if (t >= 1f)
 				{
 					activeIcons.Remove(icon);
-					Destroy(icon.image.gameObject);
+					Destroy(icon.Image.gameObject);
 				}
 			}
 		}
@@ -66,12 +66,12 @@ public class HudItemPickups : MonoBehaviour
 		iconImage.preserveAspect = true;
 		iconImage.sprite = Hud.GetItemSprite(item, new(1,1));
 		iconImage.color = Hud.hudColorActive;
-		HudIcon icon = new(iconImage, transitionTime: HudController.NOTIFY_FLASH_TIME, state: EIconState.Deactivate); // Starts bright, fades to normal
+		HudIcon icon = new(iconImage, transitionTime: HudController.NOTIFY_FLASH_TIME, state: EHudIconState.Deactivate); // Starts bright, fades to normal
 		activeIcons.Add(icon);
 
 		if (activeIcons.Count > HudController.MAX_NOTIFY_ICONS)
 		{
-			Destroy(activeIcons[0].image.gameObject);
+			Destroy(activeIcons[0].Image.gameObject);
 			activeIcons.RemoveAt(0);
 		}
 	}

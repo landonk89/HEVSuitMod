@@ -54,17 +54,17 @@ public class HudDamageTypes : MonoBehaviour
 	// Don't use Hud's StateUpdate, these are unique
 	private void Update()
 	{
-		// Unique state update, don't use base.IconUpdate
+		// Unique State update, don't use base.IconUpdate
 		if (activeIcons.Count == 0)
 			return;
 
 		foreach (HudIcon icon in activeIcons.ToArray()) // Copy to avoid modification during iteration
 		{
-			icon.timer += Time.deltaTime;
-			icon.image.color = Color.Lerp(Color.clear, Hud.hudColorActive, (Mathf.Sin(icon.timer * 4f) + 1f) * 0.5f);
-			if (icon.timer >= HudController.DMG_NOTIFY_TIME)
+			icon.Timer += Time.deltaTime;
+			icon.Image.color = Color.Lerp(Color.clear, Hud.hudColorActive, (Mathf.Sin(icon.Timer * 4f) + 1f) * 0.5f);
+			if (icon.Timer >= HudController.DMG_NOTIFY_TIME)
 			{
-				Destroy(icon.image.gameObject);
+				Destroy(icon.Image.gameObject);
 				activeIcons.Remove(icon);
 			}
 		}
@@ -114,7 +114,7 @@ public class HudDamageTypes : MonoBehaviour
 		}
 
 		// Don't notify for the same damage type twice
-		if (icon == null || activeIcons.Any(x => x.image.sprite == icon))
+		if (icon == null || activeIcons.Any(x => x.Image.sprite == icon))
 			return;
 
 		GameObject iconObj = new("icon");
@@ -126,6 +126,6 @@ public class HudDamageTypes : MonoBehaviour
 		activeIcons.Add(damageIcon);
 
 		if (activeIcons.Count > HudController.MAX_DMG_ICONS)
-			activeIcons[0].timer = HudController.DMG_NOTIFY_TIME; // Force remove oldest
+			activeIcons[0].Timer = HudController.DMG_NOTIFY_TIME; // Force remove oldest
 	}
 }

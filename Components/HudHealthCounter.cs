@@ -46,7 +46,7 @@ public class HudHealthCounter : MonoBehaviour
         Hud.IconUpdate(healthIcons);
         if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
         {
-            if (healthIcons[0].critical)
+            if (healthIcons[0].Critical)
                 Hud.IconFlash(healthIcons);
         }
     }

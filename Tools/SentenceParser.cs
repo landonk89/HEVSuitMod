@@ -58,7 +58,7 @@ public class SentenceParser
 		workingDirectory = DEFAULT_DIRECTORY;
 		log.LogInfo($"Parsed {sentenceCount} sentences.");
 		if (missingFiles.Count > 0)
-			log.LogWarning($"Encountered {missingFiles.Count} missing files:\n{Utils.FileTree(missingFiles)}");
+			log.LogWarning($"Encountered {missingFiles.Count} missing files:\n{BundleUtils.FileTree(missingFiles)}");
 	}
 
 	// --------------------------------------------------------------

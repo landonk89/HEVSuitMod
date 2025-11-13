@@ -4,15 +4,16 @@ using EFT;
 using EFT.HealthSystem;
 using EFT.InventoryLogic;
 using EFT.UI.BattleTimer;
+using HarmonyLib;
+using HEVSuitMod.Patches;
+using HEVSuitMod.Tools;
+using HEVSuitMod.Types;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using HarmonyLib;
-using HEVSuitMod.Tools;
-using HEVSuitMod.Types;
 
 namespace HEVSuitMod.Components;
 
@@ -51,6 +52,8 @@ public class VoiceController : MonoBehaviour
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		Flashlight.BatteryStateChanged += FlashlightCritical;
+		InspectChamberPatch.ChamberInspectEvent += ChamberInspectEvent;
+		InspectWeaponPatch.WeaponInspectEvent += WeaponInspectEvent;
 	}
 
 	private void Update()
@@ -75,12 +78,14 @@ public class VoiceController : MonoBehaviour
 			sentencePlayer = null;
 		}
 
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStarted;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= EffectRemoved;
+		HealthController.EffectStartedEvent -= EffectStarted;
+		HealthController.EffectRemovedEvent -= EffectRemoved;
 		HealthController.BodyPartDestroyedEvent -= BodyPartDestroyed;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		Flashlight.BatteryStateChanged -= FlashlightCritical;
+		InspectChamberPatch.ChamberInspectEvent -= ChamberInspectEvent;
+		InspectWeaponPatch.WeaponInspectEvent -= WeaponInspectEvent;
 	}
 #pragma warning restore IDE0051
 
@@ -140,7 +145,7 @@ public class VoiceController : MonoBehaviour
 		return matches.PickRandom();
 	}
 
-	// Demand load number clips
+	// Currently unused
 	private HEVSentence GetNumberSentence(int number)
 	{
 		// See if we've already generated this number first
@@ -164,6 +169,7 @@ public class VoiceController : MonoBehaviour
 		return sentence;
 	}
 
+	// Currently unused
 	private HEVSentence GetDirectionSentence(int bearing)
 	{
 		string[] directions = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
@@ -329,7 +335,7 @@ public class VoiceController : MonoBehaviour
 			return;
 		}
 
-		// Use GetType().Name because IEffect.Type returns a GInterface name insead of the effect class name
+		// Use GetType().Name because IEffect.Type returns a GInterface name instead of the effect class name
 		bool handled = false;
 		switch (effect.GetType().Name)
 		{
@@ -417,6 +423,9 @@ public class VoiceController : MonoBehaviour
 
 	public void ChamberInspectEvent()
 	{
+		if (!HEVMod.Instance.identifyAmmo.Value)
+			return;
+
 		// Play sentence with identifier matching ammo in chamber
 		if (GamePlayerOwner.MyPlayer.HandsController.Item is not Weapon weapon)
 			return;

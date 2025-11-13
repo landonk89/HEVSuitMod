@@ -1,6 +1,7 @@
 ﻿using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
+using System;
 using System.Reflection;
 
 namespace HEVSuitMod.Patches;
@@ -10,7 +11,9 @@ namespace HEVSuitMod.Patches;
 /// </summary>
 internal class InspectWeaponPatch : ModulePatch
 {
-    protected override MethodBase GetTargetMethod()
+	public static event Action WeaponInspectEvent;
+
+	protected override MethodBase GetTargetMethod()
     {
         return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.ExamineWeapon));
     }
@@ -18,7 +21,6 @@ internal class InspectWeaponPatch : ModulePatch
     [PatchPrefix]
     private static void OnInspect()
     {
-        if (HEVMod.Instance.identifyAmmo.Value)
-            HEVMod.Instance.VoiceController?.WeaponInspectEvent();
+        WeaponInspectEvent?.Invoke();
     }
 }

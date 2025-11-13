@@ -3,14 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using UnityEngine;
 
 namespace HEVSuitMod.Tools;
 
-// Some useful stuff goes here
-public static class Utils
+public static class BundleUtils
 {
-	//private static readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(Utils).FullName}");
+	//private static readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(BundleUtils).FullName}");
 
 	// Simple tree node
 	private class Node
@@ -73,19 +71,5 @@ public static class Utils
 			for (int i = 0; i < orderedChildren.Count; i++)
 				BuildTreeRecursive(sb, orderedChildren[i], childPrefix, i == orderedChildren.Count - 1);
 		}
-	}
-
-	public static string GetRelativePath(this Transform t, Transform root)
-	{
-		if (t == root)
-			return string.Empty;
-		string path = t.name;
-		Transform current = t.parent;
-		while (current != null && current != root)
-		{
-			path = current.name + "/" + path;
-			current = current.parent;
-		}
-		return path;
 	}
 }
