@@ -1,5 +1,7 @@
 ﻿using EFT;
 using EFT.InventoryLogic;
+using HEVSuitMod.Patches;
+using HEVSuitMod.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +9,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudWeaponSelection : MonoBehaviour
 {
@@ -62,6 +64,7 @@ public class HudWeaponSelection : MonoBehaviour
 #pragma warning disable IDE0051
 	private void Awake()
 	{
+		// TODO: quick slots
 		HolsterWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Holster]);
 		PrimaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Primary]);
 		SecondaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Secondary]);
@@ -70,7 +73,7 @@ public class HudWeaponSelection : MonoBehaviour
 		audioSource = GetComponent<AudioSource>();
 		audioSource.volume = 0.5f;
 		audioSource.playOnAwake = false;
-		audioSource.clip = Assets.LoadAsset<AudioClip>("assets/sounds/fx/wpn_moveselect.wav");
+		audioSource.clip = Assets.LoadAsset<AudioClip>("Assets/sounds/fx/wpn_moveselect.wav");
 		weaponSelectionUI = transform.Find("WeaponSelection").gameObject;
 		var allTransforms = weaponSelectionUI.GetComponentsInChildren<Transform>(true).ToDictionary(t => t.GetRelativePath(weaponSelectionUI.transform), t => t);
 		for (int i = 0; i < NUM_WEAPONS; i++)
@@ -111,7 +114,7 @@ public class HudWeaponSelection : MonoBehaviour
 	private void OnWeaponChanged(Item weapon, WeaponSelection selection)
 	{
 		selection.name.text = weapon != null ? weapon.ShortName.Localized() : "Error";
-		selection.icon.sprite = weapon != null ? Hud.GetItemSprite(weapon, new XYCellSizeStruct(5,2)) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
+		selection.icon.sprite = weapon != null ? Hud.GetItemSprite(weapon, new XYCellSizeStruct(5, 2)) : CacheResourcesPopAbstractClass.Pop<Sprite>("What");
 	}
 
 	void Update()

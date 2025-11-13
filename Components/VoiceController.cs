@@ -1,13 +1,20 @@
-﻿using System;
-using BepInEx.Logging;
+﻿using BepInEx.Logging;
+using Comfort.Common;
 using EFT;
+using EFT.HealthSystem;
 using EFT.InventoryLogic;
+using EFT.UI.BattleTimer;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using UnityEngine;
+using HarmonyLib;
+using HEVSuitMod.Tools;
+using HEVSuitMod.Types;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class VoiceController : MonoBehaviour
 {
@@ -19,11 +26,13 @@ public class VoiceController : MonoBehaviour
 	private HashSet<IEffect> activeEffects = [];
 	private IHandsController currentHandsController;
 
+	private Action OnShotHandler;
+	private GDelegate71 PlayerDeadHandler; // TODO: TEST! Was GDelegate70
+
 	private AssetBundle Assets => HEVMod.Instance.Assets;
 	private Flashlight Flashlight => HEVMod.Instance.Flashlight;
-
-	private Action OnShotHandler;
-	private GDelegate71 PlayerDeadHandler; // TODO: OnPickupLoot this, was GDelegate70/OnPlayerDead before
+	private SentenceParser Parser => HEVMod.Instance.SentenceParser;
+	private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;
 
 #pragma warning disable IDE0051
 	private void Awake()
@@ -36,8 +45,9 @@ public class VoiceController : MonoBehaviour
 	private void Start()
 	{
 		currentHandsController = GamePlayerOwner.MyPlayer.HandsController;
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStarted;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += EffectRemoved;
+		HealthController.EffectStartedEvent += EffectStarted;
+		HealthController.EffectRemovedEvent += EffectRemoved;
+		HealthController.BodyPartDestroyedEvent += BodyPartDestroyed;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
 		Flashlight.BatteryStateChanged += FlashlightCritical;
@@ -47,6 +57,12 @@ public class VoiceController : MonoBehaviour
 	{
 		if (pendingSentences.Count > 0 && sentencePlayer == null)
 			sentencePlayer = StartCoroutine(PlaySentences());
+
+		if (Input.GetKeyDown(KeyCode.F12)) // TODO/WIP: Map this to extract/time panel
+			SayTime();
+
+		if (Input.GetKeyDown(KeyCode.F11))
+			SayTimeRemaining();
 	}
 
 	private void OnDestroy()
@@ -61,6 +77,7 @@ public class VoiceController : MonoBehaviour
 
 		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStarted;
 		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= EffectRemoved;
+		HealthController.BodyPartDestroyedEvent -= BodyPartDestroyed;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
 		GamePlayerOwner.MyPlayer.HandsChangedEvent -= HandsChanged;
 		Flashlight.BatteryStateChanged -= FlashlightCritical;
@@ -137,7 +154,7 @@ public class VoiceController : MonoBehaviour
 		// TODO: Caching all of the number related clips might be better?
 		for (int i = 0; i < clipNames.Length; i++)
 		{
-			clipNames[i] = $"assets/sounds/numbers/{clipNames[i]}.wav";
+			clipNames[i] = $"Assets/sounds/numbers/{clipNames[i]}.wav";
 			AudioClip clip = Assets.LoadAsset<AudioClip>(clipNames[i]);
 			clips.Add(new HEVAudioClip(clip, 1, 0f, 1f, HEVMod.Instance.globalVolume.Value, 0f));
 		}
@@ -223,7 +240,7 @@ public class VoiceController : MonoBehaviour
 			case 19: clips.Add("nineteen"); break;
 		}
 
-		return clips.ToArray();
+		return [.. clips];
 	}
 
 	public void HandsChanged(IHandsController handsController)
@@ -248,6 +265,41 @@ public class VoiceController : MonoBehaviour
 			PlaySentenceById("FlashlightLow");
 	}
 
+	private void SayTime()
+	{
+		DateTime time = Singleton<GameWorld>.Instance.GameDateTime.Calculate();
+		bool milTime = HEVMod.Instance.milTime.Value;
+		string[] hour = GetNumberClips(milTime ? time.Hour : (time.Hour <= 12 ? time.Hour : time.Hour - 12));
+		string[] minute = GetNumberClips(time.Minute);
+		StringBuilder sentence = new();
+		sentence.Append("thetime time/thetimeisnow ");
+		for (int i = 0; i < hour.Length; i++) sentence.Append($"[d:0]numbers/{hour[i]} ");
+		for (int i = 0; i < minute.Length; i++) sentence.Append($"[d:0]numbers/{minute[i]} ");
+		sentence.Append(milTime ? "[d:0]time/hours" : (time.Hour < 12 ? "[d:0]time/am" : "[d:0]time/pm"));
+		HEVSentence theTime = Parser.ParseSentence(sentence.ToString());
+		PlaySentence(theTime);
+	}
+
+	private void SayTimeRemaining()
+	{
+		TimerPanel timer = FindFirstObjectByType<TimerPanel>();
+		if (timer == null)
+		{
+			log.LogError("TimerPanel not found!");
+			return;
+		}
+
+		// TODO: Consider adding seconds, maybe subtract a few to compensate for the delay from speaking?
+		TimeSpan span = Traverse.Create(timer).Field("TimeSpan").GetValue<TimeSpan>();
+		string[] minutes = GetNumberClips(span.Minutes);
+		StringBuilder sentence = new();
+		sentence.Append("timeremaining [l:2,p1.1]fx/fuzz time/timeremaining ");
+		for (int i = 0; i < minutes.Length; i++) sentence.Append($"[d:0]numbers/{minutes[i]} ");
+		sentence.Append("[d:0.2]Time/Minutes ");
+		HEVSentence timeRemaining = Parser.ParseSentence(sentence.ToString());
+		PlaySentence(timeRemaining);
+	}
+
 	private void PlayerDied()
 	{
 		if (sentencePlayer != null)
@@ -259,18 +311,27 @@ public class VoiceController : MonoBehaviour
 		PlaySentenceById("Death");
 	}
 
+	private void BodyPartDestroyed(EBodyPart part, EDamageType damageType)
+	{
+		// There's a chance that a leg can be destroyed but no fracture, so give propital if that happens.
+		if (activeEffects.Any(x => x.GetType().Name == "PainKiller"))
+			return; // Don't double up
+
+		if (part == EBodyPart.LeftLeg || part == EBodyPart.RightLeg)
+			PlaySentenceById("GiveMorphine"); // TODO: Make a unique voiceline
+	}
+
 	private void EffectStarted(IEffect effect)
 	{
-		Type effectType = effect.GetType(); // All effect classes are protected
-		string effectName = effectType.Name;
 		if (activeEffects.Contains(effect))
 		{
-			log.LogDebug($"Duplicate effect {effectName}");
+			log.LogDebug($"Duplicate effect {effect.GetType().Name}");
 			return;
 		}
 
+		// Use GetType().Name because IEffect.Type returns a GInterface name insead of the effect class name
 		bool handled = false;
-		switch (effectName)
+		switch (effect.GetType().Name)
 		{
 			case "Fracture":
 				switch (effect.BodyPart)
@@ -312,6 +373,7 @@ public class VoiceController : MonoBehaviour
 				break;
 
 			case "PainKiller": // Grabbin pills
+				handled = true; // Just add so we can keep track
 				break;
 
 			case "Intoxication":
@@ -333,13 +395,14 @@ public class VoiceController : MonoBehaviour
 		if (handled)
 		{
 			activeEffects.Add(effect);
-			log.LogDebug($"Effect {effectName} added");
+			log.LogDebug($"Effect {effect.GetType().Name} added");
 		}
 	}
 
 	private void EffectRemoved(IEffect effect)
 	{
-		activeEffects.Remove(effect);
+		if (activeEffects.Remove(effect))
+			log.LogDebug($"Effect {effect.GetType().Name} removed.");
 	}
 
 	public void WeaponInspectEvent()

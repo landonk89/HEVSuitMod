@@ -1,70 +1,36 @@
 ﻿using BepInEx.Logging;
+using HEVSuitMod.Types;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace HEVSuitMod;
-
-public class HEVAudioClip
-{
-    public AudioClip Clip { get; set; }
-    public int Loops { get; }
-    public float Interval { get; }
-    public float Pitch { get; }
-    public float Volume { get; }
-    public float Delay { get; }
-
-    public HEVAudioClip(AudioClip clip, int loops, float interval, float pitch, float volume, float delay)
-    {
-        Clip = clip;
-        Loops = loops;
-        Interval = interval;
-        Pitch = pitch;
-        Volume = volume;
-        Delay = delay;
-    }
-
-    public HEVAudioClip(AudioClip clip)
-    {
-        Clip = clip;
-        Loops = 1;
-        Interval = 0f;
-        Pitch = 1f;
-        Volume = HEVMod.Instance.globalVolume.Value;
-        Delay = HEVMod.DEFAULT_PLAYBACK_DELAY;
-    }
-}
-
-public class HEVSentence(string identifier, List<HEVAudioClip> clips)
-{
-    public string Identifier { get; } = identifier;
-    public List<HEVAudioClip> Clips { get; } = clips;
-}
+namespace HEVSuitMod.Tools;
 
 /// <summary>
 /// Parses sentences.txt predefined sentences for VoiceController.
 /// </summary>
 public class SentenceParser
 {
-	private const string SENTENCES_FILE = "assets/scripts/sentences.txt";
+	private const string SENTENCES_FILE = "Assets/scripts/sentences.txt";
+	private const string DEFAULT_DIRECTORY = "Assets/Sounds/";
 
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(SentenceParser).FullName}");
-	private readonly AssetBundle assets;
 	private readonly List<string> allFiles = [];
 	private readonly List<string> missingFiles = []; // Catch 404s
 	public readonly List<HEVSentence> allSentences = [];
-	private string workingDirectory = "assets/sounds/";
+	private string workingDirectory = DEFAULT_DIRECTORY;
 
-	public SentenceParser(AssetBundle assetBundle)
+	private AssetBundle Assets => HEVMod.Instance.Assets;
+
+	public SentenceParser()
 	{
-		assets = assetBundle;
-		allFiles = [..assets.GetAllAssetNames()];
+		allFiles = [..Assets.GetAllAssetNames()];
 		ParseAllSentences();
 	}
 
 	public void ParseAllSentences()
 	{
-		TextAsset hevSentencesFile = assets.LoadAsset<TextAsset>(SENTENCES_FILE);
+		TextAsset hevSentencesFile = Assets.LoadAsset<TextAsset>(SENTENCES_FILE);
 		if (hevSentencesFile == null)
 		{
 			log.LogError("Failed to load sentences!!");
@@ -78,16 +44,18 @@ public class SentenceParser
 			if (hevSentence[0] == '/') // Skip comments
 				continue;
 
-			if (hevSentence[0] == '$') // Change working directory
+			if (hevSentence[0] == '$') // Change working workingDirectory
 			{
 				workingDirectory = hevSentence.Substring(1);
-				log.LogDebug($"Working directory changed to {workingDirectory}");
+				log.LogDebug($"Working workingDirectory changed to {workingDirectory}");
 				continue;
 			}
 			sentenceCount++;
 			allSentences.Add(ParseSentence(hevSentence));
 		}
 
+		// Reset to the base workingDirectory for future use
+		workingDirectory = DEFAULT_DIRECTORY;
 		log.LogInfo($"Parsed {sentenceCount} sentences.");
 		if (missingFiles.Count > 0)
 			log.LogWarning($"Encountered {missingFiles.Count} missing files:\n{Utils.FileTree(missingFiles)}");
@@ -151,7 +119,7 @@ public class SentenceParser
 				
 				continue;
 			}
-			clip = assets.LoadAsset<AudioClip>(path);
+			clip = Assets.LoadAsset<AudioClip>(path);
 			clips.Add(new HEVAudioClip(clip, loops, interval, pitch, volume, delay));
 		}
 

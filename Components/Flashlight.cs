@@ -2,7 +2,7 @@
 using System;
 using UnityEngine;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class Flashlight : MonoBehaviour
 {
@@ -39,7 +39,7 @@ public class Flashlight : MonoBehaviour
 		flashlight = new("FlashlightContainer");
 		assets = HEVMod.Instance.Assets;
 		audioSource = flashlight.AddComponent<AudioSource>();
-		audioSource.clip = assets.LoadAsset<AudioClip>("assets/sounds/flashlight.wav");
+		audioSource.clip = assets.LoadAsset<AudioClip>("Assets/sounds/flashlight.wav");
 		lightSource = flashlight.AddComponent<Light>();
 	}
 
@@ -48,7 +48,7 @@ public class Flashlight : MonoBehaviour
 		lightSource.type = LightType.Spot;
 		lightSource.spotAngle = 40f;
 		lightSource.range = 50f;
-		lightSource.cookie = assets.LoadAsset<Texture2D>("assets/sprites/hl2flashlightcookie.tga");
+		lightSource.cookie = assets.LoadAsset<Texture2D>("Assets/sprites/hl2flashlightcookie.tga");
 		lightSource.intensity = 0f;
 		lightSource.enabled = false;
 		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition; // Attach to our face and reposition

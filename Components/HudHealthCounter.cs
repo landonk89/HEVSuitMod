@@ -1,30 +1,33 @@
 ﻿using EFT;
+using EFT.HealthSystem;
+using HEVSuitMod.Types;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudHealthCounter : MonoBehaviour
 {
     private readonly HudIcon[] healthIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
     private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
-    private GDelegate70 PlayerDeadAction;
+    private GDelegate71 PlayerDeadHandler;
     
     private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
     private HudController Hud => HEVMod.Instance.HudController;
+    private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;
 
 #pragma warning disable IDE0051
 	private void Awake()
     {
         HealthChangedAction = (_, _, _) => HealthChanged();
-        PlayerDeadAction = (_, _, _, _) => HealthChanged(false);
+        PlayerDeadHandler = (_) => HealthChanged(false);
         healthIcons[3] = new(transform.Find("HealthAndSuitPower/HealthIcon").GetComponent<Image>());
         for (int i = 0; i < 3; i++)
             healthIcons[i] = new(transform.Find($"HealthAndSuitPower/HealthValue/Digit{i}").GetComponent<Image>());
 
-        GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent += HealthChangedAction;
-        GamePlayerOwner.MyPlayer.OnPlayerDead += PlayerDeadAction;
+        HealthController.HealthChangedEvent += HealthChangedAction;
+        GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
     }
 
     private void Start()
@@ -34,8 +37,8 @@ public class HudHealthCounter : MonoBehaviour
 
     private void OnDestroy()
     {
-        GamePlayerOwner.MyPlayer.ActiveHealthController.HealthChangedEvent -= HealthChangedAction;
-        GamePlayerOwner.MyPlayer.OnPlayerDead -= PlayerDeadAction;
+        HealthController.HealthChangedEvent -= HealthChangedAction;
+        GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
     }
 
     private void Update()
@@ -55,7 +58,7 @@ public class HudHealthCounter : MonoBehaviour
         int normalizedHealth = 0;
         if (alive)
         {
-            float health = GamePlayerOwner.MyPlayer.ActiveHealthController.GetBodyPartHealth(EBodyPart.Common).Current;
+            float health = HealthController.GetBodyPartHealth(EBodyPart.Common).Current;
             normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
         }
         Hud.IconSetDigits(HealthNumbers, normalizedHealth);

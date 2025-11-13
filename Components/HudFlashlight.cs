@@ -1,7 +1,8 @@
-﻿using UnityEngine;
+﻿using HEVSuitMod.Types;
+using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudFlashlight : MonoBehaviour
 {

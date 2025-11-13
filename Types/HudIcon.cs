@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Types;
 
 public enum EIconState
 {

@@ -1,10 +1,11 @@
 ﻿using EFT;
 using EFT.InventoryLogic;
+using HEVSuitMod.Types;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod
+namespace HEVSuitMod.Components
 {
 	public class HudSuitPowerCounter : MonoBehaviour
 	{

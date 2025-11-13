@@ -4,7 +4,7 @@ using EFT.Console.Core;
 using EFT.UI;
 using System.Linq;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Tools;
 
 [ConsoleCommand("impulse", "", null, "Try 101 :)", ["i"])]
 public class ImpulseCommand(string impulse) : SyncCommand

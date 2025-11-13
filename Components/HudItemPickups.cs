@@ -1,25 +1,25 @@
-﻿using AnimationEventSystem;
-using BepInEx.Logging;
+﻿using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
+using HEVSuitMod.Patches;
+using HEVSuitMod.Types;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudItemPickups : MonoBehaviour
 {
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudItemPickups).FullName}");
-	private GameObject iconArea;
+	private Transform iconArea;
 	private readonly List<HudIcon> activeIcons = [];
 	private HudController Hud => HEVMod.Instance.HudController;
 
 #pragma warning disable IDE0051
 	private void Awake()
 	{
-		iconArea = transform.Find("RightNotifyArea").gameObject;
-		// FIXME: Not working, find the correct way to determine item being picked up
+		iconArea = transform.Find("RightNotifyArea");
 		PickupLootPatch.PickupLootEvent += Notification;
 	}
 
@@ -61,7 +61,7 @@ public class HudItemPickups : MonoBehaviour
 	private void Notification(Item item)
 	{
 		GameObject iconObj = new("icon");
-		iconObj.transform.parent = iconArea.transform;
+		iconObj.transform.parent = iconArea;
 		Image iconImage = iconObj.AddComponent<Image>();
 		iconImage.preserveAspect = true;
 		iconImage.sprite = Hud.GetItemSprite(item, new(1,1));

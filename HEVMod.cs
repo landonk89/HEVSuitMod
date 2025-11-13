@@ -1,6 +1,9 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using EFT.UI;
+using HEVSuitMod.Components;
+using HEVSuitMod.Tools;
+using HEVSuitMod.Patches;
 using System.IO;
 using UnityEngine;
 
@@ -28,6 +31,7 @@ public class HEVMod : BaseUnityPlugin
 	public ConfigEntry<float> ignoreDuplicateEffectsTime;
 	public ConfigEntry<bool> identifyWeapon;
 	public ConfigEntry<bool> identifyAmmo;
+	public ConfigEntry<bool> milTime;
 
 #pragma warning disable IDE0051 // Don't mark Unity methods as unused
 	private void Awake()
@@ -85,17 +89,24 @@ public class HEVMod : BaseUnityPlugin
 			"HEV will speak the name of the ammo type in your weapon's chamber when you check it."
 		);
 
+		milTime = Config.Bind(
+			SETTINGS_SECTION_GENERAL,
+			"Use 24 hour time instead of AM/PM",
+			false,
+			"Anywhere the time is spoken or displayed, use 24 hour time instead of AM/PM"
+		);
+
 		// Parse sentences file for the voicecontroller.
-		SentenceParser = new SentenceParser(Assets);
+		SentenceParser = new SentenceParser();
 
 		// Enable patches
-		new OnNewGame().Enable();
-		new OnGameEnded().Enable();
-		new OnInspectWeapon().Enable();
-		new OnInspectChamber().Enable();
+		new GameStartedPatch().Enable();
+		new GameEndedPatch().Enable();
+		new InspectWeaponPatch().Enable();
+		new InspectChamberPatch().Enable();
 		new SelectWeaponPatch().Enable();
 		new PickupLootPatch().Enable();
-		//new OnLoadSingleAmmo().Enable();
+		//new LoadSingleAmmoPatch().Enable();
 
 		// Register console commands
 		ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();

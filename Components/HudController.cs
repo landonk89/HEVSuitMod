@@ -2,10 +2,11 @@
 using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
+using HEVSuitMod.Types;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudController : MonoBehaviour
 {
@@ -46,12 +47,12 @@ public class HudController : MonoBehaviour
 	private void Awake()
 	{
 		// Cache number sprites
-		numberSprites[10] = Assets.LoadAsset<Sprite>($"assets/sprites/hud_number_blank.tga");
+		numberSprites[10] = Assets.LoadAsset<Sprite>($"Assets/sprites/hud_number_blank.tga");
 		for (int i = 0; i < 10; i++)
-			numberSprites[i] = Assets.LoadAsset<Sprite>($"assets/sprites/hud_number_{i}.tga");
+			numberSprites[i] = Assets.LoadAsset<Sprite>($"Assets/sprites/hud_number_{i}.tga");
 
 		// Instantiate HUD prefab and components for its elements
-		Hud = Instantiate(Assets.LoadAsset<GameObject>("assets/prefabs/hud.prefab"));
+		Hud = Instantiate(Assets.LoadAsset<GameObject>("Assets/prefabs/hud.prefab"));
 		hudWeaponSelection = Hud.AddComponent<HudWeaponSelection>();
 		hudDamageIndicators = Hud.AddComponent<HudDamageIndicators>();
 		hudDamageIcons = Hud.AddComponent<HudDamageTypes>();

@@ -3,16 +3,18 @@ using Comfort.Common;
 using EFT;
 using EFT.HealthSystem;
 using EFT.InventoryLogic;
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class MedicalController : MonoBehaviour
 {
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(MedicalController).FullName}");
-	private HashSet<IEffect> activeEffects = [];
+	private readonly HashSet<IEffect> activeEffects = [];
+
+	private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;
 
 	// TODO: In an ideal world, I would search the template id from the server
 	// but I don't know shit about how that works yet... Revisit this later
@@ -29,14 +31,16 @@ public class MedicalController : MonoBehaviour
 #pragma warning disable IDE0051
 	private void OnEnable()
 	{
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent += EffectStarted;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent += EffectRemoved;
+		HealthController.EffectStartedEvent += EffectStarted;
+		HealthController.EffectRemovedEvent += EffectRemoved;
+		HealthController.BodyPartDestroyedEvent += BodyPartDestroyed;
 	}
 
 	private void OnDisable()
 	{
-		GamePlayerOwner.MyPlayer.HealthController.EffectStartedEvent -= EffectStarted;
-		GamePlayerOwner.MyPlayer.HealthController.EffectRemovedEvent -= EffectRemoved;
+		HealthController.EffectStartedEvent -= EffectStarted;
+		HealthController.EffectRemovedEvent -= EffectRemoved;
+		HealthController.BodyPartDestroyedEvent -= BodyPartDestroyed;
 	}
 #pragma warning restore IDE0051
 
@@ -46,22 +50,8 @@ public class MedicalController : MonoBehaviour
 	/// <param name="injectorName">The name of the injector to use defined by <paramref name="medInjectors"/> dictionary</param>
 	/// <returns>True if the injector was used, false otherwise</returns>
 	// TODO: Make private when testing is complete
-	public void UseInjector(string injectorName) // Defualt is Morphine for testiing
+	public void UseInjector(string injectorName)
 	{
-		Player player = GamePlayerOwner.MyPlayer;
-		if (player == null)
-		{
-			log.LogError("UseInjector() - MyPlayer is null!");
-			return;
-		}
-
-		ActiveHealthController healthController = player.ActiveHealthController;
-		if (healthController == null)
-		{
-			log.LogError("UseInjector() - ActiveHealthController is null!");
-			return;
-		}
-
 		if (medInjectors.TryGetValue(injectorName, out var injectorId) == false)
 		{
 			log.LogError($"UseInjector() - '{injectorName}' is undefined.");
@@ -71,28 +61,45 @@ public class MedicalController : MonoBehaviour
 		// We need to create a stim item and add it to some stashgrid before we can call DoMedEffect
 		ItemFactoryClass itemFactory = Singleton<ItemFactoryClass>.Instance;
 		Item stim = itemFactory.GetPresetItem(injectorId);
-		GStruct154<GClass3415> addAnywhereResult = player.Inventory.SortingTable.Grid.AddAnywhere(stim, EErrorHandlingType.Log);
+		GStruct154<GClass3415> addAnywhereResult = GamePlayerOwner.MyPlayer.Inventory.SortingTable.Grid.AddAnywhere(stim, EErrorHandlingType.Log);
 		if (addAnywhereResult.Succeeded)
 		{
-			healthController.DoMedEffect(stim, EBodyPart.Head);
+			HealthController.DoMedEffect(stim, EBodyPart.Head);
 			log.LogInfo($"Used {stim.Template.ShortName.Localized()} injector.");
 		}
 	}
 
-	public void EffectStarted(IEffect effect)
+	private void BodyPartDestroyed(EBodyPart part, EDamageType damageType)
 	{
-		Type effectType = effect.GetType(); // All effect classes are protected
-		string effectName = effectType.Name;
+		// There's a chance that a leg can be destroyed but no fracture, so give propital if that happens.
+		if (activeEffects.Any(x => x.GetType().Name == "PainKiller"))
+			return; // Don't double up
+
+		if (part == EBodyPart.LeftLeg || part == EBodyPart.RightLeg)
+		{
+			log.LogDebug("Leg destroyed, use propital");
+			UseInjector("propital");
+		}
+	}
+
+	private void EffectStarted(IEffect effect)
+	{
 		if (activeEffects.Contains(effect))
 		{
-			log.LogDebug($"Duplicate effect {effectName}");
+			log.LogDebug($"Duplicate effect {effect.GetType().Name}");
 			return;
 		}
 
+		// Use GetType().Name because IEffect.Type returns a GInterface name insead of the effect class name
 		bool handled = false;
-		switch (effectName)
+		switch (effect.GetType().Name)
 		{
-			case "Fracture":    // Only stim if a leg is fractured, arm doesn't need it
+			case "Fracture":
+				// Make sure we're not already blitzed
+				if (activeEffects.Any(x => x.GetType().Name == "PainKiller"))
+					break;
+
+				// Only stim if a leg is fractured, arm doesn't need it
 				if (effect.BodyPart == EBodyPart.LeftLeg || effect.BodyPart == EBodyPart.RightLeg)
 					UseInjector("morphine");
 				handled = true;
@@ -117,21 +124,26 @@ public class MedicalController : MonoBehaviour
 				handled = true;
 				break;
 
+			case "PainKiller":
+				// Just add it so we can check for it later
+				handled = true;
+				break;
+
 			default:
-				log.LogDebug($"Unhandled health effect {effectName}");
+				log.LogDebug($"Unhandled health effect {effect.GetType().Name}");
 				break;
 		}
 
 		if (handled)
 		{
 			activeEffects.Add(effect);
-			log.LogDebug($"Effect {effectName} added");
+			log.LogDebug($"Effect {effect.GetType().Name} added");
 		}
 	}
 
 	public void EffectRemoved(IEffect effect)
     {
-		log.LogDebug($"Effect {effect.GetType().Name} removed.");
-		activeEffects.Remove(effect);
+		if (activeEffects.Remove(effect))
+			log.LogDebug($"Effect {effect.GetType().Name} removed.");
     }
 }

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Tools;
 
 // Some useful stuff goes here
 public static class Utils

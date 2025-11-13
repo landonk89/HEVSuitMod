@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Tools;
 
 // Temporary? Tarkov's compass class is really wonky, might just keep this and expand on it..
 public static class Compass

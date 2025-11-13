@@ -1,11 +1,12 @@
 ﻿using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
+using HEVSuitMod.Types;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudAmmoCounter : MonoBehaviour
 {
@@ -58,8 +59,9 @@ public class HudAmmoCounter : MonoBehaviour
 			current.Weapon.GetMagazineSlot().OnAddOrRemoveItem -= OnMagChangedHandler;
 
 			OnShotHandler = () => AmmoChanged(faController);
-			faController.Weapon.GetMagazineSlot().OnAddOrRemoveItem += OnMagChangedHandler;
 			faController.OnShot += OnShotHandler;
+			faController.OnReadyToOperate += AmmoChanged;
+			faController.Weapon.GetMagazineSlot().OnAddOrRemoveItem += OnMagChangedHandler;
 
 			currentHandsController = faController;
 			AmmoChanged(faController);

@@ -1,10 +1,11 @@
 ﻿using EFT;
+using HEVSuitMod.Types;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudDamageIndicators : MonoBehaviour
 {
@@ -44,7 +45,7 @@ public class HudDamageIndicators : MonoBehaviour
 
     private void Update()
     {
-        // Unique state update, don't use base.IconUpdate
+        // Unique state update, don't use IconUpdate
         if (indicators.All(x => x.state == EIconState.Inactive))
             return; // Only proceed if any indicators are active
 

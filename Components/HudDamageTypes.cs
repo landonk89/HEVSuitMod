@@ -3,8 +3,9 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using EFT;
+using HEVSuitMod.Types;
 
-namespace HEVSuitMod;
+namespace HEVSuitMod.Components;
 
 public class HudDamageTypes : MonoBehaviour
 {
@@ -32,15 +33,15 @@ public class HudDamageTypes : MonoBehaviour
 #pragma warning disable IDE0051
 	private void Awake()
 	{
-		bulletDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bullet.tga");
-		coldDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_cold.tga");
-		fireDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_heat.tga");
-		explosionDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_explosion.tga");
-		barbwireDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_barbed.tga");
-		toxinDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_bio.tga");
-		radiationDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_rad.tga");
-		dehydrationDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_dehydrated.tga");
-		exhaustionDamage = Assets.LoadAsset<Sprite>("assets/sprites/hud_dmg_exhausted.tga");
+		bulletDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_bullet.tga");
+		coldDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_cold.tga");
+		fireDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_heat.tga");
+		explosionDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_explosion.tga");
+		barbwireDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_barbed.tga");
+		toxinDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_bio.tga");
+		radiationDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_rad.tga");
+		dehydrationDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_dehydrated.tga");
+		exhaustionDamage = Assets.LoadAsset<Sprite>("Assets/sprites/hud_dmg_exhausted.tga");
 		damageIconArea = transform.Find("LeftNotifyArea");
 		GamePlayerOwner.MyPlayer.BeingHitAction += OnPlayerHit;
 	}
