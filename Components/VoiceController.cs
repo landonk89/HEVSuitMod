@@ -413,6 +413,9 @@ public class VoiceController : MonoBehaviour
 
 	public void WeaponInspectEvent()
 	{
+		if (!HEVMod.Instance.identifyWeapon.Value)
+			return;
+
 		// Play sentence with identifier matching held weapon
 		string templateId = GamePlayerOwner.MyPlayer.HandsController.Item.StringTemplateId;
 		if (templateId == null)
