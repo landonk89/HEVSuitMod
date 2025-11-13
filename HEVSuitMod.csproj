@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>com.redcrowbar.hevsuitmod</AssemblyName>
     <Description>HEV Suit from Half-Life for Escape from Tarkov</Description>
-    <Version>0.0.6</Version>
+    <Version>0.1.0</Version>
 	<Product>HEVSuitMod</Product>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
