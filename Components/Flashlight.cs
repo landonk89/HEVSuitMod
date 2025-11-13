@@ -21,7 +21,6 @@ public class Flashlight : MonoBehaviour
 	private const float TRANSITION_TIME = 0.1f; // Thermal inertia time (on->off)
 
 	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(Flashlight).FullName}");
-	private AssetBundle assets;
 	private Light lightSource;
 	private AudioSource audioSource; // TODO: use BetterAudio
 	private bool batteryCritical = false;
@@ -33,13 +32,14 @@ public class Flashlight : MonoBehaviour
 	public event Action<float> BatteryUpdate;
 	public event Action<bool> BatteryStateChanged;
 
+	private AssetBundle Assets => HEVSuitMod.Instance.Assets;
+
 #pragma warning disable IDE0051
 	private void Awake()
 	{
 		flashlight = new("FlashlightContainer");
-		assets = HEVSuitMod.Instance.Assets;
 		audioSource = flashlight.AddComponent<AudioSource>();
-		audioSource.clip = assets.LoadAsset<AudioClip>("Assets/sounds/flashlight.wav");
+		audioSource.clip = Assets.LoadAsset<AudioClip>("Assets/sounds/flashlight.wav");
 		lightSource = flashlight.AddComponent<Light>();
 	}
 
@@ -48,7 +48,7 @@ public class Flashlight : MonoBehaviour
 		lightSource.type = LightType.Spot;
 		lightSource.spotAngle = 40f;
 		lightSource.range = 50f;
-		lightSource.cookie = assets.LoadAsset<Texture2D>("Assets/sprites/hl2flashlightcookie.tga");
+		lightSource.cookie = Assets.LoadAsset<Texture2D>("Assets/sprites/hl2flashlightcookie.tga");
 		lightSource.intensity = 0f;
 		lightSource.enabled = false;
 		flashlight.transform.parent = GamePlayerOwner.MyPlayer.CameraPosition; // Attach to our face and reposition

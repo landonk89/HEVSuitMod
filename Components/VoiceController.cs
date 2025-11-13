@@ -61,11 +61,13 @@ public class VoiceController : MonoBehaviour
 		if (pendingSentences.Count > 0 && sentencePlayer == null)
 			sentencePlayer = StartCoroutine(PlaySentences());
 
+#if DEBUG
 		if (Input.GetKeyDown(KeyCode.F12)) // TODO/WIP: Map this to extract/time panel
 			SayTime();
 
 		if (Input.GetKeyDown(KeyCode.F11))
 			SayTimeRemaining();
+#endif
 	}
 
 	private void OnDestroy()
