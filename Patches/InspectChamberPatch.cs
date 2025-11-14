@@ -1,4 +1,4 @@
-﻿using EFT;
+using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using System;
@@ -11,16 +11,16 @@ namespace HEVSuitMod.Patches;
 /// </summary>
 internal class InspectChamberPatch : ModulePatch
 {
-    public static event Action ChamberInspectEvent;
+	public static event Action ChamberInspectEvent;
 
-    protected override MethodBase GetTargetMethod()
-    {
-        return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.CheckChamber));
-    }
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.CheckChamber));
+	}
 
-    [PatchPostfix]
-    private static void OnInspect()
-    {
-        ChamberInspectEvent?.Invoke();
-    }
+	[PatchPostfix]
+	private static void OnInspect()
+	{
+		ChamberInspectEvent?.Invoke();
+	}
 }

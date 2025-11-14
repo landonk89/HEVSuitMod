@@ -1,4 +1,4 @@
-﻿using EFT;
+using EFT;
 using System;
 using UnityEngine;
 
@@ -76,37 +76,37 @@ public class Flashlight : MonoBehaviour
 
 		switch (state)
 		{
-			case EState.OffCharged:
-				return; // Nothing to do
+		case EState.OffCharged:
+			return; // Nothing to do
 
-			case EState.OffCharging:
-				if (batteryLevel < 1f)
-					batteryLevel = Mathf.Clamp01(batteryLevel + BATT_CHARGE_RATE * Time.deltaTime);
+		case EState.OffCharging:
+			if (batteryLevel < 1f)
+				batteryLevel = Mathf.Clamp01(batteryLevel + BATT_CHARGE_RATE * Time.deltaTime);
 
-				if (batteryLevel > 0.99f)
-					state = EState.OffCharged;
-				break;
+			if (batteryLevel > 0.99f)
+				state = EState.OffCharged;
+			break;
 
-			case EState.TurningOff:
-				lightSource.intensity = Mathf.Clamp01(lightSource.intensity - Time.deltaTime / TRANSITION_TIME);
-				if (lightSource.intensity <= 0f)
-				{
-					lightSource.enabled = false;
-					state = EState.OffCharging;
-				}
-				break;
+		case EState.TurningOff:
+			lightSource.intensity = Mathf.Clamp01(lightSource.intensity - Time.deltaTime / TRANSITION_TIME);
+			if (lightSource.intensity <= 0f)
+			{
+				lightSource.enabled = false;
+				state = EState.OffCharging;
+			}
+			break;
 
-			case EState.TurningOn:
-				lightSource.intensity = Mathf.Clamp01(lightSource.intensity + Time.deltaTime / TRANSITION_TIME);
-				if (lightSource.intensity >= 1f)
-					state = EState.On;
-				break;
+		case EState.TurningOn:
+			lightSource.intensity = Mathf.Clamp01(lightSource.intensity + Time.deltaTime / TRANSITION_TIME);
+			if (lightSource.intensity >= 1f)
+				state = EState.On;
+			break;
 
-			case EState.On:
-				batteryLevel = Mathf.Clamp01(batteryLevel - BATT_DRAIN_RATE * Time.deltaTime);
-				if (batteryLevel <= 0f)
-					Toggle();
-				break;
+		case EState.On:
+			batteryLevel = Mathf.Clamp01(batteryLevel - BATT_DRAIN_RATE * Time.deltaTime);
+			if (batteryLevel <= 0f)
+				Toggle();
+			break;
 		}
 
 		BatteryUpdate?.Invoke(batteryLevel); // For HUD
@@ -123,19 +123,19 @@ public class Flashlight : MonoBehaviour
 	{
 		switch (state)
 		{
-			case EState.On:
-			case EState.TurningOn:
-				state = EState.TurningOff;
-				Toggled?.Invoke(false);
-				break;
+		case EState.On:
+		case EState.TurningOn:
+			state = EState.TurningOff;
+			Toggled?.Invoke(false);
+			break;
 
-			case EState.OffCharged:
-			case EState.OffCharging:
-			case EState.TurningOff:
-				lightSource.enabled = true;
-				state = EState.TurningOn;
-				Toggled?.Invoke(true);
-				break;
+		case EState.OffCharged:
+		case EState.OffCharging:
+		case EState.TurningOff:
+			lightSource.enabled = true;
+			state = EState.TurningOn;
+			Toggled?.Invoke(true);
+			break;
 		}
 
 		audioSource.Play();

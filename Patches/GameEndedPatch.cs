@@ -1,4 +1,4 @@
-﻿using EFT;
+using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using System.Reflection;
@@ -10,14 +10,14 @@ namespace HEVSuitMod.Patches;
 /// </summary>
 internal class GameEndedPatch : ModulePatch
 {
-    protected override MethodBase GetTargetMethod()
-    {
-        return AccessTools.Method(typeof(Player), nameof(Player.OnGameSessionEnd));
-    }
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(Player), nameof(Player.OnGameSessionEnd));
+	}
 
-    [PatchPostfix]
-    private static void GameEnded()
-    {
-        HEVSuitMod.Instance.OnGameEnded();
-    }
+	[PatchPostfix]
+	private static void GameEnded()
+	{
+		HEVSuitMod.Instance.OnGameEnded();
+	}
 }

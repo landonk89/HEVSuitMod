@@ -1,4 +1,4 @@
-﻿using BepInEx.Logging;
+using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
@@ -62,7 +62,7 @@ public class HudController : MonoBehaviour
 		hudHealthCounter = Hud.AddComponent<HudHealthCounter>();
 		hudSuitPowerCounter = Hud.AddComponent<HudSuitPowerCounter>();
 		hudItemPickups = Hud.AddComponent<HudItemPickups>();
-		hudCrosshair = Hud.AddComponent <HudCrosshair>();
+		hudCrosshair = Hud.AddComponent<HudCrosshair>();
 	}
 
 	private void Start()
@@ -140,19 +140,19 @@ public class HudController : MonoBehaviour
 
 			switch (icon.State)
 			{
-				case EHudIconState.Active:
-				case EHudIconState.Inactive:
-					break;
+			case EHudIconState.Active:
+			case EHudIconState.Inactive:
+				break;
 
-				case EHudIconState.Deactivate:
-					if (UpdateTransition(icon, icon.TransitionTime, inactiveColor))
-						icon.State = EHudIconState.Inactive;
-					break;
+			case EHudIconState.Deactivate:
+				if (UpdateTransition(icon, icon.TransitionTime, inactiveColor))
+					icon.State = EHudIconState.Inactive;
+				break;
 
-				case EHudIconState.Activate:
-					if (UpdateTransition(icon, icon.TransitionTime, activeColor))
-						icon.State = EHudIconState.Active;
-					break;
+			case EHudIconState.Activate:
+				if (UpdateTransition(icon, icon.TransitionTime, activeColor))
+					icon.State = EHudIconState.Active;
+				break;
 			}
 		}
 	}

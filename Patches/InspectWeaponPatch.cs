@@ -1,4 +1,4 @@
-﻿using EFT;
+using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using System;
@@ -14,13 +14,13 @@ internal class InspectWeaponPatch : ModulePatch
 	public static event Action WeaponInspectEvent;
 
 	protected override MethodBase GetTargetMethod()
-    {
-        return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.ExamineWeapon));
-    }
+	{
+		return AccessTools.Method(typeof(Player.FirearmController), nameof(Player.FirearmController.ExamineWeapon));
+	}
 
-    [PatchPrefix]
-    private static void OnInspect()
-    {
-        WeaponInspectEvent?.Invoke();
-    }
+	[PatchPrefix]
+	private static void OnInspect()
+	{
+		WeaponInspectEvent?.Invoke();
+	}
 }

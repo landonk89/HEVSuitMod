@@ -1,4 +1,4 @@
-﻿using BepInEx.Logging;
+using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
 using HEVSuitMod.Patches;
@@ -37,7 +37,7 @@ public class HudItemPickups : MonoBehaviour
 		{
 			if (icon.State != EHudIconState.Inactive)
 				continue;
-			
+
 			icon.Timer += Time.deltaTime;
 			if (icon.Timer >= HudController.NOTIFY_STAY_TIME)
 			{
@@ -64,7 +64,7 @@ public class HudItemPickups : MonoBehaviour
 		iconObj.transform.parent = iconArea;
 		Image iconImage = iconObj.AddComponent<Image>();
 		iconImage.preserveAspect = true;
-		iconImage.sprite = Hud.GetItemSprite(item, new(1,1));
+		iconImage.sprite = Hud.GetItemSprite(item, new(1, 1));
 		iconImage.color = Hud.hudColorActive;
 		HudIcon icon = new(iconImage, transitionTime: HudController.NOTIFY_FLASH_TIME, state: EHudIconState.Deactivate); // Starts bright, fades to normal
 		activeIcons.Add(icon);

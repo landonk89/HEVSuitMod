@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+using EFT;
+using HEVSuitMod.Types;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using EFT;
-using HEVSuitMod.Types;
 
 namespace HEVSuitMod.Components;
 
@@ -76,41 +76,41 @@ public class HudDamageTypes : MonoBehaviour
 		Sprite icon = null;
 		switch (damageInfo.DamageType)
 		{
-			case var dt when (dt & (EDamageType.Landmine | EDamageType.Explosion | EDamageType.ThermobaricExplosion | EDamageType.GrenadeFragment)) != 0:
-				icon = explosionDamage;
-				break;
+		case var dt when (dt & (EDamageType.Landmine | EDamageType.Explosion | EDamageType.ThermobaricExplosion | EDamageType.GrenadeFragment)) != 0:
+			icon = explosionDamage;
+			break;
 
-			case var dt when (dt & (EDamageType.HotGases | EDamageType.Flame)) != 0:
-				icon = fireDamage;
-				break;
+		case var dt when (dt & (EDamageType.HotGases | EDamageType.Flame)) != 0:
+			icon = fireDamage;
+			break;
 
-			case var dt when (dt & (EDamageType.LethalToxin | EDamageType.Poison)) != 0:
-				icon = toxinDamage;
-				break;
+		case var dt when (dt & (EDamageType.LethalToxin | EDamageType.Poison)) != 0:
+			icon = toxinDamage;
+			break;
 
-			case var dt when (dt & EDamageType.Barbed) != 0:
-				icon = barbwireDamage;
-				break;
+		case var dt when (dt & EDamageType.Barbed) != 0:
+			icon = barbwireDamage;
+			break;
 
-			case var dt when (dt & EDamageType.RadExposure) != 0:
-				icon = radiationDamage;
-				break;
+		case var dt when (dt & EDamageType.RadExposure) != 0:
+			icon = radiationDamage;
+			break;
 
-			case var dt when (dt & EDamageType.Bullet) != 0:
-				icon = bulletDamage;
-				break;
+		case var dt when (dt & EDamageType.Bullet) != 0:
+			icon = bulletDamage;
+			break;
 
-			case var dt when (dt & EDamageType.Exhaustion) != 0:
-				icon = exhaustionDamage;
-				break;
+		case var dt when (dt & EDamageType.Exhaustion) != 0:
+			icon = exhaustionDamage;
+			break;
 
-			case var dt when (dt & EDamageType.Dehydration) != 0:
-				icon = dehydrationDamage;
-				break;
+		case var dt when (dt & EDamageType.Dehydration) != 0:
+			icon = dehydrationDamage;
+			break;
 
-			case var dt when (dt & EDamageType.Environment) != 0: // TODO: Verify this is freezing in winter
-				icon = coldDamage;
-				break;
+		case var dt when (dt & EDamageType.Environment) != 0: // TODO: Verify this is freezing in winter
+			icon = coldDamage;
+			break;
 		}
 
 		// Don't notify for the same damage type twice

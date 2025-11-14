@@ -1,4 +1,3 @@
-﻿using BepInEx.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;

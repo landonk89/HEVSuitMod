@@ -1,4 +1,4 @@
-﻿using EFT;
+using EFT;
 using EFT.HealthSystem;
 using HEVSuitMod.Types;
 using System;
@@ -9,60 +9,60 @@ namespace HEVSuitMod.Components;
 
 public class HudHealthCounter : MonoBehaviour
 {
-    private readonly HudIcon[] healthIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
-    private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
-    private GDelegate71 PlayerDeadHandler;
-    
-    private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
-    private HudController Hud => HEVSuitMod.Instance.HudController;
-    private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;
+	private readonly HudIcon[] healthIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
+	private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
+	private GDelegate71 PlayerDeadHandler;
+
+	private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
+	private HudController Hud => HEVSuitMod.Instance.HudController;
+	private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;
 
 #pragma warning disable IDE0051
 	private void Awake()
-    {
-        HealthChangedAction = (_, _, _) => HealthChanged();
-        PlayerDeadHandler = (_) => HealthChanged(false);
-        healthIcons[3] = new(transform.Find("HealthAndSuitPower/HealthIcon").GetComponent<Image>());
-        for (int i = 0; i < 3; i++)
-            healthIcons[i] = new(transform.Find($"HealthAndSuitPower/HealthValue/Digit{i}").GetComponent<Image>());
+	{
+		HealthChangedAction = (_, _, _) => HealthChanged();
+		PlayerDeadHandler = (_) => HealthChanged(false);
+		healthIcons[3] = new(transform.Find("HealthAndSuitPower/HealthIcon").GetComponent<Image>());
+		for (int i = 0; i < 3; i++)
+			healthIcons[i] = new(transform.Find($"HealthAndSuitPower/HealthValue/Digit{i}").GetComponent<Image>());
 
-        HealthController.HealthChangedEvent += HealthChangedAction;
-        GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
-    }
+		HealthController.HealthChangedEvent += HealthChangedAction;
+		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
+	}
 
-    private void Start()
-    {
-        HealthChanged();
-    }
+	private void Start()
+	{
+		HealthChanged();
+	}
 
-    private void OnDestroy()
-    {
-        HealthController.HealthChangedEvent -= HealthChangedAction;
-        GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
-    }
+	private void OnDestroy()
+	{
+		HealthController.HealthChangedEvent -= HealthChangedAction;
+		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
+	}
 
-    private void Update()
-    {
-        Hud.IconUpdate(healthIcons);
-        if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
-        {
-            if (healthIcons[0].Critical)
-                Hud.IconFlash(healthIcons);
-        }
-    }
+	private void Update()
+	{
+		Hud.IconUpdate(healthIcons);
+		if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
+		{
+			if (healthIcons[0].Critical)
+				Hud.IconFlash(healthIcons);
+		}
+	}
 #pragma warning restore IDE0051
 
 	private void HealthChanged(bool alive = true)
-    {
-        // FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
-        int normalizedHealth = 0;
-        if (alive)
-        {
-            float health = HealthController.GetBodyPartHealth(EBodyPart.Common).Current;
-            normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
-        }
-        Hud.IconSetDigits(HealthNumbers, normalizedHealth);
-        Hud.IconSetCritical(healthIcons, normalizedHealth <= HudController.HEALTH_CRITICAL);
-        Hud.IconFlash(healthIcons);
-    }
+	{
+		// FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
+		int normalizedHealth = 0;
+		if (alive)
+		{
+			float health = HealthController.GetBodyPartHealth(EBodyPart.Common).Current;
+			normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+		}
+		Hud.IconSetDigits(HealthNumbers, normalizedHealth);
+		Hud.IconSetCritical(healthIcons, normalizedHealth <= HudController.HEALTH_CRITICAL);
+		Hud.IconFlash(healthIcons);
+	}
 }

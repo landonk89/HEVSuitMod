@@ -1,4 +1,4 @@
-﻿using BepInEx.Logging;
+using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
 using EFT.HealthSystem;
@@ -120,7 +120,7 @@ public class VoiceController : MonoBehaviour
 	public void PlaySentence(HEVSentence sentence)
 	{
 		if (!pendingSentences.Contains(sentence)) // Don't play the same one agian
-		pendingSentences.Add(sentence);
+			pendingSentences.Add(sentence);
 	}
 
 	public void PlaySentenceById(string identifier)
@@ -213,39 +213,39 @@ public class VoiceController : MonoBehaviour
 			int tens = number / 10;
 			switch (tens)
 			{
-				case 2: clips.Add("twenty"); break;
-				case 3: clips.Add("thirty"); break;
-				case 4: clips.Add("forty"); break;
-				case 5: clips.Add("fifty"); break;
-				case 6: clips.Add("sixty"); break;
-				case 7: clips.Add("seventy"); break;
-				case 8: clips.Add("eighty"); break;
-				case 9: clips.Add("ninety"); break;
+			case 2: clips.Add("twenty"); break;
+			case 3: clips.Add("thirty"); break;
+			case 4: clips.Add("forty"); break;
+			case 5: clips.Add("fifty"); break;
+			case 6: clips.Add("sixty"); break;
+			case 7: clips.Add("seventy"); break;
+			case 8: clips.Add("eighty"); break;
+			case 9: clips.Add("ninety"); break;
 			}
 			number %= 10;
 		}
 
 		switch (number)
 		{
-			case 1: clips.Add("one"); break;
-			case 2: clips.Add("two"); break;
-			case 3: clips.Add("three"); break;
-			case 4: clips.Add("four"); break;
-			case 5: clips.Add("five"); break;
-			case 6: clips.Add("six"); break;
-			case 7: clips.Add("seven"); break;
-			case 8: clips.Add("eight"); break;
-			case 9: clips.Add("nine"); break;
-			case 10: clips.Add("ten"); break;
-			case 11: clips.Add("eleven"); break;
-			case 12: clips.Add("twelve"); break;
-			case 13: clips.Add("thirteen"); break;
-			case 14: clips.Add("fourteen"); break;
-			case 15: clips.Add("fifteen"); break;
-			case 16: clips.Add("sixteen"); break;
-			case 17: clips.Add("seventeen"); break;
-			case 18: clips.Add("eighteen"); break;
-			case 19: clips.Add("nineteen"); break;
+		case 1: clips.Add("one"); break;
+		case 2: clips.Add("two"); break;
+		case 3: clips.Add("three"); break;
+		case 4: clips.Add("four"); break;
+		case 5: clips.Add("five"); break;
+		case 6: clips.Add("six"); break;
+		case 7: clips.Add("seven"); break;
+		case 8: clips.Add("eight"); break;
+		case 9: clips.Add("nine"); break;
+		case 10: clips.Add("ten"); break;
+		case 11: clips.Add("eleven"); break;
+		case 12: clips.Add("twelve"); break;
+		case 13: clips.Add("thirteen"); break;
+		case 14: clips.Add("fourteen"); break;
+		case 15: clips.Add("fifteen"); break;
+		case 16: clips.Add("sixteen"); break;
+		case 17: clips.Add("seventeen"); break;
+		case 18: clips.Add("eighteen"); break;
+		case 19: clips.Add("nineteen"); break;
 		}
 
 		return [.. clips];
@@ -341,63 +341,63 @@ public class VoiceController : MonoBehaviour
 		bool handled = false;
 		switch (effect.GetType().Name)
 		{
-			case "Fracture":
-				switch (effect.BodyPart)
-				{
-					case EBodyPart.LeftLeg:
-					case EBodyPart.RightLeg:
-						// "Major Fracture" because we can't run
-						PlaySentenceById("MajorFracture");
-						PlaySentenceById("GiveMorphine");
-						break;
-
-					case EBodyPart.LeftArm:
-					case EBodyPart.RightArm:
-						// "Minor Fracture" because a broken arm is no big deal
-						PlaySentenceById("MinorFracture");
-						break;
-				}
-				handled = true;
+		case "Fracture":
+			switch (effect.BodyPart)
+			{
+			case EBodyPart.LeftLeg:
+			case EBodyPart.RightLeg:
+				// "Major Fracture" because we can't run
+				PlaySentenceById("MajorFracture");
+				PlaySentenceById("GiveMorphine");
 				break;
 
-			case "HeavyBleeding":
-				PlaySentenceById("HeavyBleeding");
-				PlaySentenceById("GiveTourniquet");
-				handled = true;
+			case EBodyPart.LeftArm:
+			case EBodyPart.RightArm:
+				// "Minor Fracture" because a broken arm is no big deal
+				PlaySentenceById("MinorFracture");
 				break;
+			}
+			handled = true;
+			break;
 
-			case "LightBleeding":
-				PlaySentenceById("LightBleeding");
-				PlaySentenceById("GiveBandage"); // FIXME: Doesn't exist yet
-				handled = true;
-				break;
+		case "HeavyBleeding":
+			PlaySentenceById("HeavyBleeding");
+			PlaySentenceById("GiveTourniquet");
+			handled = true;
+			break;
 
-			case "LowEdgeHealth":
-				PlaySentenceById("NearDeath"); // TODO: Better voice line?
-				handled = true;
-				break;
+		case "LightBleeding":
+			PlaySentenceById("LightBleeding");
+			PlaySentenceById("GiveBandage"); // FIXME: Doesn't exist yet
+			handled = true;
+			break;
 
-			case "Pain":
-				break;
+		case "LowEdgeHealth":
+			PlaySentenceById("NearDeath"); // TODO: Better voice line?
+			handled = true;
+			break;
 
-			case "PainKiller": // Grabbin pills
-				handled = true; // Just add so we can keep track
-				break;
+		case "Pain":
+			break;
 
-			case "Intoxication":
-				break;
+		case "PainKiller": // Grabbin pills
+			handled = true; // Just add so we can keep track
+			break;
 
-			case "Exhaustion":
-				break;
+		case "Intoxication":
+			break;
 
-			case "Dehydration":
-				break;
+		case "Exhaustion":
+			break;
 
-			case "RadExposure":
-				break;
+		case "Dehydration":
+			break;
 
-			case "ZombieInfection":
-				break;
+		case "RadExposure":
+			break;
+
+		case "ZombieInfection":
+			break;
 		}
 
 		if (handled)

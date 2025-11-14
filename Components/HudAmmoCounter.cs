@@ -1,4 +1,4 @@
-﻿using BepInEx.Logging;
+using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
 using HEVSuitMod.Patches;
@@ -14,17 +14,17 @@ public class HudAmmoCounter : MonoBehaviour
 	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudAmmoCounter).FullName}");
 	private readonly HudIcon[] ammoIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
 	private IHandsController currentHandsController;
-	
+
 	private Action OnShotHandler;
 	private Action<Item> OnMagChangedHandler;
 	private Action LoadSingleAmmoHandler;
-	
+
 	private HudIcon[] AmmoNumbers => [ammoIcons[0], ammoIcons[1], ammoIcons[2]];
 	private HudController Hud => HEVSuitMod.Instance.HudController;
 
 #pragma warning disable IDE0051
 	private void Awake()
-	{ 
+	{
 		currentHandsController = GamePlayerOwner.MyPlayer.HandsController;
 		OnMagChangedHandler = (_) => AmmoChanged(currentHandsController);
 		OnShotHandler = () => AmmoChanged(currentHandsController);
@@ -64,7 +64,7 @@ public class HudAmmoCounter : MonoBehaviour
 
 			OnShotHandler = () => AmmoChanged(faController);
 			LoadSingleAmmoHandler = () => AmmoChanged(faController);
-			
+
 			faController.OnShot += OnShotHandler;
 			faController.OnReadyToOperate += AmmoChanged;
 			faController.Weapon.GetMagazineSlot()?.OnAddOrRemoveItem += OnMagChangedHandler;

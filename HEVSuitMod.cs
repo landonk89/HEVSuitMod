@@ -1,9 +1,9 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Configuration;
 using EFT.UI;
 using HEVSuitMod.Components;
-using HEVSuitMod.Tools;
 using HEVSuitMod.Patches;
+using HEVSuitMod.Tools;
 using System.IO;
 using UnityEngine;
 
@@ -115,7 +115,7 @@ public class HEVSuitMod : BaseUnityPlugin
 #if DEBUG
 	// We're just using this to test stuff right now
 	private void Update()
-	{ 	
+	{
 		if (Input.GetKeyDown(KeyCode.F1))
 			MedicalController?.UseInjector("etgchange");
 
