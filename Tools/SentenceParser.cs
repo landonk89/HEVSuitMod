@@ -97,11 +97,11 @@ public class SentenceParser
 
 					switch (key)
 					{
-					case "l" when int.TryParse(val, out int lps): loops = lps; break;
-					case "i" when float.TryParse(val, out float intvl): interval = intvl; break;
-					case "p" when float.TryParse(val, out float pch): pitch = pch; break;
-					case "v" when float.TryParse(val, out float vol): volume *= vol; break;
-					case "d" when float.TryParse(val, out float dly): delay = dly; break;
+						case "l" when int.TryParse(val, out int lps): loops = lps; break;
+						case "i" when float.TryParse(val, out float intvl): interval = intvl; break;
+						case "p" when float.TryParse(val, out float pch): pitch = pch; break;
+						case "v" when float.TryParse(val, out float vol): volume *= vol; break;
+						case "d" when float.TryParse(val, out float dly): delay = dly; break;
 					}
 				}
 				path = workingDirectory + tokens[i].Substring(tokens[i].IndexOf(']') + 1).ToLower() + ".wav";

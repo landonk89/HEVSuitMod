@@ -27,15 +27,15 @@ public class ImpulseCommand(string impulse) : SyncCommand
 
 		switch (impulseValue)
 		{
-		// Play a random sentence
-		case 1:
-			HEVSuitMod.Instance.VoiceController?.PlaySentenceById(HEVSuitMod.Instance.SentenceParser?.allSentences.PickRandom().Identifier);
-			break;
+			// Play a random sentence
+			case 1:
+				HEVSuitMod.Instance.VoiceController?.PlaySentenceById(HEVSuitMod.Instance.SentenceParser?.allSentences.PickRandom().Identifier);
+				break;
 
-		// TODO: super neato stuff will go here
-		case 101:
-			ConsoleScreen.Log("Cheater!");
-			break;
+			// TODO: super neato stuff will go here
+			case 101:
+				ConsoleScreen.Log("Cheater!");
+				break;
 		}
 	}
 }

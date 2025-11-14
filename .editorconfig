@@ -1,4 +1,4 @@
-﻿root = true
+root = true
 
 [*]
 charset = utf-8
@@ -18,7 +18,7 @@ csharp_indent_block_contents = true
 csharp_indent_braces = false
 csharp_indent_case_contents = true
 csharp_indent_case_contents_when_block = true
-csharp_indent_switch_labels = false
+csharp_indent_switch_labels = true
 
 csharp_new_line_before_open_brace = all
 csharp_new_line_between_query_expression_clauses = true

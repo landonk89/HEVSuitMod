@@ -42,21 +42,21 @@ public class HudCrosshair : MonoBehaviour
 		// Fade it out if we're ADS, fade back in when not ADS
 		switch (crosshair.State)
 		{
-		case EHudIconState.Activate:
-			if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.white) && Hud.UpdateTransition(crosshairOnTarget, HudController.FADE_TIME, Color.white))
-			{
-				crosshair.State = EHudIconState.Active;
-				crosshairOnTarget.State = EHudIconState.Active;
-			}
-			break;
+			case EHudIconState.Activate:
+				if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.white) && Hud.UpdateTransition(crosshairOnTarget, HudController.FADE_TIME, Color.white))
+				{
+					crosshair.State = EHudIconState.Active;
+					crosshairOnTarget.State = EHudIconState.Active;
+				}
+				break;
 
-		case EHudIconState.Deactivate:
-			if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.clear) && Hud.UpdateTransition(crosshairOnTarget, HudController.FADE_TIME, Color.clear))
-			{
-				crosshair.State = EHudIconState.Inactive;
-				crosshairOnTarget.State = EHudIconState.Inactive;
-			}
-			break;
+			case EHudIconState.Deactivate:
+				if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.clear) && Hud.UpdateTransition(crosshairOnTarget, HudController.FADE_TIME, Color.clear))
+				{
+					crosshair.State = EHudIconState.Inactive;
+					crosshairOnTarget.State = EHudIconState.Inactive;
+				}
+				break;
 		}
 
 		if (currentFirearm == null)

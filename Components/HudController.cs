@@ -129,7 +129,7 @@ public class HudController : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Updates the State and appearance of the specified HUD icons based on their current State and Critical status. Should be called every frame.
+	/// Default/template icon transition update method. Should be called every frame.
 	/// </summary>
 	public void IconUpdate(HudIcon[] icons)
 	{
@@ -140,25 +140,25 @@ public class HudController : MonoBehaviour
 
 			switch (icon.State)
 			{
-			case EHudIconState.Active:
-			case EHudIconState.Inactive:
-				break;
+				case EHudIconState.Active:
+				case EHudIconState.Inactive:
+					break;
 
-			case EHudIconState.Deactivate:
-				if (UpdateTransition(icon, icon.TransitionTime, inactiveColor))
-					icon.State = EHudIconState.Inactive;
-				break;
+				case EHudIconState.Deactivate:
+					if (UpdateTransition(icon, icon.TransitionTime, inactiveColor))
+						icon.State = EHudIconState.Inactive;
+					break;
 
-			case EHudIconState.Activate:
-				if (UpdateTransition(icon, icon.TransitionTime, activeColor))
-					icon.State = EHudIconState.Active;
-				break;
+				case EHudIconState.Activate:
+					if (UpdateTransition(icon, icon.TransitionTime, activeColor))
+						icon.State = EHudIconState.Active;
+					break;
 			}
 		}
 	}
 
 	/// <summary>
-	/// Sets the Critical status for the specified HUD icons, updating their appearance accordingly.
+	/// Sets the Critical status for the specified HUD icons, critical icons are red.
 	/// </summary>
 	/// <param name="icons">An array of HUD icons whose Critical status will be set. Cannot be null.</param>
 	/// <param name="critical">A value indicating whether the specified icons should be marked as Critical.</param>
@@ -216,8 +216,7 @@ public class HudController : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Updates the specified array of HUD digit icons to visually represent the given number, displaying each digit in its
-	/// corresponding position.
+	/// Updates the specified array of HUD digit icons to visually represent the given number, displaying each digit in its corresponding position.
 	/// </summary>
 	/// <remarks>Leading zeros are hidden except for the least significant digit, ensuring that only significant
 	/// digits are shown. The number is padded with leading zeros if it has fewer digits than the length of the digitIcons

@@ -93,44 +93,44 @@ public class MedicalController : MonoBehaviour
 		bool handled = false;
 		switch (effect.GetType().Name)
 		{
-		case "Fracture":
-			// Make sure we're not already blitzed
-			if (activeEffects.Any(x => x.GetType().Name == "PainKiller"))
+			case "Fracture":
+				// Make sure we're not already blitzed
+				if (activeEffects.Any(x => x.GetType().Name == "PainKiller"))
+					break;
+
+				// Only stim if a leg is fractured, arm doesn't need it
+				if (effect.BodyPart == EBodyPart.LeftLeg || effect.BodyPart == EBodyPart.RightLeg)
+					UseInjector("morphine");
+				handled = true;
 				break;
 
-			// Only stim if a leg is fractured, arm doesn't need it
-			if (effect.BodyPart == EBodyPart.LeftLeg || effect.BodyPart == EBodyPart.RightLeg)
-				UseInjector("morphine");
-			handled = true;
-			break;
+			case "HeavyBleeding":
+			case "LightBleeding":
+				UseInjector("zagustin");
+				handled = true;
+				break;
 
-		case "HeavyBleeding":
-		case "LightBleeding":
-			UseInjector("zagustin");
-			handled = true;
-			break;
+			// TODO: Make this configurable? The user may or may not want this level of assistance
+			case "LowEdgeHealth":
+				UseInjector("etgchange");
+				handled = true;
+				break;
 
-		// TODO: Make this configurable? The user may or may not want this level of assistance
-		case "LowEdgeHealth":
-			UseInjector("etgchange");
-			handled = true;
-			break;
+			// TODO: Need to verify this is the effect for being stabbed by cultist knife
+			case "LethalIntoxication":
+			case "Intoxication":
+				UseInjector("antidote");
+				handled = true;
+				break;
 
-		// TODO: Need to verify this is the effect for being stabbed by cultist knife
-		case "LethalIntoxication":
-		case "Intoxication":
-			UseInjector("antidote");
-			handled = true;
-			break;
+			case "PainKiller":
+				// Just add it so we can check for it later
+				handled = true;
+				break;
 
-		case "PainKiller":
-			// Just add it so we can check for it later
-			handled = true;
-			break;
-
-		default:
-			log.LogDebug($"Unhandled health effect {effect.GetType().Name}");
-			break;
+			default:
+				log.LogDebug($"Unhandled health effect {effect.GetType().Name}");
+				break;
 		}
 
 		if (handled)
