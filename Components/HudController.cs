@@ -119,7 +119,7 @@ public class HudController : MonoBehaviour
 		if (icon.Timer >= duration)
 		{
 			icon.Image.color = target;
-			icon.LastColor = target; // TODO: TEST
+			icon.LastColor = target;
 			icon.Timer = 0f;
 			return true;
 		}

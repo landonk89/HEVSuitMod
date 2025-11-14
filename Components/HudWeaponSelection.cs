@@ -1,4 +1,4 @@
-﻿using EFT;
+using EFT;
 using EFT.InventoryLogic;
 using HEVSuitMod.Patches;
 using HEVSuitMod.Tools;
@@ -109,6 +109,7 @@ public class HudWeaponSelection : MonoBehaviour
 		Holster.OnAddOrRemoveItem -= HolsterWeaponChanged;
 		Primary.OnAddOrRemoveItem -= PrimaryWeaponChanged;
 		Secondary.OnAddOrRemoveItem -= SecondaryWeaponChanged;
+		Scabbard.OnAddOrRemoveItem -= ScabbardWeaponChanged;
 	}
 
 	private void OnWeaponChanged(Item weapon, WeaponSelection selection)
@@ -147,6 +148,7 @@ public class HudWeaponSelection : MonoBehaviour
 				weapons[i].expander.SetActive(true);
 				weapons[i].inactiveImg.SetActive(false);
 				weapons[i].selectedImg.SetActive(true);
+				// TODO: Won't work for weapons that don't use mags like double barrel or mp18
 				weapons[i].ammoLevel.fillAmount = item is Weapon weapon ? (float)weapon.GetCurrentMagazineCount() / weapon.GetMaxMagazineCount() : 0f;
 			}
 		}

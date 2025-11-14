@@ -59,7 +59,7 @@ public class HudHealthCounter : MonoBehaviour
 		if (alive)
 		{
 			float health = HealthController.GetBodyPartHealth(EBodyPart.Common).Current;
-			normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+			normalizedHealth = health > 0f ? Mathf.CeilToInt(health / 440f * 100f) : 0;
 		}
 		Hud.IconSetDigits(HealthNumbers, normalizedHealth);
 		Hud.IconSetCritical(healthIcons, normalizedHealth <= HudController.HEALTH_CRITICAL);

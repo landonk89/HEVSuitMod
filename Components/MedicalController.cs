@@ -64,8 +64,10 @@ public class MedicalController : MonoBehaviour
 		if (addAnywhereResult.Succeeded)
 		{
 			HealthController.DoMedEffect(stim, EBodyPart.Head);
-			log.LogInfo($"Used {stim.Template.ShortName.Localized()} injector.");
+			log.LogDebug($"Used {injectorName} injector.");
 		}
+		else
+			log.LogDebug($"Couldn't get stim: {injectorName}");
 	}
 
 	private void BodyPartDestroyed(EBodyPart part, EDamageType damageType)

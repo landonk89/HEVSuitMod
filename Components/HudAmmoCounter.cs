@@ -30,8 +30,7 @@ public class HudAmmoCounter : MonoBehaviour
 		OnShotHandler = () => AmmoChanged(currentHandsController);
 		LoadSingleAmmoHandler = () => AmmoChanged(currentHandsController);
 		GamePlayerOwner.MyPlayer.HandsChangedEvent += HandsChanged;
-		Image iconImg = transform.Find("AmmoCounter/Icon").GetComponent<Image>();
-		ammoIcons[3] = new(iconImg);
+		ammoIcons[3] = new(transform.Find("AmmoCounter/Icon").GetComponent<Image>());
 		for (int i = 0; i < 3; i++)
 			ammoIcons[i] = new(transform.Find($"AmmoCounter/Value/Digit{i}").GetComponent<Image>());
 	}
@@ -54,14 +53,16 @@ public class HudAmmoCounter : MonoBehaviour
 
 	public void HandsChanged(IHandsController handsController)
 	{
-		if (handsController is Player.FirearmController faController)
+		if (currentHandsController is Player.FirearmController current)
 		{
-			Player.FirearmController current = currentHandsController as Player.FirearmController;
 			current.OnShot -= OnShotHandler;
 			current.OnReadyToOperate -= AmmoChanged;
 			current.Weapon.GetMagazineSlot()?.OnAddOrRemoveItem -= OnMagChangedHandler;
 			LoadSingleAmmoPatch.SingleLoadAmmoEvent -= LoadSingleAmmoHandler;
+		}
 
+		if (handsController is Player.FirearmController faController)
+		{
 			OnShotHandler = () => AmmoChanged(faController);
 			LoadSingleAmmoHandler = () => AmmoChanged(faController);
 
@@ -73,6 +74,8 @@ public class HudAmmoCounter : MonoBehaviour
 			currentHandsController = faController;
 			AmmoChanged(faController);
 		}
+		else
+			AmmoChanged(null);
 	}
 
 	public void AmmoChanged(IHandsController handsController)

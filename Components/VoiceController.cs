@@ -326,7 +326,7 @@ public class VoiceController : MonoBehaviour
 			return; // Don't double up
 
 		if (part == EBodyPart.LeftLeg || part == EBodyPart.RightLeg)
-			PlaySentenceById("GiveMorphine"); // TODO: Make a unique voiceline
+			PlaySentenceById("GiveMorphine");
 	}
 
 	private void EffectStarted(IEffect effect)

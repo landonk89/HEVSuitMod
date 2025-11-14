@@ -67,6 +67,7 @@ public class HudCrosshair : MonoBehaviour
 			crosshair.Image.rectTransform.position = camera.WorldToScreenPoint(hit.point);
 
 		// If we are aiming at a player/bot, activate the 'on target' indicator
+		// FIXME: Only seems to activate if aiming at chest
 		if (hit.collider?.GetComponent<IPlayer>() != null)
 			crosshairOnTarget.Image.enabled = true;
 		else
@@ -83,7 +84,7 @@ public class HudCrosshair : MonoBehaviour
 
 	private void HandsChanged(IHandsController controller)
 	{
-		currentFirearm.OnAimingChanged -= AimingChanged;
+		currentFirearm?.OnAimingChanged -= AimingChanged;
 		if (controller is Player.FirearmController faController)
 		{
 			faController.OnAimingChanged += AimingChanged;

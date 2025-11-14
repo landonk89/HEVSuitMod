@@ -1,4 +1,3 @@
-using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
 using HEVSuitMod.Patches;
@@ -11,7 +10,7 @@ namespace HEVSuitMod.Components;
 
 public class HudItemPickups : MonoBehaviour
 {
-	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudItemPickups).FullName}");
+	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudItemPickups).FullName}");
 	private Transform iconArea;
 	private readonly List<HudIcon> activeIcons = [];
 	private HudController Hud => HEVSuitMod.Instance.HudController;
@@ -33,7 +32,7 @@ public class HudItemPickups : MonoBehaviour
 			Hud.IconUpdate([.. activeIcons]); // Handle normally until inactive
 
 		// Idle for a sec and fade away once inactive
-		foreach (HudIcon icon in activeIcons.ToArray())
+		foreach (HudIcon icon in activeIcons.ToArray()) // Copy so we don't modify mid iteration
 		{
 			if (icon.State != EHudIconState.Inactive)
 				continue;
