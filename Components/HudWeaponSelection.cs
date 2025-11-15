@@ -23,7 +23,7 @@ public class HudWeaponSelection : MonoBehaviour
 		public Image ammoLevel;
 	}
 
-	public enum ESlot
+	public enum EItemSlot
 	{
 		Holster,
 		Primary,
@@ -35,7 +35,7 @@ public class HudWeaponSelection : MonoBehaviour
 	private const float DISPLAY_TIME = 3.0f; // Seconds to display the weapon selection UI
 	private const int NUM_WEAPONS = 4; // NOTENOTE: Update if more slots are added (like quickslots)
 
-	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudWeaponSelection).FullName}");
+	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(HudWeaponSelection).FullName);
 	private GameObject weaponSelectionUI;
 	private AudioSource audioSource;
 	private readonly WeaponSelection[] weapons = new WeaponSelection[NUM_WEAPONS];
@@ -53,22 +53,22 @@ public class HudWeaponSelection : MonoBehaviour
 	private Slot Secondary => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon);
 	private Slot Scabbard => GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.Scabbard);
 
-	private Dictionary<ESlot, Slot> SlotMap => new()
+	private Dictionary<EItemSlot, Slot> SlotMap => new()
 	{
-		{ ESlot.Holster, Holster },
-		{ ESlot.Primary, Primary },
-		{ ESlot.Secondary, Secondary },
-		{ ESlot.Scabbard, Scabbard }
+		{ EItemSlot.Holster, Holster },
+		{ EItemSlot.Primary, Primary },
+		{ EItemSlot.Secondary, Secondary },
+		{ EItemSlot.Scabbard, Scabbard }
 	};
 
 #pragma warning disable IDE0051
 	private void Awake()
 	{
 		// TODO: quick slots
-		HolsterWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Holster]);
-		PrimaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Primary]);
-		SecondaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Secondary]);
-		ScabbardWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)ESlot.Scabbard]);
+		HolsterWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Holster]);
+		PrimaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Primary]);
+		SecondaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Secondary]);
+		ScabbardWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Scabbard]);
 
 		audioSource = GetComponent<AudioSource>();
 		audioSource.volume = 0.5f;
@@ -100,7 +100,7 @@ public class HudWeaponSelection : MonoBehaviour
 		Scabbard.OnAddOrRemoveItem += ScabbardWeaponChanged;
 
 		for (int i = 0; i < NUM_WEAPONS; i++)
-			OnWeaponChanged(SlotMap[(ESlot)i].ContainedItem, weapons[i]);
+			OnWeaponChanged(SlotMap[(EItemSlot)i].ContainedItem, weapons[i]);
 	}
 
 	private void OnDestroy()
@@ -129,14 +129,14 @@ public class HudWeaponSelection : MonoBehaviour
 	}
 #pragma warning restore IDE0051
 
-	private void SelectWeapon(ESlot index)
+	private void SelectWeapon(EItemSlot index)
 	{
 		weaponSelectionUI.SetActive(true);
 		audioSource.Play();
 		activeTimer = DISPLAY_TIME;
 		for (int i = 0; i < NUM_WEAPONS; i++)
 		{
-			Item item = SlotMap[(ESlot)i].ContainedItem;
+			Item item = SlotMap[(EItemSlot)i].ContainedItem;
 			if (i != (int)index || item == null) // Not selected
 			{
 				weapons[i].expander.SetActive(false);

@@ -21,7 +21,7 @@ public class HudController : MonoBehaviour
 	public const float FADE_TIME = 0.5f;
 	public const float FLASH_TIME = 1f;
 
-	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudController).FullName}");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(HudController).FullName);
 	public readonly Color hudColor = new(1f, 0.627f, 0f, 0.4f); // Matches 'RGB_YELLOWISH' and 'MIN_ALPHA' from hl1\cl_dll\hud.h
 	public readonly Color hudColorActive = new(1f, 0.8f, 0f, 1f); // Brighter
 	public readonly Color hudColorCritical = new(1f, 0f, 0f, 0.4f); // Red
@@ -167,11 +167,10 @@ public class HudController : MonoBehaviour
 		foreach (HudIcon icon in icons)
 		{
 			icon.Critical = critical;
-			icon.Image.color = icon.State switch
-			{
-				EHudIconState.Inactive => critical ? hudColorCritical : hudColor,
-				_ => critical ? hudColorCriticalActive : hudColorActive
-			};
+			if (icon.State == EHudIconState.Inactive)
+				icon.Image.color = critical ? hudColorCritical : hudColor;
+			else
+				icon.Image.color = critical ? hudColorCriticalActive : hudColorActive;
 		}
 	}
 

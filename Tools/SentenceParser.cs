@@ -14,7 +14,7 @@ public class SentenceParser
 	private const string SENTENCES_FILE = "Assets/scripts/sentences.txt";
 	private const string DEFAULT_DIRECTORY = "Assets/Sounds/";
 
-	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(SentenceParser).FullName}");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(SentenceParser).FullName);
 	private readonly List<string> allFiles = [];
 	private readonly List<string> missingFiles = []; // Catch 404s
 	public readonly List<HEVSentence> allSentences = [];

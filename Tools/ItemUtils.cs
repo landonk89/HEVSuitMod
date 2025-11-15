@@ -12,8 +12,8 @@ public static class ItemUtils
 
 		if (!Singleton<GameWorld>.Instantiated)
 			return false;
-		
-		Item slotItem = GamePlayerOwner.MyPlayer?.Equipment?.GetSlot(slot)?.ContainedItem;
+
+		Item slotItem = GamePlayerOwner.MyPlayer?.Equipment?.GetSlot(slot).ContainedItem;
 		if (slotItem is T item)
 		{
 			equipment = item;

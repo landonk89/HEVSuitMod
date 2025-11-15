@@ -7,7 +7,7 @@ namespace HEVSuitMod.Components;
 
 public class HudCrosshair : MonoBehaviour
 {
-	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudCrosshair).FullName}");
+	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(HudCrosshair).FullName);
 	private Player.FirearmController currentFirearm;
 	private HudIcon crosshair;
 	private HudIcon crosshairOnTarget;

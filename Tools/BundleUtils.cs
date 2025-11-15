@@ -7,7 +7,7 @@ namespace HEVSuitMod.Tools;
 
 public static class BundleUtils
 {
-	//private static readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(BundleUtils).FullName}");
+	//private static readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(BundleUtils).FullName);
 
 	// Simple tree node
 	private class Node

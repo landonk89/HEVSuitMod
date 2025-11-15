@@ -11,7 +11,7 @@ namespace HEVSuitMod.Components;
 
 public class HudAmmoCounter : MonoBehaviour
 {
-	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudAmmoCounter).FullName}");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(HudAmmoCounter).FullName);
 	private readonly HudIcon[] ammoIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
 	private IHandsController currentHandsController;
 
@@ -43,11 +43,8 @@ public class HudAmmoCounter : MonoBehaviour
 	private void Update()
 	{
 		Hud.IconUpdate(ammoIcons);
-		if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
-		{
-			if (ammoIcons[0].Critical)
-				Hud.IconFlash(ammoIcons);
-		}
+		if (Time.time % HudController.FLASH_TIME < Time.deltaTime && ammoIcons[0].Critical)
+			Hud.IconFlash(ammoIcons);
 	}
 #pragma warning restore IDE0051
 

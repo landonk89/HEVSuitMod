@@ -19,12 +19,12 @@ namespace HEVSuitMod.Components;
 
 public class VoiceController : MonoBehaviour
 {
-	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(VoiceController).FullName}");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(VoiceController).FullName);
 	private AudioSource audioSource;
 	public Coroutine sentencePlayer;
 	private List<HEVSentence> allSentences;
 	public readonly List<HEVSentence> pendingSentences = [];
-	private HashSet<IEffect> activeEffects = [];
+	private readonly HashSet<IEffect> activeEffects = [];
 	private IHandsController currentHandsController;
 
 	private Action OnShotHandler;
@@ -119,7 +119,7 @@ public class VoiceController : MonoBehaviour
 
 	public void PlaySentence(HEVSentence sentence)
 	{
-		if (!pendingSentences.Contains(sentence)) // Don't play the same one agian
+		if (!pendingSentences.Contains(sentence)) // Don't play the same one again
 			pendingSentences.Add(sentence);
 	}
 

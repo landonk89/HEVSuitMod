@@ -44,11 +44,8 @@ public class HudHealthCounter : MonoBehaviour
 	private void Update()
 	{
 		Hud.IconUpdate(healthIcons);
-		if (Time.time % HudController.FLASH_TIME < Time.deltaTime)
-		{
-			if (healthIcons[0].Critical)
-				Hud.IconFlash(healthIcons);
-		}
+		if (Time.time % HudController.FLASH_TIME < Time.deltaTime && healthIcons[0].Critical)
+			Hud.IconFlash(healthIcons);
 	}
 #pragma warning restore IDE0051
 
@@ -56,11 +53,10 @@ public class HudHealthCounter : MonoBehaviour
 	{
 		// FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
 		int normalizedHealth = 0;
-		if (alive)
-		{
-			float health = HealthController.GetBodyPartHealth(EBodyPart.Common).Current;
-			normalizedHealth = health > 0f ? Mathf.CeilToInt(health / 440f * 100f) : 0;
-		}
+		float health = HealthController.GetBodyPartHealth(EBodyPart.Common).Current;
+		if (alive && health > 0f)
+			normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
+
 		Hud.IconSetDigits(HealthNumbers, normalizedHealth);
 		Hud.IconSetCritical(healthIcons, normalizedHealth <= HudController.HEALTH_CRITICAL);
 		Hud.IconFlash(healthIcons);

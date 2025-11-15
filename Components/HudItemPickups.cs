@@ -10,7 +10,7 @@ namespace HEVSuitMod.Components;
 
 public class HudItemPickups : MonoBehaviour
 {
-	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(HudItemPickups).FullName}");
+	//private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(HudItemPickups).FullName);
 	private Transform iconArea;
 	private readonly List<HudIcon> activeIcons = [];
 	private HudController Hud => HEVSuitMod.Instance.HudController;
@@ -24,7 +24,7 @@ public class HudItemPickups : MonoBehaviour
 
 	private void Update()
 	{
-#if DEBUG
+#if DEBUG // Testing right side notifications
 		if (Input.GetKeyDown(KeyCode.F11))
 			Notification(GamePlayerOwner.MyPlayer.LastEquippedWeaponOrKnifeItem);
 #endif

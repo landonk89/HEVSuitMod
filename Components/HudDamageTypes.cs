@@ -54,7 +54,7 @@ public class HudDamageTypes : MonoBehaviour
 	// Don't use Hud's StateUpdate, these are unique
 	private void Update()
 	{
-		// Unique State update, don't use base.IconUpdate
+		// Unique State update, don't use HudController IconUpdate
 		if (activeIcons.Count == 0)
 			return;
 

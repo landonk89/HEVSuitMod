@@ -11,7 +11,7 @@ namespace HEVSuitMod.Components;
 
 public class MedicalController : MonoBehaviour
 {
-	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource($"{typeof(MedicalController).FullName}");
+	private readonly ManualLogSource log = BepInEx.Logging.Logger.CreateLogSource(typeof(MedicalController).FullName);
 	private readonly HashSet<IEffect> activeEffects = [];
 
 	private ActiveHealthController HealthController => GamePlayerOwner.MyPlayer.ActiveHealthController;

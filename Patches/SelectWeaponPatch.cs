@@ -3,7 +3,7 @@ using HarmonyLib;
 using SPT.Reflection.Patching;
 using System;
 using System.Reflection;
-using ESlot = HEVSuitMod.Components.HudWeaponSelection.ESlot;
+using EItemSlot = HEVSuitMod.Components.HudWeaponSelection.EItemSlot;
 
 namespace HEVSuitMod.Patches;
 
@@ -12,7 +12,7 @@ namespace HEVSuitMod.Patches;
 /// </summary>
 internal class SelectWeaponPatch : ModulePatch
 {
-	public static event Action<ESlot> SelectionEvent;
+	public static event Action<EItemSlot> SelectionEvent;
 
 	protected override MethodBase GetTargetMethod()
 	{
@@ -22,17 +22,17 @@ internal class SelectWeaponPatch : ModulePatch
 	[PatchPostfix]
 	private static void Postfix(ref ECommand command)
 	{
-		ESlot slot = command switch
+		EItemSlot slot = command switch
 		{
-			ECommand.SelectFirstPrimaryWeapon => ESlot.Primary,
-			ECommand.SelectSecondPrimaryWeapon => ESlot.Secondary,
-			ECommand.SelectSecondaryWeapon => ESlot.Holster,
-			ECommand.QuickSelectSecondaryWeapon => ESlot.Holster,
-			ECommand.SelectKnife => ESlot.Scabbard,
-			_ => ESlot.None
+			ECommand.SelectFirstPrimaryWeapon => EItemSlot.Primary,
+			ECommand.SelectSecondPrimaryWeapon => EItemSlot.Secondary,
+			ECommand.SelectSecondaryWeapon => EItemSlot.Holster,
+			ECommand.QuickSelectSecondaryWeapon => EItemSlot.Holster,
+			ECommand.SelectKnife => EItemSlot.Scabbard,
+			_ => EItemSlot.None
 		};
 
-		if (slot != ESlot.None)
+		if (slot != EItemSlot.None)
 			SelectionEvent?.Invoke(slot);
 	}
 }
