@@ -278,7 +278,7 @@ public class HudController : MonoBehaviour
 			Color c = pixels[i];
 			float gray = c.r * 0.299f + c.g * 0.587f + c.b * 0.114f;
 			gray = Mathf.Lerp(gray, 1f, 0.5f);
-			gray *= 1.5f;
+			gray *= 1.25f;
 			pixels[i] = new Color(gray, gray, gray, c.a);
 		}
 

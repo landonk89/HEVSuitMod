@@ -114,7 +114,7 @@ public class MedicalController : MonoBehaviour
 
 			// TODO: Make this configurable? The user may or may not want this level of assistance
 			case "LowEdgeHealth":
-				UseInjector("etgchange");
+				//UseInjector("etgchange");
 				handled = true;
 				break;
 

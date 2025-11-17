@@ -107,6 +107,7 @@ public class HEVSuitMod : BaseUnityPlugin
 		new SelectWeaponPatch().Enable();
 		new PickupLootPatch().Enable();
 		//new LoadSingleAmmoPatch().Enable();
+		new PlayerKillPatch().Enable();
 
 		// Register console commands
 		ConsoleScreen.Processor.RegisterCommand<ImpulseCommand>();

@@ -40,10 +40,11 @@ public class HudCrosshair : MonoBehaviour
 	private void Update()
 	{
 		// Fade it out if we're ADS, fade back in when not ADS
+		// Don't fade the OnTarget one though since it's not really in the way
 		switch (crosshair.State)
 		{
 			case EHudIconState.Activate:
-				if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.white) && Hud.UpdateTransition(crosshairOnTarget, HudController.FADE_TIME, Color.white))
+				if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.white))
 				{
 					crosshair.State = EHudIconState.Active;
 					crosshairOnTarget.State = EHudIconState.Active;
@@ -51,7 +52,7 @@ public class HudCrosshair : MonoBehaviour
 				break;
 
 			case EHudIconState.Deactivate:
-				if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.clear) && Hud.UpdateTransition(crosshairOnTarget, HudController.FADE_TIME, Color.clear))
+				if (Hud.UpdateTransition(crosshair, HudController.FADE_TIME, Color.clear))
 				{
 					crosshair.State = EHudIconState.Inactive;
 					crosshairOnTarget.State = EHudIconState.Inactive;
@@ -67,8 +68,7 @@ public class HudCrosshair : MonoBehaviour
 			crosshair.Image.rectTransform.position = camera.WorldToScreenPoint(hit.point);
 
 		// If we are aiming at a player/bot, activate the 'on target' indicator
-		// FIXME: Only seems to activate if aiming at chest
-		if (hit.collider?.GetComponent<IPlayer>() != null)
+		if (hit.collider?.GetComponentInParent<IPlayer>() != null)
 			crosshairOnTarget.Image.enabled = true;
 		else
 			crosshairOnTarget.Image.enabled = false;

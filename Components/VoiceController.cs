@@ -325,7 +325,7 @@ public class VoiceController : MonoBehaviour
 		if (activeEffects.Any(x => x.GetType().Name == "PainKiller"))
 			return; // Don't double up
 
-		if (part == EBodyPart.LeftLeg || part == EBodyPart.RightLeg)
+		if (HealthController.IsAlive && (part == EBodyPart.LeftLeg || part == EBodyPart.RightLeg))
 			PlaySentenceById("GiveMorphine");
 	}
 
