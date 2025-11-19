@@ -21,7 +21,7 @@ public class HudHealthCounter : MonoBehaviour
 	private void Awake()
 	{
 		HealthChangedAction = (_, _, _) => HealthChanged();
-		PlayerDeadHandler = (_) => HealthChanged(false);
+		PlayerDeadHandler = (_) => HealthChanged();
 		healthIcons[3] = new(transform.Find("HealthAndSuitPower/HealthIcon").GetComponent<Image>());
 		for (int i = 0; i < 3; i++)
 			healthIcons[i] = new(transform.Find($"HealthAndSuitPower/HealthValue/Digit{i}").GetComponent<Image>());
@@ -49,16 +49,11 @@ public class HudHealthCounter : MonoBehaviour
 	}
 #pragma warning restore IDE0051
 
-	private void HealthChanged(bool alive = true)
+	private void HealthChanged()
 	{
-		// FIXME/TODO: Assumes normal 440 max health player, may break if health is modded higher
-		int normalizedHealth = 0;
-		float health = HealthController.GetBodyPartHealth(EBodyPart.Common).Current;
-		if (alive && health > 0f)
-			normalizedHealth = Mathf.CeilToInt(health / 440f * 100f);
-
-		Hud.IconSetDigits(HealthNumbers, normalizedHealth);
-		Hud.IconSetCritical(healthIcons, normalizedHealth <= HudController.HEALTH_CRITICAL);
+		int health = Mathf.FloorToInt(100 * HealthController.GetBodyPartHealth(EBodyPart.Common).Normalized);
+		Hud.IconSetDigits(HealthNumbers, health);
+		Hud.IconSetCritical(healthIcons, health <= HudController.HEALTH_CRITICAL);
 		Hud.IconFlash(healthIcons);
 	}
 }
