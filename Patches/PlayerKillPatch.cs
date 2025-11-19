@@ -17,7 +17,7 @@ internal class PlayerKillPatch : ModulePatch
 	private static bool Prefix(ref ActiveHealthController __instance)
 	{
 		if (__instance.Player != GamePlayerOwner.MyPlayer)
-			return true;
+			return true; // If this health controller is not our player, act normally
 
 		// Disallow death until health is actually zero because the suit's job is to keep us alive better
 		if (__instance.GetBodyPartHealth(EBodyPart.Common).Current > 0f)
