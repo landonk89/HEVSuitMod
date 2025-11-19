@@ -1,4 +1,4 @@
-﻿using HEVSuitMod.Types;
+using HEVSuitMod.Types;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -47,7 +47,7 @@ public class HudFlashlight : MonoBehaviour
 			Hud.IconDeactivate(flashlightIcons);
 	}
 
-	public void SetBatteryLevel(float level)
+	private void SetBatteryLevel(float level)
 	{
 		FullIcon.Image.fillAmount = level;
 	}
