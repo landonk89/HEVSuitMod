@@ -19,8 +19,9 @@ internal class InspectChamberPatch : ModulePatch
 	}
 
 	[PatchPostfix]
-	private static void OnInspect()
+	private static void PostFix(Player.FirearmController __instance)
 	{
-		ChamberInspectEvent?.Invoke();
+		if (GamePlayerOwner.MyPlayer?.HandsController == __instance)
+			ChamberInspectEvent?.Invoke();
 	}
 }

@@ -10,7 +10,7 @@ namespace HEVSuitMod.Components;
 public class HudHealthCounter : MonoBehaviour
 {
 	private readonly HudIcon[] healthIcons = new HudIcon[4]; // 3 digits[0,1,2] + icon[3]
-	private Action<EBodyPart, float, DamageInfoStruct> HealthChangedAction;
+	private Action<EBodyPart, float, DamageInfoStruct> HealthChangedHandler;
 	private GDelegate71 PlayerDeadHandler;
 
 	private HudIcon[] HealthNumbers => [healthIcons[0], healthIcons[1], healthIcons[2]];
@@ -20,13 +20,13 @@ public class HudHealthCounter : MonoBehaviour
 #pragma warning disable IDE0051
 	private void Awake()
 	{
-		HealthChangedAction = (_, _, _) => HealthChanged();
+		HealthChangedHandler = (_, _, _) => HealthChanged();
 		PlayerDeadHandler = (_) => HealthChanged();
 		healthIcons[3] = new(transform.Find("HealthAndSuitPower/HealthIcon").GetComponent<Image>());
 		for (int i = 0; i < 3; i++)
 			healthIcons[i] = new(transform.Find($"HealthAndSuitPower/HealthValue/Digit{i}").GetComponent<Image>());
 
-		HealthController.HealthChangedEvent += HealthChangedAction;
+		HealthController.HealthChangedEvent += HealthChangedHandler;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn += PlayerDeadHandler;
 	}
 
@@ -37,7 +37,7 @@ public class HudHealthCounter : MonoBehaviour
 
 	private void OnDestroy()
 	{
-		HealthController.HealthChangedEvent -= HealthChangedAction;
+		HealthController.HealthChangedEvent -= HealthChangedHandler;
 		GamePlayerOwner.MyPlayer.OnPlayerDeadOrUnspawn -= PlayerDeadHandler;
 	}
 

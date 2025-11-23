@@ -106,7 +106,7 @@ public class HEVSuitMod : BaseUnityPlugin
 		new InspectChamberPatch().Enable();
 		new SelectWeaponPatch().Enable();
 		new PickupLootPatch().Enable();
-		//new LoadSingleAmmoPatch().Enable();
+		new LoadSingleAmmoPatch().Enable();
 		new PlayerKillPatch().Enable();
 
 		// Register console commands

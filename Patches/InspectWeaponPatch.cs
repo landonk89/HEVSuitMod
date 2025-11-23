@@ -19,8 +19,9 @@ internal class InspectWeaponPatch : ModulePatch
 	}
 
 	[PatchPrefix]
-	private static void OnInspect()
+	private static void PostFix(Player.FirearmController __instance)
 	{
-		WeaponInspectEvent?.Invoke();
+		if (GamePlayerOwner.MyPlayer?.HandsController == __instance)
+			WeaponInspectEvent?.Invoke();
 	}
 }

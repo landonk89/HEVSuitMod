@@ -12,8 +12,8 @@ public class HudSuitPowerCounter : MonoBehaviour
 {
 	private readonly HudIcon[] suitIcons = new HudIcon[5]; // 3 digits[0,1,2] + fullicon[3] + emptyicon[4]
 
-	private Action<DamageInfoStruct, EBodyPart, float> SuitPowerChangedAction;
-	private Action<Item> SuitChangedAction;
+	private Action<DamageInfoStruct, EBodyPart, float> SuitPowerChangedHandler;
+	private Action<Item> VestItemChangedHandler;
 	private HudIcon SuitFull => suitIcons[3];
 	private HudIcon[] SuitNumbers => [suitIcons[0], suitIcons[1], suitIcons[2]];
 	private HudController Hud => HEVSuitMod.Instance.HudController;
@@ -21,16 +21,16 @@ public class HudSuitPowerCounter : MonoBehaviour
 #pragma warning disable IDE0051
 	private void Awake()
 	{
-		SuitPowerChangedAction = (damageInfo, _, _) => SuitPowerChanged(damageInfo);
-		SuitChangedAction = (_) => SuitPowerChanged(null);
+		SuitPowerChangedHandler = (damageInfo, _, _) => SuitPowerChanged(damageInfo);
+		VestItemChangedHandler = (_) => SuitPowerChanged(null);
 
 		suitIcons[4] = new(transform.Find("HealthAndSuitPower/SuitIconEmpty").GetComponent<Image>());
 		suitIcons[3] = new(transform.Find("HealthAndSuitPower/SuitIconFull").GetComponent<Image>());
 		for (int i = 0; i < 3; i++)
 			suitIcons[i] = new(transform.Find($"HealthAndSuitPower/SuitPowerValue/Digit{i}").GetComponent<Image>());
 
-		GamePlayerOwner.MyPlayer.BeingHitAction += SuitPowerChangedAction;
-		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += SuitChangedAction;
+		GamePlayerOwner.MyPlayer.BeingHitAction += SuitPowerChangedHandler;
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem += VestItemChangedHandler;
 	}
 
 	private void Start()
@@ -40,8 +40,8 @@ public class HudSuitPowerCounter : MonoBehaviour
 
 	private void OnDestroy()
 	{
-		GamePlayerOwner.MyPlayer.BeingHitAction -= SuitPowerChangedAction;
-		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= SuitChangedAction;
+		GamePlayerOwner.MyPlayer.BeingHitAction -= SuitPowerChangedHandler;
+		GamePlayerOwner.MyPlayer.Equipment.GetSlot(EquipmentSlot.TacticalVest).OnAddOrRemoveItem -= VestItemChangedHandler;
 	}
 
 	private void Update()

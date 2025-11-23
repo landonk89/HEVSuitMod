@@ -41,10 +41,10 @@ public class HudWeaponSelection : MonoBehaviour
 	private readonly WeaponSelection[] weapons = new WeaponSelection[NUM_WEAPONS];
 	private float activeTimer = 0f;
 
-	private Action<Item> HolsterWeaponChanged;
-	private Action<Item> PrimaryWeaponChanged;
-	private Action<Item> SecondaryWeaponChanged;
-	private Action<Item> ScabbardWeaponChanged;
+	private Action<Item> HolsterChangedHandler;
+	private Action<Item> PrimaryChangedHandler;
+	private Action<Item> SecondaryChangedHandler;
+	private Action<Item> ScabbardChangedHandler;
 
 	private AssetBundle Assets => HEVSuitMod.Instance.Assets;
 	private HudController Hud => HEVSuitMod.Instance.HudController;
@@ -65,10 +65,10 @@ public class HudWeaponSelection : MonoBehaviour
 	private void Awake()
 	{
 		// TODO: quick slots
-		HolsterWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Holster]);
-		PrimaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Primary]);
-		SecondaryWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Secondary]);
-		ScabbardWeaponChanged = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Scabbard]);
+		HolsterChangedHandler = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Holster]);
+		PrimaryChangedHandler = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Primary]);
+		SecondaryChangedHandler = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Secondary]);
+		ScabbardChangedHandler = (item) => OnWeaponChanged(item, weapons[(int)EItemSlot.Scabbard]);
 
 		audioSource = GetComponent<AudioSource>();
 		audioSource.volume = 0.5f;
@@ -94,10 +94,10 @@ public class HudWeaponSelection : MonoBehaviour
 	{
 		weaponSelectionUI.SetActive(false); // Start hidden
 		SelectWeaponPatch.SelectionEvent += SelectWeapon;
-		Holster.OnAddOrRemoveItem += HolsterWeaponChanged;
-		Primary.OnAddOrRemoveItem += PrimaryWeaponChanged;
-		Secondary.OnAddOrRemoveItem += SecondaryWeaponChanged;
-		Scabbard.OnAddOrRemoveItem += ScabbardWeaponChanged;
+		Holster.OnAddOrRemoveItem += HolsterChangedHandler;
+		Primary.OnAddOrRemoveItem += PrimaryChangedHandler;
+		Secondary.OnAddOrRemoveItem += SecondaryChangedHandler;
+		Scabbard.OnAddOrRemoveItem += ScabbardChangedHandler;
 
 		for (int i = 0; i < NUM_WEAPONS; i++)
 			OnWeaponChanged(SlotMap[(EItemSlot)i].ContainedItem, weapons[i]);
@@ -106,10 +106,10 @@ public class HudWeaponSelection : MonoBehaviour
 	private void OnDestroy()
 	{
 		SelectWeaponPatch.SelectionEvent -= SelectWeapon;
-		Holster.OnAddOrRemoveItem -= HolsterWeaponChanged;
-		Primary.OnAddOrRemoveItem -= PrimaryWeaponChanged;
-		Secondary.OnAddOrRemoveItem -= SecondaryWeaponChanged;
-		Scabbard.OnAddOrRemoveItem -= ScabbardWeaponChanged;
+		Holster.OnAddOrRemoveItem -= HolsterChangedHandler;
+		Primary.OnAddOrRemoveItem -= PrimaryChangedHandler;
+		Secondary.OnAddOrRemoveItem -= SecondaryChangedHandler;
+		Scabbard.OnAddOrRemoveItem -= ScabbardChangedHandler;
 	}
 
 	private void OnWeaponChanged(Item weapon, WeaponSelection selection)

@@ -1,4 +1,4 @@
-﻿using EFT;
+using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using System;
@@ -17,8 +17,9 @@ internal class LoadSingleAmmoPatch : ModulePatch
 	}
 
 	[PatchPostfix]
-	private static void PostFix()
+	private static void PostFix(Player.FirearmController __instance)
 	{
-		SingleLoadAmmoEvent?.Invoke();
+		if (GamePlayerOwner.MyPlayer?.HandsController == __instance)
+			SingleLoadAmmoEvent?.Invoke();
 	}
 }
