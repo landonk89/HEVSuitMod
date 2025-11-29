@@ -9,12 +9,6 @@ namespace HEVSuitMod.Components;
 
 public class HudDamageTypes : MonoBehaviour
 {
-	private class DamageIcon(Image img)
-	{
-		public Image image = img;
-		public float timer = 0f;
-	}
-
 	private Sprite bulletDamage;
 	private Sprite coldDamage;
 	private Sprite fireDamage;
