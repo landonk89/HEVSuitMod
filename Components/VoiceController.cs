@@ -259,7 +259,7 @@ public class VoiceController : MonoBehaviour
 			current.OnShot -= OnShotHandler;
 			OnShotHandler = () =>
 			{
-				if (faController.Weapon.GetCurrentMagazine().Count + faController.Weapon.ChamberAmmoCount == 0)
+				if (faController.Weapon.GetCurrentMagazine()?.Count + faController.Weapon.ChamberAmmoCount == 0)
 					PlaySentenceById("OutOfAmmo");
 			};
 			currentHandsController = faController;

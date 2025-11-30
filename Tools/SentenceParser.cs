@@ -3,7 +3,6 @@ using HEVSuitMod.Types;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security;
 using UnityEngine;
 
 namespace HEVSuitMod.Tools;
@@ -26,15 +25,12 @@ public class SentenceParser
 
 	public SentenceParser()
 	{
-		allFiles = [.. Assets.GetAllAssetNames()];
+		allFiles = [..Assets.GetAllAssetNames()];
 		ParseAllSentences();
 	}
 
 	public void ParseAllSentences()
 	{
-		Stopwatch timetaken = new();
-		timetaken.Start();
-
 		TextAsset hevSentencesFile = Assets.LoadAsset<TextAsset>(SENTENCES_FILE);
 		if (hevSentencesFile == null)
 		{
@@ -64,9 +60,6 @@ public class SentenceParser
 		log.LogInfo($"Parsed {sentenceCount} sentences.");
 		if (missingFiles.Count > 0)
 			log.LogWarning($"Encountered {missingFiles.Count} missing files:\n{BundleUtils.FileTree(missingFiles)}");
-
-		timetaken.Stop();
-		log.LogWarning($"Parser elapsed time: {timetaken.Elapsed}");
 	}
 
 	// --------------------------------------------------------------
@@ -82,8 +75,8 @@ public class SentenceParser
 		List<HEVAudioClip> clips = [];
 
 		int index = span.IndexOf(' ');
-		var firstToken = span[..index];
 		int position = index + 1;
+		var firstToken = span[..index];
 		while (position <= span.Length)
 		{
 			int next = span[position..].IndexOf(' ');
